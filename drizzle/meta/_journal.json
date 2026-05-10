@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1776843470700,
+      "tag": "0000_sturdy_deadpool",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777193148441,
+      "tag": "0001_broad_black_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1778040000000,
+      "tag": "0002_admin_operation_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1778040001000,
+      "tag": "0003_article_likes",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1778040002000,
+      "tag": "0004_article_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1778212800000,
+      "tag": "0005_anonymous_feedback",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+import { SeriesIndexPage } from "@/components/content/series-pages";
+import { listPublicSeries } from "@/lib/series";
+import { buildSeriesIndexMetadata } from "@/lib/series-metadata";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = buildSeriesIndexMetadata("zh");
+
+export default async function SeriesPage() {
+  const seriesList = await listPublicSeries("zh");
+
+  return <SeriesIndexPage locale="zh" seriesList={seriesList} />;
+}

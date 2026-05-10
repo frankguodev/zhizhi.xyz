@@ -1,0 +1,53 @@
+name = "your-worker-name"
+account_id = "your-cloudflare-account-id"
+main = ".open-next/worker.js"
+compatibility_date = "2026-04-22"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "your-worker-name"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "your-d1-database-name"
+database_id = "your-d1-database-id"
+migrations_dir = "drizzle"
+
+[[r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "your-opennext-cache-bucket"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "your-media-bucket"
+
+[env.test]
+name = "your-worker-name-test"
+workers_dev = true
+
+[env.test.assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[env.test.services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "your-worker-name-test"
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "your-test-d1-database-name"
+database_id = "your-test-d1-database-id"
+migrations_dir = "drizzle"
+
+[[env.test.r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "your-test-opennext-cache-bucket"
+
+[[env.test.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "your-test-media-bucket"
