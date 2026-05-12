@@ -49,5 +49,6 @@ export function getSampleInput(tab: ToolTab, locale: Locale) {
     text: locale === "en" ? "Knowledge\nTools\nKnowledge\n\nzhizhi" : "知识\n工具\n知识\n\n知之",
     time: "",
     uuid: "10",
+    wechatQr: "",
   }[tab];
 }

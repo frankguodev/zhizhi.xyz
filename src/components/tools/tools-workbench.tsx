@@ -18,6 +18,7 @@ import {
   KeyRound,
   Link2,
   Palette,
+  QrCode,
   Rows3,
   Save,
   Search,
@@ -33,6 +34,7 @@ import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
 import { ImageTool } from "./image-tool";
+import { WechatQrTool } from "./wechat-qr-tool";
 import { describeInvalidJsonPunctuation, findInvalidJsonPunctuationIndex, findInvalidJsonPunctuationRange } from "./tool-json-diagnostics";
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
 import { readToolPreferences, writeToolPreferences } from "./tool-preferences";
@@ -125,6 +127,7 @@ const toolGroupByTab: Record<ToolTab, Exclude<ToolGroup, "all">> = {
   text: "writing",
   time: "dev",
   uuid: "dev",
+  wechatQr: "media",
 };
 
 const copyLabels = {
@@ -235,6 +238,7 @@ const tabLabels = {
     { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
     { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
     { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
+    { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
   ],
   en: [
     { id: "json", label: "JSON", description: "Format, minify, validate, sort, escape, and flatten JSON.", icon: FileJson2 },
@@ -250,6 +254,7 @@ const tabLabels = {
     { id: "csv", label: "CSV", description: "Convert CSV / TSV tables to JSON for content and data cleanup.", icon: Table2 },
     { id: "color", label: "Color", description: "Convert between HEX, RGB, and HSL color formats.", icon: Palette },
     { id: "image", label: "Image", description: "Compress and convert JPG / PNG / WebP locally with WASM encoders first.", icon: FileImage },
+    { id: "wechatQr", label: "WeChat QR", description: "Combine a WeChat contact QR code with an avatar locally in the browser.", icon: QrCode },
   ],
 } as const;
 
@@ -267,6 +272,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   text: "text string line dedupe sort trim uppercase lowercase wenben",
   time: "time timestamp unix date utc local seconds milliseconds shijian shijianchuo",
   uuid: "uuid guid random v4 id",
+  wechatQr: "wechat weixin qr qrcode contact friend avatar scan saoyisao erweima touxiang",
 };
 
 export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
@@ -353,6 +359,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     text: textOutput,
     time: timeOutput,
     uuid: uuidOutput,
+    wechatQr: "",
   });
   const currentInput = getToolValue(activeTab, {
     color: colorInput,
@@ -368,6 +375,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     text: textInput,
     time: timeInput,
     uuid: uuidInput,
+    wechatQr: "",
   });
   const activeTabInfo = tabLabels[locale].find((tab) => tab.id === activeTab) ?? tabLabels[locale][0];
   const ActiveIcon = activeTabInfo.icon;
@@ -1316,6 +1324,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
             </div>
           </div>
 
+          {!isStandaloneTool(activeTab) ? (
           <div className="rounded-md bg-paper/54 p-2.5">
             {activeTab === "json" ? (
               <JsonControls
@@ -1388,6 +1397,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
             ) : null}
             {activeTab === "color" ? <ColorControls locale={locale} onRun={runColorConvert} /> : null}
           </div>
+          ) : null}
 
           {historyMounted ? (
             <ToolHistoryPanel
@@ -1407,8 +1417,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
           ) : null}
 
           {activeTab === "image" ? <ImageTool locale={locale} /> : null}
+          {activeTab === "wechatQr" ? <WechatQrTool locale={locale} /> : null}
 
-          {activeTab !== "image" ? (
+          {!isStandaloneTool(activeTab) ? (
             <>
           <div className="grid grid-cols-2 gap-1 rounded-md bg-accent/8 p-1 lg:hidden">
             <button
@@ -3582,6 +3593,10 @@ function readToolFromUrl() {
 
 function isExpandedWorkspaceTool(tab: ToolTab) {
   return toolGroupByTab[tab] === "data" || toolGroupByTab[tab] === "writing";
+}
+
+function isStandaloneTool(tab: ToolTab) {
+  return tab === "image" || tab === "wechatQr";
 }
 
 function getPanelSize(tab: ToolTab): EditorPanelSize {
