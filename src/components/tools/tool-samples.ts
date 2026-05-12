@@ -44,6 +44,7 @@ export function getSampleInput(tab: ToolTab, locale: Locale) {
     image: "",
     json: sampleJson,
     jwt: "",
+    linkQr: "https://zhizhi.xyz",
     markdown: sampleMarkdown,
     regex: locale === "en" ? "ZhiZhi tools\nzhizhi.xyz" : "知之工具\nzhizhi.xyz",
     text: locale === "en" ? "Knowledge\nTools\nKnowledge\n\nzhizhi" : "知识\n工具\n知识\n\n知之",

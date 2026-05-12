@@ -34,6 +34,7 @@ import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
 import { ImageTool } from "./image-tool";
+import { LinkQrTool } from "./link-qr-tool";
 import { WechatQrTool } from "./wechat-qr-tool";
 import { describeInvalidJsonPunctuation, findInvalidJsonPunctuationIndex, findInvalidJsonPunctuationRange } from "./tool-json-diagnostics";
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
@@ -122,6 +123,7 @@ const toolGroupByTab: Record<ToolTab, Exclude<ToolGroup, "all">> = {
   image: "media",
   json: "data",
   jwt: "dev",
+  linkQr: "media",
   markdown: "writing",
   regex: "dev",
   text: "writing",
@@ -238,6 +240,7 @@ const tabLabels = {
     { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
     { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
     { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
+    { id: "linkQr", label: "链接二维码", description: "输入网址后一键生成可下载的二维码 PNG。", icon: QrCode },
     { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
   ],
   en: [
@@ -254,6 +257,7 @@ const tabLabels = {
     { id: "csv", label: "CSV", description: "Convert CSV / TSV tables to JSON for content and data cleanup.", icon: Table2 },
     { id: "color", label: "Color", description: "Convert between HEX, RGB, and HSL color formats.", icon: Palette },
     { id: "image", label: "Image", description: "Compress and convert JPG / PNG / WebP locally with WASM encoders first.", icon: FileImage },
+    { id: "linkQr", label: "Link QR", description: "Enter a URL and generate a downloadable QR code PNG.", icon: QrCode },
     { id: "wechatQr", label: "WeChat QR", description: "Combine a WeChat contact QR code with an avatar locally in the browser.", icon: QrCode },
   ],
 } as const;
@@ -267,6 +271,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
   json: "json format minify validate sort flatten parse escape",
   jwt: "jwt token bearer header payload exp iat nbf",
+  linkQr: "link url qr qrcode website webpage erweima lianjie wangzhi",
   markdown: "markdown md gfm preview render table code yulan",
   regex: "regex regexp regular expression pattern replace zhengze",
   text: "text string line dedupe sort trim uppercase lowercase wenben",
@@ -354,6 +359,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     image: "",
     json: jsonOutput,
     jwt: jwtOutput,
+    linkQr: "",
     markdown: markdownOutput,
     regex: regexOutput,
     text: textOutput,
@@ -370,6 +376,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     image: "",
     json: jsonInput,
     jwt: jwtInput,
+    linkQr: "",
     markdown: markdownInput,
     regex: regexInput,
     text: textInput,
@@ -1417,6 +1424,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
           ) : null}
 
           {activeTab === "image" ? <ImageTool locale={locale} /> : null}
+          {activeTab === "linkQr" ? <LinkQrTool locale={locale} /> : null}
           {activeTab === "wechatQr" ? <WechatQrTool locale={locale} /> : null}
 
           {!isStandaloneTool(activeTab) ? (
@@ -3596,7 +3604,7 @@ function isExpandedWorkspaceTool(tab: ToolTab) {
 }
 
 function isStandaloneTool(tab: ToolTab) {
-  return tab === "image" || tab === "wechatQr";
+  return tab === "image" || tab === "wechatQr" || tab === "linkQr";
 }
 
 function getPanelSize(tab: ToolTab): EditorPanelSize {

@@ -1,6 +1,6 @@
 import type { Locale } from "@/lib/site";
 
-export type ToolTab = "json" | "encoding" | "time" | "text" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "csv" | "color" | "image" | "wechatQr";
+export type ToolTab = "json" | "encoding" | "time" | "text" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "csv" | "color" | "image" | "wechatQr" | "linkQr";
 export type CsvDelimiter = "auto" | "comma" | "tab";
 export type CsvOutputMode = "objects" | "rows";
 export type EncodingAction = "urlEncode" | "urlDecode" | "base64Encode" | "base64Decode" | "unicodeEscape" | "unicodeUnescape" | "htmlEscape" | "htmlUnescape";
@@ -110,7 +110,8 @@ export function isToolTab(value: unknown): value is ToolTab {
     value === "csv" ||
     value === "color" ||
     value === "image" ||
-    value === "wechatQr"
+    value === "wechatQr" ||
+    value === "linkQr"
   );
 }
 
