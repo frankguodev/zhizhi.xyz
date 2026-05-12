@@ -239,7 +239,7 @@ export function checkArticleQuality(article: ArticleRecord): ArticleQualityRepor
   }
 
   if (article.category && !isStandardArticleCategory(article.category, article.locale)) {
-    issues.push(createIssue("warning", "non-standard-category", "分类不在当前语言标准分类中", "建议使用当前语言下的 8 个主分类之一，避免前台筛选和后台统计口径分散。"));
+    issues.push(createIssue("warning", "non-standard-category", "分类不在当前语言标准分类中", "建议使用当前语言下的 9 个主分类之一，避免前台筛选和后台统计口径分散。"));
   }
 
   if (article.tags.length < 2) {

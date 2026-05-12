@@ -789,4 +789,4 @@ database_id = "00000000-0000-0000-0000-000000000000"
 
 ## 许可证
 
-本项目使用 [MIT License](./LICENSE)。
+Private project. All rights reserved.

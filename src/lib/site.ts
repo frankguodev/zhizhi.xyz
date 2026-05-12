@@ -16,6 +16,7 @@ export const siteConfig = {
   social: {
     email: "hello@zhizhi.xyz",
     xUrl: "https://x.com",
+    githubUrl: "https://github.com/frankguodev",
   },
 } as const;
 

@@ -254,7 +254,7 @@ export function parseArticleImport(markdown: string): ArticleImportResult {
   if (!rawCategory) warnings.push(`Frontmatter 缺少 category，已归入“${categoryFallback(rawLocale)}”。`);
   if (rawCategory && rawCategory !== normalizedCategory) warnings.push(`Frontmatter category 已从“${rawCategory}”归一为“${normalizedCategory}”。`);
   if (rawCategory && rawCategory === normalizedCategory && !isStandardArticleCategory(normalizedCategory, rawLocale)) {
-    warnings.push(`Frontmatter category “${normalizedCategory}”不在 ${rawLocale === "en" ? "English" : "中文"} 标准分类中，建议改为当前语言的 8 个主分类之一。`);
+    warnings.push(`Frontmatter category “${normalizedCategory}”不在 ${rawLocale === "en" ? "English" : "中文"} 标准分类中，建议改为当前语言的 9 个主分类之一。`);
   }
 
   return {

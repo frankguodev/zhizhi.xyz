@@ -57,6 +57,15 @@ export const standardArticleCategories = [
     aliases: ["个人成长", "真实成长", "成长路径", "普通人成长", "经验分享", "Growth Practice", "Personal Growth", "Self Improvement", "Personal Practice"],
   },
   {
+    key: "personal-brand",
+    name: "个人品牌",
+    labels: {
+      zh: "个人品牌",
+      en: "Personal Brand",
+    },
+    aliases: ["个人 IP", "个人IP", "IP 打造", "IP打造", "个人技术品牌", "个人品牌全球化", "领英运营", "GitHub 个人品牌", "Personal Branding", "Personal IP", "Professional Brand", "Technical Brand", "LinkedIn", "LinkedIn Operations", "GitHub Personal Brand"],
+  },
+  {
     key: "global-tools",
     name: "出海工具",
     labels: {
