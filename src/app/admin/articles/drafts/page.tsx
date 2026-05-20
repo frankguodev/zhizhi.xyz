@@ -63,7 +63,7 @@ export default async function DraftsPage() {
 
   return (
     <AdminPageShell
-      active="drafts"
+      active="articleDrafts"
       eyebrow="草稿管理"
       title="文章草稿"
       description="这里展示已经保存到 D1 的 Markdown 草稿，可继续编辑、检查和发布。"

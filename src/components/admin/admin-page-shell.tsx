@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminNav, type AdminNavItemKey } from "@/components/admin/admin-nav";
 
-type AdminSection = "dashboard" | "import" | "drafts" | "published" | "links" | "series" | "feedback";
+type AdminSection = AdminNavItemKey;
 
 type AdminPageShellProps = {
   active: AdminSection;

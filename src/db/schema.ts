@@ -254,9 +254,21 @@ export const adminOperationLogs = sqliteTable(
     adminUserId: text("admin_user_id").references(() => users.id, { onDelete: "set null" }),
     adminEmail: text("admin_email"),
     action: text("action", {
-      enum: ["article_publish", "article_update", "article_archive", "article_restore", "article_delete"],
+      enum: [
+        "article_publish",
+        "article_update",
+        "article_archive",
+        "article_restore",
+        "article_delete",
+        "ai_term_import",
+        "ai_term_update",
+        "ai_term_publish",
+        "ai_term_archive",
+        "ai_term_restore",
+        "ai_term_delete",
+      ],
     }).notNull(),
-    targetType: text("target_type", { enum: ["article"] }).notNull(),
+    targetType: text("target_type", { enum: ["article", "ai_term"] }).notNull(),
     targetId: text("target_id"),
     targetLocale: text("target_locale", { enum: ["zh", "en"] }),
     targetSlug: text("target_slug"),
@@ -267,5 +279,149 @@ export const adminOperationLogs = sqliteTable(
   (table) => [
     index("admin_operation_logs_target_idx").on(table.targetType, table.targetId, table.createdAt),
     index("admin_operation_logs_action_idx").on(table.action, table.createdAt),
+  ],
+);
+
+export const aiTerms = sqliteTable(
+  "ai_terms",
+  {
+    id: text("id").primaryKey(),
+    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    translationKey: text("translation_key").notNull(),
+    term: text("term").notNull(),
+    termZh: text("term_zh"),
+    fullName: text("full_name"),
+    slug: text("slug").notNull(),
+    shortConcept: text("short_concept").notNull(),
+    shortDesc: text("short_desc").notNull(),
+    tagline: text("tagline"),
+    beginnerNotesJson: text("beginner_notes_json", { mode: "json" }),
+    type: text("type", {
+      enum: ["concept", "protocol", "framework", "product", "model", "workflow", "infra", "slang", "company", "method"],
+    }).notNull().default("concept"),
+    difficulty: text("difficulty", { enum: ["beginner", "intermediate", "advanced"] }).notNull().default("beginner"),
+    status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
+    visibility: text("visibility", { enum: ["public", "login", "hidden"] }).notNull().default("public"),
+    heatScore: integer("heat_score").notNull().default(0),
+    qualityScore: integer("quality_score").notNull().default(0),
+    trending: integer("trending", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    contentMd: text("content_md").notNull(),
+    contentFormat: text("content_format", { enum: ["markdown"] }).notNull().default("markdown"),
+    contentVersion: text("content_version").notNull().default("ai-term-md-v1"),
+    seoTitle: text("seo_title"),
+    seoDescription: text("seo_description"),
+    seoKeywords: text("seo_keywords"),
+    canonicalUrl: text("canonical_url"),
+    robots: text("robots"),
+    shareImage: text("share_image"),
+    shareImageAlt: text("share_image_alt"),
+    metadataJson: text("metadata_json", { mode: "json" }),
+    sourceNote: text("source_note"),
+    aiAssisted: integer("ai_assisted", { mode: "boolean" }).notNull().default(true),
+    humanReviewed: integer("human_reviewed", { mode: "boolean" }).notNull().default(false),
+    viewCount: integer("view_count").notNull().default(0),
+    publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+    lastVerifiedAt: integer("last_verified_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("ai_terms_locale_slug_unique").on(table.locale, table.slug),
+    index("ai_terms_locale_status_visibility_idx").on(table.locale, table.status, table.visibility),
+    index("ai_terms_locale_trending_idx").on(table.locale, table.trending, table.heatScore),
+    index("ai_terms_locale_heat_idx").on(table.locale, table.heatScore),
+    index("ai_terms_locale_quality_idx").on(table.locale, table.qualityScore),
+    index("ai_terms_locale_published_idx").on(table.locale, table.publishedAt),
+    index("ai_terms_locale_verified_idx").on(table.locale, table.lastVerifiedAt),
+    index("ai_terms_locale_sort_idx").on(table.locale, table.sortOrder, table.term),
+    index("ai_terms_public_published_idx").on(table.locale, table.status, table.visibility, table.publishedAt),
+    index("ai_terms_public_heat_idx").on(table.locale, table.status, table.visibility, table.heatScore),
+    index("ai_terms_public_quality_idx").on(table.locale, table.status, table.visibility, table.qualityScore),
+    index("ai_terms_public_sort_idx").on(table.locale, table.status, table.visibility, table.sortOrder, table.term),
+    index("ai_terms_translation_key_idx").on(table.translationKey),
+  ],
+);
+
+export const aiTermCategories = sqliteTable(
+  "ai_term_categories",
+  {
+    id: text("id").primaryKey(),
+    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    translationKey: text("translation_key").notNull(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    icon: text("icon"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("ai_term_categories_locale_slug_unique").on(table.locale, table.slug),
+    index("ai_term_categories_locale_sort_idx").on(table.locale, table.sortOrder, table.name),
+    index("ai_term_categories_translation_key_idx").on(table.translationKey),
+  ],
+);
+
+export const aiTermCategoryRelations = sqliteTable(
+  "ai_term_category_relations",
+  {
+    termId: text("term_id").notNull().references(() => aiTerms.id, { onDelete: "cascade" }),
+    categoryId: text("category_id").notNull().references(() => aiTermCategories.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.termId, table.categoryId] }),
+    index("ai_term_category_relations_category_idx").on(table.categoryId, table.sortOrder),
+  ],
+);
+
+export const aiTermTags = sqliteTable(
+  "ai_term_tags",
+  {
+    id: text("id").primaryKey(),
+    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    translationKey: text("translation_key").notNull(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("ai_term_tags_locale_slug_unique").on(table.locale, table.slug),
+    index("ai_term_tags_translation_key_idx").on(table.translationKey),
+  ],
+);
+
+export const aiTermTagRelations = sqliteTable(
+  "ai_term_tag_relations",
+  {
+    termId: text("term_id").notNull().references(() => aiTerms.id, { onDelete: "cascade" }),
+    tagId: text("tag_id").notNull().references(() => aiTermTags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.termId, table.tagId] }),
+    index("ai_term_tag_relations_tag_idx").on(table.tagId),
+  ],
+);
+
+export const aiTermRelations = sqliteTable(
+  "ai_term_relations",
+  {
+    id: text("id").primaryKey(),
+    termId: text("term_id").notNull().references(() => aiTerms.id, { onDelete: "cascade" }),
+    relatedTermId: text("related_term_id").notNull().references(() => aiTerms.id, { onDelete: "cascade" }),
+    relationType: text("relation_type", { enum: ["related", "similar", "opposite", "upstream", "downstream", "ecosystem"] })
+      .notNull()
+      .default("related"),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("ai_term_relations_unique").on(table.termId, table.relatedTermId, table.relationType),
+    index("ai_term_relations_term_idx").on(table.termId, table.sortOrder),
+    index("ai_term_relations_related_idx").on(table.relatedTermId),
   ],
 );

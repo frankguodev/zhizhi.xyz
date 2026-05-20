@@ -112,12 +112,28 @@ CREATE TABLE IF NOT EXISTS ai_terms (
     content_version TEXT NOT NULL DEFAULT 'ai-term-md-v1',
 
     -- SEO 与分享
+    -- 第一版只结构化保存 SEO 与分享图基础字段。
+    -- 发布稿中的 seo.* 映射到 seo_title / seo_description / seo_keywords / canonical_url / robots。
+    -- 词条封面图就是分享图；open_graph.image 与 twitter.image 应保持一致，并映射到 share_image。
+    -- open_graph.image_alt 映射到 share_image_alt。
+    -- open_graph / twitter 的其他字段不在第一版单独拆列，前台 metadata 默认从 SEO 与分享图字段派生；
+    -- 如需保留分享层覆盖值，可放入 metadata_json。
+    -- structured_data 等暂不单独拆字段，也保存在 metadata_json。
+    -- metadata_json 建议存 JSON 字符串，例如：
+    -- {
+    --   "openGraph": {},
+    --   "twitter": {},
+    --   "structuredData": {},
+    --   "rawFrontmatter": {}
+    -- }
     seo_title TEXT,
     seo_description TEXT,
     seo_keywords TEXT,
     canonical_url TEXT,
-    cover_image TEXT,
-    cover_image_alt TEXT,
+    robots TEXT,
+    share_image TEXT,
+    share_image_alt TEXT,
+    metadata_json TEXT,
 
     -- 生产与审核信息
     source_note TEXT,
@@ -158,6 +174,18 @@ ON ai_terms(locale, last_verified_at DESC);
 
 CREATE INDEX IF NOT EXISTS ai_terms_locale_sort_idx
 ON ai_terms(locale, sort_order, term);
+
+CREATE INDEX IF NOT EXISTS ai_terms_public_published_idx
+ON ai_terms(locale, status, visibility, published_at);
+
+CREATE INDEX IF NOT EXISTS ai_terms_public_heat_idx
+ON ai_terms(locale, status, visibility, heat_score);
+
+CREATE INDEX IF NOT EXISTS ai_terms_public_quality_idx
+ON ai_terms(locale, status, visibility, quality_score);
+
+CREATE INDEX IF NOT EXISTS ai_terms_public_sort_idx
+ON ai_terms(locale, status, visibility, sort_order, term);
 
 CREATE INDEX IF NOT EXISTS ai_terms_translation_key_idx
 ON ai_terms(translation_key);
@@ -257,32 +285,10 @@ CREATE INDEX IF NOT EXISTS ai_term_tag_relations_tag_idx
 ON ai_term_tag_relations(tag_id);
 
 -- =========================================================
--- 6. AI 词条别名表
--- 用于搜索缩写、中文译名、常见叫法。
--- 例如：Model Context Protocol / MCP 协议 / 模型上下文协议
--- =========================================================
-CREATE TABLE IF NOT EXISTS ai_term_aliases (
-    id TEXT PRIMARY KEY,
-    term_id TEXT NOT NULL,
-    alias TEXT NOT NULL,
-    locale TEXT NOT NULL DEFAULT 'zh'
-        CHECK (locale IN ('zh', 'en')),
-    created_at INTEGER NOT NULL,
-
-    FOREIGN KEY (term_id)
-        REFERENCES ai_terms(id)
-        ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS ai_term_aliases_term_idx
-ON ai_term_aliases(term_id);
-
-CREATE INDEX IF NOT EXISTS ai_term_aliases_locale_alias_idx
-ON ai_term_aliases(locale, alias);
-
--- =========================================================
--- 7. AI 词条关联关系表
+-- 6. AI 词条关联关系表
 -- 用于详情页“强相关概念 / 继续理解”区域。
+-- MVP 导入策略：只写入 related_term_id 已经存在的关联。
+-- 发布稿中的关联词条候选如果尚未入库，先跳过，后续可在后台补建词条后再补关系。
 -- =========================================================
 CREATE TABLE IF NOT EXISTS ai_term_relations (
     id TEXT PRIMARY KEY,
@@ -325,26 +331,26 @@ CREATE INDEX IF NOT EXISTS ai_term_relations_related_idx
 ON ai_term_relations(related_term_id);
 
 -- =========================================================
--- 8. AI 词条全文搜索表
+-- 7. AI 词条全文搜索表
 -- D1 支持 FTS5。注意：中文搜索效果取决于分词能力，
 -- 第一版可先用于英文词、缩写、slug、短描述和正文关键词。
+-- term_id 使用 UNINDEXED 保存 ai_terms.id，方便搜索结果直接回查主表，
+-- 不依赖隐藏 rowid 作为应用层关联字段。
 -- =========================================================
 CREATE VIRTUAL TABLE IF NOT EXISTS ai_term_search
 USING fts5(
+    term_id UNINDEXED,
     term,
     term_zh,
     full_name,
     short_concept,
     short_desc,
     beginner_notes_json,
-    content_md,
-    aliases
+    content_md
 );
 
 -- =========================================================
--- 9. AI 词条搜索同步触发器
--- aliases 字段不会自动从 ai_term_aliases 聚合进来。
--- 第一版可以在应用层导入/更新词条后主动刷新 search row。
+-- 8. AI 词条搜索同步触发器
 -- 这里先同步主表，避免 SQL 触发器里做复杂聚合。
 -- =========================================================
 CREATE TRIGGER IF NOT EXISTS ai_terms_ai
@@ -352,25 +358,25 @@ AFTER INSERT ON ai_terms
 BEGIN
     INSERT INTO ai_term_search (
         rowid,
+        term_id,
         term,
         term_zh,
         full_name,
         short_concept,
         short_desc,
         beginner_notes_json,
-        content_md,
-        aliases
+        content_md
     )
     VALUES (
         new.rowid,
+        new.id,
         new.term,
         new.term_zh,
         new.full_name,
         new.short_concept,
         new.short_desc,
         new.beginner_notes_json,
-        new.content_md,
-        ''
+        new.content_md
     );
 END;
 
@@ -386,6 +392,7 @@ AFTER UPDATE ON ai_terms
 BEGIN
     UPDATE ai_term_search
     SET
+        term_id = new.id,
         term = new.term,
         term_zh = new.term_zh,
         full_name = new.full_name,
@@ -397,67 +404,3 @@ BEGIN
 END;
 
 -- =========================================================
--- 10. 可选初始化分类
--- 如果项目后续决定从后台维护分类，可以删除这段。
--- =========================================================
-INSERT OR IGNORE INTO ai_term_categories (
-    id,
-    locale,
-    translation_key,
-    name,
-    slug,
-    description,
-    icon,
-    sort_order,
-    created_at,
-    updated_at
-)
-VALUES
-(
-    'ai-term-cat-agent-zh',
-    'zh',
-    'agent',
-    'Agent',
-    'agent',
-    '围绕 AI Agent、工具调用、工作流和自主任务执行的词条。',
-    'bot',
-    10,
-    strftime('%s','now') * 1000,
-    strftime('%s','now') * 1000
-),
-(
-    'ai-term-cat-ai-coding-zh',
-    'zh',
-    'ai-coding',
-    'AI 编程',
-    'ai-coding',
-    '围绕 AI Coding、代码助手、开发者工具和工程工作流的词条。',
-    'code',
-    20,
-    strftime('%s','now') * 1000,
-    strftime('%s','now') * 1000
-),
-(
-    'ai-term-cat-ai-infra-zh',
-    'zh',
-    'ai-infra',
-    'AI Infra',
-    'ai-infra',
-    '围绕模型应用基础设施、协议、上下文、部署和数据连接的词条。',
-    'network',
-    30,
-    strftime('%s','now') * 1000,
-    strftime('%s','now') * 1000
-),
-(
-    'ai-term-cat-ai-product-zh',
-    'zh',
-    'ai-product',
-    'AI 产品',
-    'ai-product',
-    '围绕 AI 产品形态、用户体验和真实应用场景的词条。',
-    'sparkles',
-    40,
-    strftime('%s','now') * 1000,
-    strftime('%s','now') * 1000
-);

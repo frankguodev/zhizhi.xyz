@@ -34,14 +34,6 @@
 
 `./summery/aiterms/source/{{TERM}}_资料归档.md`
 
-数据库结构参考：
-
-`./docs/aiterms-workflow/sql/词条sql_rebuild.sql`
-
-发布稿提示词参考：
-
-`./docs/aiterms-workflow/02-AI词条可导入MD发布稿_prompt.md`
-
 -----------------------------------
 
 # 前置要求

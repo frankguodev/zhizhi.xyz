@@ -36,7 +36,7 @@ export default async function PublishedArticleEditorPage({ params }: { params: P
 
   return (
     <AdminPageShell
-      active="published"
+      active="articlePublished"
       eyebrow="已发布文章编辑"
       title={article.title}
       description="这里会直接更新公开文章。每次写入前都会弹窗确认，并在后台记录操作。"

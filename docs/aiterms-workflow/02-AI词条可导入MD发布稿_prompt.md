@@ -38,14 +38,6 @@
 
 `./summery/aiterms/source/{{TERM}}_资料归档.md`
 
-数据库结构参考：
-
-`./docs/aiterms-workflow/sql/词条sql_rebuild.sql`
-
-提示词文件名：
-
-`./docs/aiterms-workflow/02-AI词条可导入MD发布稿_prompt.md`
-
 -----------------------------------
 
 # 前置要求
@@ -100,7 +92,7 @@
 - 下面的 YAML frontmatter 是最终发布稿文件内容的一部分，必须输出。
 - 不要把本提示词里的横向分隔线 `-----------------------------------` 输出到最终 Markdown 文件。
 - 正文中不要保留 `初稿说明`、`初稿字段提炼参考`、字段候选、生产备注等内部内容。
-- 如果某个数组没有内容，使用空数组，例如 `aliases: []`，不要输出只包含空字符串的数组项。
+- 如果某个数组没有内容，使用空数组，不要输出只包含空字符串的数组项。
 
 ---
 term: "{{TERM}}"
@@ -144,9 +136,6 @@ tags:
   - name: ""
     slug: ""
 
-aliases:
-  - ""
-
 relations:
   - term: ""
     slug: ""
@@ -175,10 +164,6 @@ twitter:
   description: ""
   image: ""
 
-cover:
-  image: ""
-  image_alt: ""
-
 source:
   source_note: ""
   ai_assisted: true
@@ -202,6 +187,10 @@ structured_data:
 ...
 
 ## 给小白的理解
+
+...
+
+## 详细解释
 
 ...
 
@@ -260,7 +249,6 @@ structured_data:
 
 你不应该做：
 
-- 大幅重写人工二创稿
 - 增加未核实的新事实
 - 编造参考资料
 - 编造产品发布时间
@@ -340,12 +328,12 @@ SEO 友好 URL。
 
 - 50-120 字
 - 自然
-- 小白能看懂
-- 有 AI 世界语境
+- 通俗易懂，小白能看懂
 
 ## tagline
 
 一句有记忆点的短句。
+例如：MCP 被广泛称为 AI 领域的“USB 接口”或“AI 世界的 HTTP 协议”
 
 如果没有合适内容，可以留空。
 
@@ -478,23 +466,6 @@ content:
 - Context Engineering
 - GitHub
 
-## aliases
-
-输出常见别名。
-
-可以包括：
-
-- 英文全称
-- 中文译名
-- 常见缩写
-- 社区常用说法
-
-不要编造无人使用的别名。
-
-如果没有别名，可以输出空数组：
-
-`aliases: []`
-
 ## relations
 
 输出 3-8 个关联词条。
@@ -560,6 +531,7 @@ SEO 字段要自然，不要关键词堆砌。
 - `open_graph.type` 固定为 `"article"`。
 - `open_graph.image` 如果没有用户提供的图片路径，保持空字符串。
 - `open_graph.image_alt` 如果没有图片，保持空字符串。
+- 词条封面图就是分享图；`open_graph.image` 和 `twitter.image` 应保持一致。
 - 不要编造图片路径。
 
 ## twitter
@@ -577,14 +549,8 @@ SEO 字段要自然，不要关键词堆砌。
 - `twitter.card` 默认 `"summary_large_image"`。
 - `twitter.title` 可复用或略短于 `open_graph.title`。
 - `twitter.description` 可复用或略短于 `open_graph.description`。
-- `twitter.image` 如果没有用户提供的图片路径，保持空字符串。
+- `twitter.image` 应与 `open_graph.image` 保持一致；如果没有用户提供的图片路径，保持空字符串。
 - 不要编造图片路径。
-
-## cover
-
-如果没有用户提供的图片路径，保持空字符串。
-
-不要编造封面图。
 
 ## source
 
@@ -660,7 +626,7 @@ SEO 字段要自然，不要关键词堆砌。
 - seo.description 是否自然
 - open_graph 是否适合社交分享
 - twitter 是否适合 X 分享卡片
-- cover.image 是否没有编造
+- open_graph.image 与 twitter.image 是否一致，且没有编造
 - structured_data 是否和词条主体一致
 - 正文是否删除了内部生产备注
 - 参考资料链接是否来自资料归档或正文已有内容

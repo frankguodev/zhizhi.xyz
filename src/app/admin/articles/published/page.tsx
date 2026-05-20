@@ -50,7 +50,7 @@ export default async function PublishedArticlesPage() {
 
   return (
     <AdminPageShell
-      active="published"
+      active="articlePublished"
       eyebrow="发布管理"
       title="发布文章管理"
       description="这里管理已发布和已下架的文章。编辑、逻辑下架、重新上架和物理删除都会先弹窗确认，并写入后台操作记录。"

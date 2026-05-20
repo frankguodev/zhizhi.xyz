@@ -32,7 +32,7 @@ export default async function DraftEditorPage({ params }: { params: Promise<{ lo
 
   return (
     <AdminPageShell
-      active="drafts"
+      active="articleDrafts"
       eyebrow="草稿编辑"
       title={article.title}
       description={article.summary || "编辑 Markdown、刷新预览并发布文章。"}

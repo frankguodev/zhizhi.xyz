@@ -17,7 +17,7 @@ export default async function ImportArticlePage() {
   await requireAdminPage("/admin/articles/import");
   return (
     <AdminPageShell
-      active="import"
+      active="articleImport"
       eyebrow="导入工作台"
       title="Markdown 导入"
       description="把 Obsidian 里的 final.md 粘贴进来，系统会解析 Frontmatter、生成文章预览，并运行发布前质量检查。"
