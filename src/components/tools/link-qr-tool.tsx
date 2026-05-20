@@ -91,7 +91,7 @@ const errorCorrectionOptions: Array<{ label: string; value: ErrorCorrectionLevel
   { label: "H", value: "H" },
 ];
 
-const colorSwatches = ["#16251f", "#2f8f6b", "#4f7f6d", "#1f2937", "#ffffff", "#f7f4ec", "#f1f5f2", "#d9eadf"] as const;
+const colorSwatches = ["#171920", "#d9b861", "#c59b4a", "#2b2b2a", "#ffffff", "#f7f4ec", "#e6e0d3", "#8f8069"] as const;
 
 export function LinkQrTool({ locale }: { locale: Locale }) {
   const labels = copy[locale];
@@ -99,7 +99,7 @@ export function LinkQrTool({ locale }: { locale: Locale }) {
   const [size, setSize] = useState(1024);
   const [margin, setMargin] = useState(4);
   const [errorCorrection, setErrorCorrection] = useState<ErrorCorrectionLevel>("M");
-  const [darkColor, setDarkColor] = useState("#16251f");
+  const [darkColor, setDarkColor] = useState("#171920");
   const [lightColor, setLightColor] = useState("#ffffff");
   const [generatedQr, setGeneratedQr] = useState<GeneratedLinkQr | null>(null);
   const [busy, setBusy] = useState(false);
@@ -315,7 +315,7 @@ function ColorInput({ customLabel, label, onChange, value }: { customLabel: stri
   const pickerRef = useRef<HTMLDivElement | null>(null);
   const saturationRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
-  const validColor = normalizeHexColor(value) ?? "#16251f";
+  const validColor = normalizeHexColor(value) ?? "#171920";
   const hsv = hexToHsv(validColor);
   const hueColor = hsvToHex({ h: hsv.h, s: 100, v: 100 });
 
@@ -381,7 +381,7 @@ function ColorInput({ customLabel, label, onChange, value }: { customLabel: stri
             }}
           >
             <span
-              className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(15,23,42,0.45)]"
+              className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(20,17,10,0.46)]"
               style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }}
             />
           </div>
@@ -424,7 +424,7 @@ function ColorInput({ customLabel, label, onChange, value }: { customLabel: stri
               value={value}
               onChange={(event) => onChange(cleanHexInput(event.target.value))}
               onBlur={() => onChange(normalizeHexColor(value) ?? validColor)}
-              placeholder="#16251f"
+              placeholder="#171920"
               spellCheck={false}
             />
           </label>

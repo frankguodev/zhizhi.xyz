@@ -21,20 +21,20 @@ html[data-theme="light"] {
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --background: #0b1110;
-  --foreground: #eef6f1;
-  --muted: #9fb1aa;
-  --line: #23342f;
-  --surface: #101917;
-  --surface-raised: #15221f;
-  --paper: #121b18;
-  --accent: #73d9c4;
-  --accent-2: #f0a08a;
-  --accent-3: #9fb7ff;
-  --accent-ink: #071211;
-  --amber: #e7a457;
-  --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.34);
-  --shadow-quiet: 0 1px 0 rgba(238, 246, 241, 0.04), 0 18px 56px rgba(0, 0, 0, 0.28);
+  --background: #0f1115;
+  --foreground: #e6e0d3;
+  --muted: #a9a295;
+  --line: #2b2b2a;
+  --surface: #151821;
+  --surface-raised: #1b1f27;
+  --paper: #171920;
+  --accent: #d9b861;
+  --accent-2: #c59b4a;
+  --accent-3: #8f8069;
+  --accent-ink: #14110a;
+  --amber: #f4c84a;
+  --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --shadow-quiet: 0 1px 0 rgba(230, 224, 211, 0.035), 0 18px 56px rgba(0, 0, 0, 0.3);
 }
 
 @theme inline {
@@ -102,6 +102,22 @@ a {
     linear-gradient(90deg, color-mix(in srgb, var(--line) 46%, transparent) 1px, transparent 1px),
     linear-gradient(120deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 26rem);
   background-size: 44px 44px, 44px 44px, auto;
+}
+
+html[data-theme="dark"] body {
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--accent) 4%, transparent), transparent 32rem),
+    linear-gradient(245deg, color-mix(in srgb, var(--accent-2) 5%, transparent), transparent 36rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 16%, transparent), transparent 28rem),
+    var(--background);
+}
+
+html[data-theme="dark"] .site-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--line) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(120deg, color-mix(in srgb, var(--accent) 3%, transparent), transparent 28rem);
+  background-size: 48px 48px, 48px 48px, auto;
 }
 
 .glass-surface {

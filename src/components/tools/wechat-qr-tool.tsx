@@ -510,7 +510,7 @@ async function composeWechatQr({
     const radius = avatarShape === "circle" ? plateSize / 2 : Math.round(plateSize * 0.18);
 
     context.save();
-    context.shadowColor = "rgba(15, 23, 42, 0.12)";
+    context.shadowColor = "rgba(20, 17, 10, 0.14)";
     context.shadowBlur = Math.max(6, Math.round(outputSize * 0.012));
     context.shadowOffsetY = Math.max(1, Math.round(outputSize * 0.003));
     context.fillStyle = "#ffffff";

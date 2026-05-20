@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
             <span className="admin-muted-pill px-3 py-2 font-semibold text-accent">内容维护</span>
           </div>
         </div>
-        <div className="admin-surface bg-surface/95 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.12)]">
+        <div className="admin-surface bg-surface/95 p-5 shadow-[0_18px_60px_rgba(20,17,10,0.14)]">
           <div className="mb-5">
             <p className="text-sm font-semibold text-accent">Admin Console</p>
             <h2 className="mt-2 text-2xl font-semibold text-foreground">后台登录</h2>

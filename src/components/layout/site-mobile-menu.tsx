@@ -55,7 +55,7 @@ export function SiteMobileMenu({ menuLabel, navLabel, closeLabel, items }: SiteM
       />
       <div id={menuId} className="relative" role="dialog" aria-modal="true" aria-label={navLabel}>
         <div
-          className={`glass-surface w-full rounded-b-xl border-b border-line bg-background/95 p-3 shadow-[0_18px_60px_rgba(15,23,42,0.16)] transition duration-200 ease-out ${
+          className={`glass-surface w-full rounded-b-xl border-b border-line bg-background/95 p-3 shadow-[0_18px_60px_rgba(20,17,10,0.18)] transition duration-200 ease-out ${
             open ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
           }`}
         >

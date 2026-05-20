@@ -36,7 +36,7 @@ Markdown 预览,content,8`;
 
 export function getSampleInput(tab: ToolTab, locale: Locale) {
   return {
-    color: "#2f8f6b",
+    color: "#d9b861",
     csv: sampleCsv,
     data: sampleStructured,
     encoding: "https://zhizhi.xyz/articles?tag=AI 应用",

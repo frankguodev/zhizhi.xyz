@@ -293,7 +293,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   const [toolHistoryItems, setToolHistoryItems] = useState<ToolHistoryItem[]>([]);
   const [structuredResult, setStructuredResult] = useState<StructuredToolResult | null>(null);
   const [copiedTarget, setCopiedTarget] = useState<"input" | "output" | null>(null);
-  const [colorInput, setColorInput] = useState("#2f8f6b");
+  const [colorInput, setColorInput] = useState("#d9b861");
   const [colorOutput, setColorOutput] = useState("");
   const [csvDelimiter, setCsvDelimiter] = useState<CsvDelimiter>("auto");
   const [csvEmptyAsNull, setCsvEmptyAsNull] = useState(false);
@@ -1692,7 +1692,7 @@ function ToolHistoryPanel({
       />
       <aside
         ref={panelRef}
-        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[86vh] flex-col rounded-t-lg border border-line bg-paper p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-16px_48px_rgba(15,23,42,0.14)] transition-[opacity,transform] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:inset-x-auto md:bottom-4 md:right-4 md:top-20 md:w-[28rem] md:rounded-md md:pb-3 md:shadow-[var(--shadow-quiet)] motion-reduce:transition-none ${
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[86vh] flex-col rounded-t-lg border border-line bg-paper p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-16px_48px_rgba(20,17,10,0.16)] transition-[opacity,transform] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:inset-x-auto md:bottom-4 md:right-4 md:top-20 md:w-[28rem] md:rounded-md md:pb-3 md:shadow-[var(--shadow-quiet)] motion-reduce:transition-none ${
           open ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0 md:translate-x-10"
         }`}
         role="dialog"
@@ -1800,7 +1800,7 @@ function ToolHistoryPanel({
           }}
         >
           <div
-            className="w-full max-w-sm rounded-md border border-line bg-paper p-4 shadow-[0_22px_70px_rgba(15,23,42,0.18)]"
+            className="w-full max-w-sm rounded-md border border-line bg-paper p-4 shadow-[0_22px_70px_rgba(20,17,10,0.2)]"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="tools-history-confirm-title"
@@ -2720,7 +2720,7 @@ function ToolButton({
     <button
       className={`inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${
         variant === "primary"
-          ? "bg-accent text-white shadow-[var(--shadow-quiet)] hover:bg-[color-mix(in_srgb,var(--accent)_86%,var(--foreground))] disabled:hover:bg-accent"
+          ? "bg-accent text-accent-ink shadow-[var(--shadow-quiet)] hover:bg-[color-mix(in_srgb,var(--accent)_86%,var(--foreground))] disabled:hover:bg-accent"
           : "bg-accent/10 text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted))] hover:bg-accent/15 hover:text-accent disabled:hover:bg-accent/10 disabled:hover:text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted))]"
       }`}
       type="button"
@@ -3343,7 +3343,7 @@ function translateEnglishToolError(message: string, fallback: string) {
     return "数组值里有未闭合的引号字符串。";
   }
   if (/Unsupported color/i.test(message)) {
-    return "不支持的颜色格式。可输入 #2f8f6b、rgb(47,143,107) 或 hsl(157,50%,37%)。";
+    return "不支持的颜色格式。可输入 #d9b861、rgb(217,184,97) 或 hsl(43,62%,62%)。";
   }
   if (/URI malformed/i.test(message)) {
     return "URL 编码格式无效，请检查百分号转义。";
@@ -3684,7 +3684,7 @@ function parseColorValue(input: string) {
     return hslToRgb(Number(hsl[1]), Number(hsl[2]), Number(hsl[3]));
   }
 
-  throw new Error("Unsupported color. Try #2f8f6b, rgb(47,143,107), or hsl(157,50%,37%).");
+  throw new Error("Unsupported color. Try #d9b861, rgb(217,184,97), or hsl(43,62%,62%).");
 }
 
 function getColorFormatsFromInput(input: string) {

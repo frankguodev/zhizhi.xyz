@@ -54,7 +54,7 @@ export function AdminConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 px-4 backdrop-blur-sm" role="dialog" aria-modal="true">
       <button className="absolute inset-0 cursor-default" type="button" aria-label="关闭确认弹窗" onClick={busy ? undefined : onCancel} />
-      <div className="admin-surface relative w-full max-w-lg p-5 shadow-[0_18px_60px_rgba(15,23,42,0.18)]">
+      <div className="admin-surface relative w-full max-w-lg p-5 shadow-[0_18px_60px_rgba(20,17,10,0.2)]">
         <div className="flex items-start gap-4">
           <span
             className={cn(

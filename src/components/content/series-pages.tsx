@@ -102,7 +102,7 @@ function coverStyle(coverImage: string | null): CSSProperties | undefined {
   }
 
   return {
-    backgroundImage: `linear-gradient(135deg, rgba(8, 22, 18, 0.1), rgba(8, 22, 18, 0.42)), url(${JSON.stringify(normalized)})`,
+    backgroundImage: `linear-gradient(135deg, rgba(15, 17, 21, 0.14), rgba(20, 17, 10, 0.44)), url(${JSON.stringify(normalized)})`,
   };
 }
 
