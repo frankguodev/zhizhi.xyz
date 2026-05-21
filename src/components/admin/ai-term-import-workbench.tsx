@@ -252,15 +252,18 @@ export function AiTermImportWorkbench() {
           </button>
         </div>
 
-        <textarea
-          value={markdown}
-          onChange={(event) => {
-            setMarkdown(event.target.value);
-            setSaveState({ status: "idle", message: "" });
-          }}
-          spellCheck={false}
-          className="min-h-[640px] w-full resize-y border border-line bg-surface p-4 font-mono text-sm leading-6 text-foreground outline-none transition focus:border-accent"
-        />
+        <label className="block">
+          <span className="sr-only">AI 词条 Markdown 发布稿</span>
+          <textarea
+            value={markdown}
+            onChange={(event) => {
+              setMarkdown(event.target.value);
+              setSaveState({ status: "idle", message: "" });
+            }}
+            spellCheck={false}
+            className="min-h-[640px] w-full resize-y border border-line bg-surface p-4 font-mono text-sm leading-6 text-foreground outline-none transition focus:border-accent"
+          />
+        </label>
 
         <div className="flex flex-wrap items-center gap-3">
           <button

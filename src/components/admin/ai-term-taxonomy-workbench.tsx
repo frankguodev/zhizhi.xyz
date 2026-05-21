@@ -3,6 +3,7 @@
 import { Loader2, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
+import { AdminSelect } from "@/components/admin/admin-select";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 import type { AdminAiTermTaxonomyItem, AiTermLocale, AiTermTaxonomyKind } from "@/lib/ai-terms";
 
@@ -18,6 +19,18 @@ type SaveState = {
   status: "idle" | "saving" | "acting" | "error" | "saved";
   message: string;
 };
+
+const localeOptions = [
+  { value: "all", label: "全部语言" },
+  { value: "zh", label: "中文" },
+  { value: "en", label: "English" },
+];
+
+const kindOptions = [
+  { value: "all", label: "全部类型" },
+  { value: "category", label: "分类" },
+  { value: "tag", label: "标签" },
+];
 
 export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: TaxonomyItem[] }) {
   const [taxonomy, setTaxonomy] = useState(initialTaxonomy);
@@ -139,22 +152,30 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
       />
 
       <section className="grid gap-3 border border-line bg-surface p-4 md:grid-cols-[140px_140px_minmax(220px,1fr)]">
-        <select value={filters.locale} onChange={(event) => setFilters((value) => ({ ...value, locale: event.target.value as FilterState["locale"] }))} className="h-11 border border-line bg-background px-3 text-sm">
-          <option value="all">全部语言</option>
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-        </select>
-        <select value={filters.kind} onChange={(event) => setFilters((value) => ({ ...value, kind: event.target.value as FilterState["kind"] }))} className="h-11 border border-line bg-background px-3 text-sm">
-          <option value="all">全部类型</option>
-          <option value="category">分类</option>
-          <option value="tag">标签</option>
-        </select>
-        <input value={filters.q} onChange={(event) => setFilters((value) => ({ ...value, q: event.target.value }))} placeholder="搜索名称或 slug" className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent" />
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">语言</span>
+          <AdminSelect ariaLabel="筛选分类标签语言" value={filters.locale} onChange={(next) => setFilters((value) => ({ ...value, locale: next as FilterState["locale"] }))} options={localeOptions} />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">类型</span>
+          <AdminSelect ariaLabel="筛选分类标签类型" value={filters.kind} onChange={(next) => setFilters((value) => ({ ...value, kind: next as FilterState["kind"] }))} options={kindOptions} />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">搜索</span>
+          <input value={filters.q} onChange={(event) => setFilters((value) => ({ ...value, q: event.target.value }))} placeholder="搜索名称或 slug" className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent" />
+        </label>
       </section>
 
-      {saveState.message ? <p className={saveState.status === "error" ? "border border-red-200 bg-red-50 p-3 text-sm text-red-700" : "border border-line bg-surface p-3 text-sm text-muted"}>{saveState.message}</p> : null}
+      {saveState.message ? (
+        <p
+          role={saveState.status === "error" ? "alert" : "status"}
+          className={saveState.status === "error" ? "border border-red-200 bg-red-50 p-3 text-sm text-red-700" : "border border-line bg-surface p-3 text-sm text-muted"}
+        >
+          {saveState.message}
+        </p>
+      ) : null}
 
-      <section className="overflow-x-auto border border-line bg-surface">
+      <section className="hidden overflow-x-auto border border-line bg-surface xl:block">
         <table className="min-w-[1040px] w-full border-collapse text-left text-sm">
           <thead className="border-b border-line bg-background text-xs uppercase tracking-wide text-muted">
             <tr>
@@ -189,12 +210,12 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
                   </td>
                   <td className="px-4 py-4">{item.termCount}</td>
                   <td className="px-4 py-4">
-                    <select value={mergeTarget[item.id] ?? ""} onChange={(event) => setMergeTarget((value) => ({ ...value, [item.id]: event.target.value }))} className="h-9 w-full border border-line bg-background px-2 text-sm">
-                      <option value="">选择目标</option>
-                      {candidates.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
-                      ))}
-                    </select>
+                    <AdminSelect
+                      ariaLabel={`选择 ${item.name} 的合并目标`}
+                      value={mergeTarget[item.id] ?? ""}
+                      onChange={(next) => setMergeTarget((value) => ({ ...value, [item.id]: next }))}
+                      options={[{ value: "", label: "选择目标" }, ...candidates.map((candidate) => ({ value: candidate.id, label: candidate.name }))]}
+                    />
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex flex-col gap-2">
@@ -214,6 +235,71 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
             })}
           </tbody>
         </table>
+      </section>
+
+      <section className="grid gap-3 xl:hidden" aria-label="分类标签移动端列表">
+        {filtered.length > 0 ? (
+          filtered.map((item) => {
+            const draft = editing[item.id] ?? item;
+            const candidates = taxonomy.filter((candidate) => candidate.kind === item.kind && candidate.locale === item.locale && candidate.id !== item.id);
+
+            return (
+              <article key={item.id} className="admin-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-accent">{item.kind === "category" ? "分类" : "标签"}</p>
+                    <p className="mt-1 break-all text-xs text-muted">{item.locale}/{item.slug}</p>
+                  </div>
+                  <span className="shrink-0 border border-line bg-background px-2 py-1 text-xs font-semibold text-muted">关联 {item.termCount}</span>
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    名称
+                    <input value={draft.name} onChange={(event) => updateDraft(item.id, { name: event.target.value })} className="h-10 border border-line bg-background px-2 text-sm text-foreground" />
+                  </label>
+                  {item.kind === "category" ? (
+                    <>
+                      <label className="grid gap-1 text-xs font-semibold text-muted">
+                        描述
+                        <input value={draft.description ?? ""} onChange={(event) => updateDraft(item.id, { description: event.target.value })} placeholder="分类描述" className="h-10 border border-line bg-background px-2 text-sm text-foreground" />
+                      </label>
+                      <label className="grid gap-1 text-xs font-semibold text-muted">
+                        排序
+                        <input value={draft.sortOrder} onChange={(event) => updateDraft(item.id, { sortOrder: Number.parseInt(event.target.value, 10) || 0 })} className="h-10 border border-line bg-background px-2 text-sm text-foreground" inputMode="numeric" />
+                      </label>
+                    </>
+                  ) : (
+                    <p className="border border-line bg-background p-3 text-sm text-muted">标签暂无描述字段</p>
+                  )}
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    合并到
+                    <AdminSelect
+                      ariaLabel={`选择 ${item.name} 的合并目标`}
+                      value={mergeTarget[item.id] ?? ""}
+                      onChange={(next) => setMergeTarget((value) => ({ ...value, [item.id]: next }))}
+                      options={[{ value: "", label: "选择目标" }, ...candidates.map((candidate) => ({ value: candidate.id, label: candidate.name }))]}
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <button type="button" onClick={() => saveItem(item)} disabled={busy} className="admin-btn admin-btn-primary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold disabled:opacity-60">
+                    {saveState.status === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    保存
+                  </button>
+                  <button type="button" onClick={() => mergeItem(item)} disabled={busy || !mergeTarget[item.id]} className="admin-btn admin-btn-secondary h-10 px-3 text-sm font-semibold disabled:opacity-60">合并</button>
+                  <button type="button" onClick={() => setConfirmDelete(item)} disabled={busy || item.termCount > 0} className="admin-btn inline-flex h-10 items-center justify-center gap-2 bg-red-700 px-3 text-sm font-semibold text-white disabled:opacity-50">
+                    <Trash2 className="h-4 w-4" />
+                    删除
+                  </button>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className="admin-surface p-8 text-center text-muted">没有匹配的分类或标签。</div>
+        )}
       </section>
     </div>
   );

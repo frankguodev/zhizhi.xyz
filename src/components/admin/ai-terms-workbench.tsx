@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { Archive, CheckCircle2, Edit, ExternalLink, Loader2, RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { AdminCheckbox } from "@/components/admin/admin-checkbox";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
+import { AdminSelect } from "@/components/admin/admin-select";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 import type { AdminAiTermItem, AiTermStatus, AiTermVisibility } from "@/lib/ai-terms";
 
@@ -27,6 +29,11 @@ type PendingAction = {
   term: AdminAiTermItem;
 };
 
+type PendingBulkAction = {
+  action: BulkAction;
+  ids: string[];
+};
+
 const statusLabels: Record<AiTermStatus, string> = {
   draft: "草稿",
   published: "已发布",
@@ -38,6 +45,39 @@ const visibilityLabels: Record<AiTermVisibility, string> = {
   login: "登录可见",
   hidden: "隐藏",
 };
+
+const localeOptions = [
+  { value: "all", label: "全部语言" },
+  { value: "zh", label: "中文" },
+  { value: "en", label: "English" },
+];
+
+const statusOptions = [
+  { value: "all", label: "全部状态" },
+  { value: "draft", label: "草稿" },
+  { value: "published", label: "已发布" },
+  { value: "archived", label: "已归档" },
+];
+
+const visibilityOptions = [
+  { value: "all", label: "全部可见性" },
+  { value: "public", label: "公开" },
+  { value: "login", label: "登录可见" },
+  { value: "hidden", label: "隐藏" },
+];
+
+const rowStatusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
+const rowVisibilityOptions = Object.entries(visibilityLabels).map(([value, label]) => ({ value, label }));
+const bulkActionOptions: Array<{ value: BulkAction; label: string }> = [
+  { value: "markReviewed", label: "标记人审" },
+  { value: "unmarkReviewed", label: "取消人审" },
+  { value: "setTrending", label: "设为热门" },
+  { value: "unsetTrending", label: "取消热门" },
+  { value: "publish", label: "发布" },
+  { value: "archive", label: "归档" },
+  { value: "restore", label: "恢复" },
+  { value: "delete", label: "物理删除已归档" },
+];
 
 function dateText(value: Date | string | number | null | undefined) {
   if (!value) {
@@ -75,6 +115,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
   const [bulkAction, setBulkAction] = useState<BulkAction>("markReviewed");
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [pendingBulkAction, setPendingBulkAction] = useState<PendingBulkAction | null>(null);
   const busy = saveState.status === "loading" || saveState.status === "saving" || saveState.status === "acting";
   const filteredTerms = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
@@ -234,19 +275,19 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
     setSelectedIds(checked ? filteredTerms.map((term) => term.id) : []);
   }
 
-  async function runBulkAction() {
-    if (selectedIds.length === 0) {
+  async function runBulkAction(ids = selectedIds, action = bulkAction) {
+    if (ids.length === 0) {
       setSaveState({ status: "error", message: "请先选择要批量操作的 AI 词条。" });
       return;
     }
 
-    setSaveState({ status: "acting", message: `正在批量处理 ${selectedIds.length} 条 AI 词条...` });
+    setSaveState({ status: "acting", message: `正在批量处理 ${ids.length} 条 AI 词条...` });
 
     try {
       const response = await fetch("/api/admin/ai-terms/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedIds, action: bulkAction }),
+        body: JSON.stringify({ ids, action }),
       });
       const data: unknown = await response.json();
       if (handleAdminUnauthorized(response)) return;
@@ -261,6 +302,20 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
     }
   }
 
+  function requestBulkAction() {
+    if (selectedIds.length === 0) {
+      setSaveState({ status: "error", message: "请先选择要批量操作的 AI 词条。" });
+      return;
+    }
+
+    if (bulkAction === "publish" || bulkAction === "archive" || bulkAction === "restore" || bulkAction === "delete") {
+      setPendingBulkAction({ action: bulkAction, ids: selectedIds });
+      return;
+    }
+
+    void runBulkAction();
+  }
+
   const actionMeta = pendingAction
     ? {
         publish: { title: "发布 AI 词条", description: "发布前会执行后台质量检查，存在错误时会阻止发布。", label: "发布", tone: "primary" as const },
@@ -268,6 +323,18 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
         restore: { title: "恢复 AI 词条", description: "恢复后词条会重新变为已发布公开状态。", label: "恢复", tone: "primary" as const },
         delete: { title: "删除 AI 词条", description: "这会物理删除词条和关联关系，操作不可撤销。", label: "确认删除", tone: "danger" as const },
       }[pendingAction.action]
+    : null;
+  const bulkActionMeta = pendingBulkAction
+    ? {
+        publish: { title: "批量发布 AI 词条", description: "发布前会逐条执行后台质量检查，存在错误时会阻止对应词条发布。", label: "批量发布", tone: "primary" as const },
+        archive: { title: "批量归档 AI 词条", description: "归档后这些词条会被隐藏，不再进入公开内容范围。", label: "批量归档", tone: "danger" as const },
+        restore: { title: "批量恢复 AI 词条", description: "恢复后这些词条会重新变为已发布公开状态。", label: "批量恢复", tone: "primary" as const },
+        delete: { title: "批量物理删除 AI 词条", description: "这会物理删除已归档词条和关联关系，操作不可撤销。", label: "确认批量删除", tone: "danger" as const },
+        markReviewed: null,
+        unmarkReviewed: null,
+        setTrending: null,
+        unsetTrending: null,
+      }[pendingBulkAction.action]
     : null;
 
   return (
@@ -294,47 +361,55 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
           if (pending) void runRowAction(pending);
         }}
       />
+      <AdminConfirmDialog
+        open={Boolean(pendingBulkAction && bulkActionMeta)}
+        title={bulkActionMeta?.title ?? ""}
+        description={bulkActionMeta?.description ?? ""}
+        confirmLabel={bulkActionMeta?.label ?? "确认"}
+        tone={bulkActionMeta?.tone ?? "danger"}
+        busy={saveState.status === "acting"}
+        details={
+          pendingBulkAction ? (
+            <div className="grid gap-2 border border-line bg-background p-3 text-sm">
+              <div className="font-semibold text-foreground">已选择 {pendingBulkAction.ids.length} 条词条</div>
+              <div className="text-muted">批量操作会立即写入后台，请确认当前筛选和勾选范围。</div>
+            </div>
+          ) : null
+        }
+        onCancel={() => setPendingBulkAction(null)}
+        onConfirm={() => {
+          const pending = pendingBulkAction;
+          setPendingBulkAction(null);
+          if (pending) void runBulkAction(pending.ids, pending.action);
+        }}
+      />
       <section className="grid gap-3 border border-line bg-surface p-4 md:grid-cols-[minmax(220px,1fr)_140px_140px_140px_auto]">
-        <input
-          value={filters.q}
-          onChange={(event) => setFilters((value) => ({ ...value, q: event.target.value }))}
-          placeholder="搜索词条、slug、中文名或全称"
-          className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-        />
-        <select
-          value={filters.locale}
-          onChange={(event) => setFilters((value) => ({ ...value, locale: event.target.value as FilterState["locale"] }))}
-          className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-        >
-          <option value="all">全部语言</option>
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-        </select>
-        <select
-          value={filters.status}
-          onChange={(event) => setFilters((value) => ({ ...value, status: event.target.value as FilterState["status"] }))}
-          className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-        >
-          <option value="all">全部状态</option>
-          <option value="draft">草稿</option>
-          <option value="published">已发布</option>
-          <option value="archived">已归档</option>
-        </select>
-        <select
-          value={filters.visibility}
-          onChange={(event) => setFilters((value) => ({ ...value, visibility: event.target.value as FilterState["visibility"] }))}
-          className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-        >
-          <option value="all">全部可见性</option>
-          <option value="public">公开</option>
-          <option value="login">登录可见</option>
-          <option value="hidden">隐藏</option>
-        </select>
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">搜索</span>
+          <input
+            value={filters.q}
+            onChange={(event) => setFilters((value) => ({ ...value, q: event.target.value }))}
+            placeholder="搜索词条、slug、中文名或全称"
+            className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
+          />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">语言</span>
+          <AdminSelect ariaLabel="筛选 AI 词条语言" value={filters.locale} onChange={(next) => setFilters((value) => ({ ...value, locale: next as FilterState["locale"] }))} options={localeOptions} />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">状态</span>
+          <AdminSelect ariaLabel="筛选 AI 词条状态" value={filters.status} onChange={(next) => setFilters((value) => ({ ...value, status: next as FilterState["status"] }))} options={statusOptions} />
+        </label>
+        <label className="grid gap-1">
+          <span className="text-xs font-semibold text-muted">可见性</span>
+          <AdminSelect ariaLabel="筛选 AI 词条可见性" value={filters.visibility} onChange={(next) => setFilters((value) => ({ ...value, visibility: next as FilterState["visibility"] }))} options={visibilityOptions} />
+        </label>
         <button
           type="button"
           onClick={refresh}
           disabled={busy}
-          className="admin-btn admin-btn-secondary inline-flex h-11 items-center justify-center gap-2 px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          className="admin-btn admin-btn-secondary inline-flex h-11 items-center justify-center gap-2 self-end px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saveState.status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           刷新
@@ -344,17 +419,8 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
       <section className="flex flex-col gap-3 border border-line bg-surface p-4 md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-muted">已选择 {selectedIds.length} 条词条</div>
         <div className="flex flex-wrap gap-2">
-          <select value={bulkAction} onChange={(event) => setBulkAction(event.target.value as BulkAction)} className="h-10 border border-line bg-background px-3 text-sm">
-            <option value="markReviewed">标记人审</option>
-            <option value="unmarkReviewed">取消人审</option>
-            <option value="setTrending">设为热门</option>
-            <option value="unsetTrending">取消热门</option>
-            <option value="publish">发布</option>
-            <option value="archive">归档</option>
-            <option value="restore">恢复</option>
-            <option value="delete">物理删除已归档</option>
-          </select>
-          <button type="button" onClick={runBulkAction} disabled={busy || selectedIds.length === 0} className="admin-btn admin-btn-primary h-10 px-4 text-sm font-semibold disabled:opacity-60">
+          <AdminSelect ariaLabel="批量操作" className="min-w-44" value={bulkAction} onChange={(next) => setBulkAction(next as BulkAction)} options={bulkActionOptions} />
+          <button type="button" onClick={requestBulkAction} disabled={busy || selectedIds.length === 0} className="admin-btn admin-btn-primary h-10 px-4 text-sm font-semibold disabled:opacity-60">
             批量执行
           </button>
         </div>
@@ -362,6 +428,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
 
       {saveState.message ? (
         <p
+          role={saveState.status === "error" ? "alert" : "status"}
           className={`whitespace-pre-line border px-4 py-3 text-sm ${
             saveState.status === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-line bg-surface text-muted"
           }`}
@@ -370,13 +437,12 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
         </p>
       ) : null}
 
-      <section className="overflow-x-auto border border-line bg-surface">
+      <section className="hidden overflow-x-auto border border-line bg-surface xl:block">
         <table className="min-w-[1120px] w-full border-collapse text-left text-sm">
           <thead className="border-b border-line bg-background text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">
-                <input
-                  type="checkbox"
+                <AdminCheckbox
                   checked={filteredTerms.length > 0 && filteredTerms.every((term) => selectedIds.includes(term.id))}
                   onChange={(event) => toggleAllVisible(event.target.checked)}
                   aria-label="选择当前列表全部词条"
@@ -401,8 +467,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                 return (
                   <tr key={term.id} className="border-b border-line align-top last:border-b-0">
                     <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
+                      <AdminCheckbox
                         checked={selectedIds.includes(term.id)}
                         onChange={(event) => toggleSelected(term.id, event.target.checked)}
                         aria-label={`选择 ${term.term}`}
@@ -420,30 +485,20 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <select
+                      <AdminSelect
+                        ariaLabel={`设置 ${term.term} 状态`}
                         value={draft.status}
-                        onChange={(event) => updateDraft(term.id, { status: event.target.value as AiTermStatus })}
-                        className="h-9 border border-line bg-background px-2 text-sm"
-                      >
-                        {Object.entries(statusLabels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(next) => updateDraft(term.id, { status: next as AiTermStatus })}
+                        options={rowStatusOptions}
+                      />
                     </td>
                     <td className="px-4 py-4">
-                      <select
+                      <AdminSelect
+                        ariaLabel={`设置 ${term.term} 可见性`}
                         value={draft.visibility}
-                        onChange={(event) => updateDraft(term.id, { visibility: event.target.value as AiTermVisibility })}
-                        className="h-9 border border-line bg-background px-2 text-sm"
-                      >
-                        {Object.entries(visibilityLabels).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(next) => updateDraft(term.id, { visibility: next as AiTermVisibility })}
+                        options={rowVisibilityOptions}
+                      />
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
@@ -477,16 +532,14 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                     </td>
                     <td className="px-4 py-4">
                       <label className="flex items-center gap-2 text-sm text-muted">
-                        <input
-                          type="checkbox"
+                        <AdminCheckbox
                           checked={draft.trending}
                           onChange={(event) => updateDraft(term.id, { trending: event.target.checked })}
                         />
                         热门
                       </label>
                       <label className="mt-2 flex items-center gap-2 text-sm text-muted">
-                        <input
-                          type="checkbox"
+                        <AdminCheckbox
                           checked={draft.humanReviewed}
                           onChange={(event) => updateDraft(term.id, { humanReviewed: event.target.checked })}
                         />
@@ -570,6 +623,170 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
             )}
           </tbody>
         </table>
+      </section>
+
+      <section className="grid gap-3 xl:hidden" aria-label="AI 词条移动端列表">
+        {filteredTerms.length > 0 ? (
+          filteredTerms.map((term) => {
+            const draft = editing[term.id] ?? term;
+            const dirty = Boolean(editing[term.id]);
+
+            return (
+              <article key={term.id} className="admin-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-muted">
+                    <AdminCheckbox
+                      checked={selectedIds.includes(term.id)}
+                      onChange={(event) => toggleSelected(term.id, event.target.checked)}
+                      aria-label={`选择 ${term.term}`}
+                    />
+                    选择
+                  </label>
+                  <span className="border border-line bg-background px-2 py-1 text-xs font-semibold text-muted">{statusLabels[term.status]}</span>
+                </div>
+
+                <div className="mt-3">
+                  <h2 className="break-words text-lg font-semibold text-foreground [overflow-wrap:anywhere]">{term.term}</h2>
+                  <p className="mt-1 break-words text-xs text-muted [overflow-wrap:anywhere]">{term.termZh || term.fullName || term.slug}</p>
+                  <p className="mt-2 text-xs text-muted">更新于 {dateText(term.updatedAt)}</p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {term.categories.map((category) => (
+                    <span key={category.slug} className="border border-line bg-background px-2 py-0.5 text-xs text-muted">
+                      {category.name}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    状态
+                    <AdminSelect
+                      ariaLabel={`设置 ${term.term} 状态`}
+                      value={draft.status}
+                      onChange={(next) => updateDraft(term.id, { status: next as AiTermStatus })}
+                      options={rowStatusOptions}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    可见性
+                    <AdminSelect
+                      ariaLabel={`设置 ${term.term} 可见性`}
+                      value={draft.visibility}
+                      onChange={(next) => updateDraft(term.id, { visibility: next as AiTermVisibility })}
+                      options={rowVisibilityOptions}
+                    />
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="grid gap-1 text-xs font-semibold text-muted">
+                      热度
+                      <input
+                        value={draft.heatScore}
+                        onChange={(event) => updateDraft(term.id, { heatScore: numberValue(event.target.value) })}
+                        className="h-10 min-w-0 border border-line bg-background px-2 text-sm text-foreground"
+                        inputMode="numeric"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-semibold text-muted">
+                      质量
+                      <input
+                        value={draft.qualityScore}
+                        onChange={(event) => updateDraft(term.id, { qualityScore: numberValue(event.target.value) })}
+                        className="h-10 min-w-0 border border-line bg-background px-2 text-sm text-foreground"
+                        inputMode="numeric"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-semibold text-muted">
+                      排序
+                      <input
+                        value={draft.sortOrder}
+                        onChange={(event) => updateDraft(term.id, { sortOrder: numberValue(event.target.value) })}
+                        className="h-10 min-w-0 border border-line bg-background px-2 text-sm text-foreground"
+                        inputMode="numeric"
+                      />
+                    </label>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-sm text-muted">
+                    <label className="flex items-center gap-2">
+                      <AdminCheckbox checked={draft.trending} onChange={(event) => updateDraft(term.id, { trending: event.target.checked })} />
+                      热门
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <AdminCheckbox checked={draft.humanReviewed} onChange={(event) => updateDraft(term.id, { humanReviewed: event.target.checked })} />
+                      人审
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Link href={editPath(term)} className="admin-btn admin-btn-secondary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold">
+                    <Edit className="h-4 w-4" />
+                    编辑
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => saveTerm(term.id)}
+                    disabled={!dirty || saveState.status === "saving"}
+                    className="admin-btn admin-btn-primary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {saveState.status === "saving" && dirty ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    保存
+                  </button>
+                  {term.status === "archived" ? (
+                    <button
+                      type="button"
+                      onClick={() => setPendingAction({ action: "restore", term })}
+                      disabled={busy}
+                      className="admin-btn admin-btn-secondary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold disabled:opacity-60"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      恢复
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPendingAction({ action: "publish", term })}
+                        disabled={busy}
+                        className="admin-btn admin-btn-secondary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold disabled:opacity-60"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        发布
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingAction({ action: "archive", term })}
+                        disabled={busy}
+                        className="admin-btn admin-btn-secondary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold disabled:opacity-60"
+                      >
+                        <Archive className="h-4 w-4" />
+                        归档
+                      </button>
+                    </>
+                  )}
+                  <Link href={publicPath(term)} className="admin-btn admin-btn-secondary inline-flex h-10 items-center justify-center gap-2 px-3 text-sm font-semibold">
+                    <ExternalLink className="h-4 w-4" />
+                    前台
+                  </Link>
+                  {term.status === "archived" ? (
+                    <button
+                      type="button"
+                      onClick={() => setPendingAction({ action: "delete", term })}
+                      disabled={busy}
+                      className="admin-btn inline-flex h-10 items-center justify-center gap-2 bg-red-700 px-3 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      物理删除
+                    </button>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className="admin-surface p-8 text-center text-muted">{emptyMessage}</div>
+        )}
       </section>
     </div>
   );

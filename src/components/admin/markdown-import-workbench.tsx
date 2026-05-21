@@ -434,7 +434,7 @@ export function MarkdownImportWorkbench() {
               </div>
             </div>
           ) : null}
-          <div className="admin-card-flat sticky top-20 z-20 mt-4 space-y-3 bg-surface/95 p-3 backdrop-blur">
+          <div className="admin-card-flat sticky bottom-3 top-auto z-20 mt-4 space-y-3 bg-surface/95 p-3 backdrop-blur md:bottom-auto md:top-20">
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
@@ -468,17 +468,20 @@ export function MarkdownImportWorkbench() {
               <span>{lastSavedAt ? `上次保存：${lastSavedAt}` : dirty ? "尚未保存到数据库" : "当前为示例稿"}</span>
             </div>
           </div>
-          <textarea
-            ref={textareaRef}
-            className="mt-4 min-h-[560px] w-full resize-y border border-line bg-background p-4 font-mono text-sm leading-6 outline-none focus:border-accent"
-            value={markdown}
-            onChange={(event) => {
-              setMarkdown(event.target.value);
-              setDirty(true);
-              setSavedDraft(null);
-            }}
-            spellCheck={false}
-          />
+          <label className="mt-4 block">
+            <span className="sr-only">文章 Markdown 内容</span>
+            <textarea
+              ref={textareaRef}
+              className="min-h-[560px] w-full resize-y border border-line bg-background p-4 font-mono text-sm leading-6 outline-none focus:border-accent"
+              value={markdown}
+              onChange={(event) => {
+                setMarkdown(event.target.value);
+                setDirty(true);
+                setSavedDraft(null);
+              }}
+              spellCheck={false}
+            />
+          </label>
           {preview && !previewFresh ? (
             <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900" role="status">
               Markdown 已修改，右侧预览和质量报告可能不是最新结果。请重新解析并检查。

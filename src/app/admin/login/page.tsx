@@ -14,7 +14,7 @@ export const metadata = {
 export default function AdminLoginPage() {
   return (
     <main className="admin-page site-grid min-h-screen bg-background">
-      <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1fr_26rem]">
+      <section className="mx-auto grid min-h-screen max-w-5xl items-center gap-8 px-6 py-12 lg:grid-cols-[minmax(0,1fr)_26rem]">
         <div className="max-w-2xl">
           <div className="flex items-center gap-3">
             <SiteLogoMark className="h-11 w-11" />
@@ -23,11 +23,11 @@ export default function AdminLoginPage() {
               <p className="text-sm text-muted">知之后台管理</p>
             </div>
           </div>
-          <h1 className="mt-8 text-4xl font-semibold text-foreground sm:text-5xl">回到内容中枢</h1>
+          <h1 className="mt-8 text-3xl font-semibold text-foreground sm:text-4xl">知之后台管理</h1>
           <p className="mt-5 max-w-xl leading-7 text-muted">
-            后台登录沿用网站的知识脉络视觉系统，但使用独立管理员会话。生产环境建议在 `/admin/*` 前再叠加 Cloudflare Access。
+            使用管理员账号进入内容管理后台。生产环境建议在 `/admin/*` 前叠加 Cloudflare Access。
           </p>
-          <div className="vein-map glass-surface tech-border mt-8 grid gap-3 rounded-md p-4 text-sm text-muted sm:grid-cols-3">
+          <div className="admin-surface mt-8 grid gap-3 p-4 text-sm text-muted sm:grid-cols-3">
             <span className="admin-muted-pill px-3 py-2 font-semibold text-accent">Markdown 导入</span>
             <span className="admin-muted-pill px-3 py-2 font-semibold text-accent">发布审核</span>
             <span className="admin-muted-pill px-3 py-2 font-semibold text-accent">内容维护</span>

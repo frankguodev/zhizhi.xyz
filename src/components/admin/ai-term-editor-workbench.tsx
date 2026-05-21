@@ -293,7 +293,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
               </span>
             </div>
 
-            <div className="sticky top-0 z-20 mt-4 flex flex-wrap gap-3 bg-surface/95 p-3 backdrop-blur">
+            <div className="sticky bottom-3 top-auto z-20 mt-4 grid grid-cols-2 gap-3 border border-line bg-surface/95 p-3 backdrop-blur sm:flex sm:flex-wrap md:bottom-auto md:top-3">
               <button type="button" onClick={refreshPreview} disabled={busy} className="admin-btn admin-btn-secondary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
                 {saveState.status === "checking" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
                 检查
@@ -302,7 +302,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
                 {saveState.status === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 保存
               </button>
-              <button type="button" onClick={() => requestAction("publish")} disabled={busy} className="admin-btn inline-flex h-11 items-center gap-2 bg-foreground px-4 font-semibold text-background disabled:opacity-60">
+              <button type="button" onClick={() => requestAction("publish")} disabled={busy} className="admin-btn admin-btn-primary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
                 <CheckCircle2 className="h-4 w-4" />
                 发布
               </button>
@@ -327,7 +327,10 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
             />
 
             {saveState.message ? (
-              <p className={saveState.status === "error" ? "mt-3 whitespace-pre-line text-sm font-medium text-red-700" : "mt-3 text-sm font-medium text-accent"}>
+              <p
+                className={saveState.status === "error" ? "mt-3 whitespace-pre-line text-sm font-medium text-red-700" : "mt-3 text-sm font-medium text-accent"}
+                role={saveState.status === "error" ? "alert" : "status"}
+              >
                 {saveState.message}
               </p>
             ) : null}
@@ -352,7 +355,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
 
         <section className="space-y-6">
           <div className="border border-line bg-surface p-3">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="AI 词条预览面板">
               <TabButton active={previewTab === "info"} label="词条信息" onClick={() => setPreviewTab("info")} />
               <TabButton active={previewTab === "quality"} label={`质量 ${data.quality.issues.length}`} onClick={() => setPreviewTab("quality")} />
               <TabButton active={previewTab === "preview"} label="解析预览" onClick={() => setPreviewTab("preview")} />
@@ -370,7 +373,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
 
 function EditorModeButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={active ? "admin-btn h-9 bg-accent px-3 text-sm font-semibold text-accent-ink" : "admin-btn h-9 px-3 text-sm font-semibold text-muted"}>
+    <button type="button" aria-pressed={active} onClick={onClick} className={active ? "admin-btn h-9 bg-accent px-3 text-sm font-semibold text-accent-ink" : "admin-btn h-9 px-3 text-sm font-semibold text-muted"}>
       {label}
     </button>
   );
@@ -378,7 +381,13 @@ function EditorModeButton({ active, label, onClick }: { active: boolean; label: 
 
 function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={active ? "admin-btn h-10 bg-accent px-3 text-sm font-semibold text-accent-ink" : "admin-btn h-10 px-3 text-sm font-semibold text-muted"}>
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={active ? "admin-btn h-10 bg-accent px-3 text-sm font-semibold text-accent-ink" : "admin-btn h-10 px-3 text-sm font-semibold text-muted"}
+    >
       {label}
     </button>
   );
@@ -466,7 +475,7 @@ function PreviewPanel({ aiTerm }: { aiTerm: AdminAiTermDetail }) {
       <p className="text-sm font-semibold text-accent">解析预览</p>
       <h2 className="mt-4 text-3xl font-semibold text-foreground">{aiTerm.term}</h2>
       <p className="mt-3 text-lg font-semibold text-foreground">{aiTerm.shortConcept}</p>
-      <p className="mt-3 leading-7 text-muted">{aiTerm.shortDesc}</p>
+      <p className="mt-3 break-words leading-7 text-muted [overflow-wrap:anywhere]">{aiTerm.shortDesc}</p>
       <div className="mt-5 flex flex-wrap gap-2">
         {aiTerm.categories.map((category) => (
           <span key={category.slug} className="border border-line bg-background px-2 py-1 text-xs text-muted">

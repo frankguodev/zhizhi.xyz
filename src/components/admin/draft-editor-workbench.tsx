@@ -576,7 +576,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
               当前 Markdown 没有检测到 Frontmatter。你可以在这里写入字段，保存时会自动补上 `---` 分隔符。
             </p>
           ) : null}
-          <div className="admin-card-flat sticky top-0 z-20 mt-4 flex flex-wrap gap-3 bg-surface/95 p-3 backdrop-blur">
+          <div className="admin-card-flat sticky bottom-3 top-auto z-20 mt-4 grid grid-cols-2 gap-3 bg-surface/95 p-3 backdrop-blur sm:flex sm:flex-wrap md:bottom-auto md:top-3">
               {isPublishedMode ? (
                 <>
                   <button
@@ -642,7 +642,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
               </button>
               {!isPublishedMode ? <button
                 type="button"
-                className="admin-btn inline-flex h-11 items-center justify-center gap-2 bg-foreground px-5 font-semibold text-background disabled:opacity-60"
+                className="admin-btn admin-btn-primary inline-flex h-11 items-center justify-center gap-2 px-5 font-semibold disabled:opacity-60"
                 onClick={requestPublishDraft}
                 disabled={busy}
               >
@@ -688,7 +688,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
 
       <section className="space-y-6">
         <div className="admin-surface p-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="文章编辑预览面板">
             <WorkbenchTabButton active={previewTab === "info"} label={infoTabLabel} onClick={() => setPreviewTab("info")} />
             <WorkbenchTabButton
               active={previewTab === "quality"}
@@ -783,6 +783,7 @@ function DraftStatusBar({
 function EditorModeButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
+      aria-pressed={active}
       className={
         active
           ? "admin-btn h-9 bg-accent px-3 text-sm font-semibold text-accent-ink"
@@ -799,6 +800,8 @@ function EditorModeButton({ active, label, onClick }: { active: boolean; label: 
 function WorkbenchTabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
+      role="tab"
+      aria-selected={active}
       className={active ? "admin-btn h-10 bg-accent px-3 text-sm font-semibold text-accent-ink" : "admin-btn h-10 px-3 text-sm font-semibold text-muted"}
       type="button"
       onClick={onClick}

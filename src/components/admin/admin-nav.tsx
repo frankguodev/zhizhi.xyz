@@ -153,11 +153,11 @@ export function AdminNav({ active }: AdminNavProps) {
         </div>
         <AdminLogoutButton />
       </div>
-      <nav className="flex flex-wrap items-start gap-4" aria-label="后台导航">
+      <nav className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:items-start sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0" aria-label="后台导航">
         {adminNavGroups.map((group) => (
-          <section key={group.label} className="min-w-0 space-y-2">
+          <section key={group.label} className="min-w-[max-content] snap-start space-y-2 sm:min-w-0">
             <h2 className="text-xs font-semibold text-muted">{group.label}</h2>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 sm:flex-wrap">
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.key === active;

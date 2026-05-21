@@ -174,12 +174,15 @@ export function AnonymousFeedbackWorkbench({ initialFeedback }: { initialFeedbac
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-          <input
-            className="h-11 rounded-md border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索反馈内容、联系方式、文章标题或 URL"
-          />
+          <label className="grid gap-1">
+            <span className="text-xs font-semibold text-muted">搜索</span>
+            <input
+              className="h-11 rounded-md border border-line bg-background px-3 text-sm outline-none focus:border-accent"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索反馈内容、联系方式、文章标题或 URL"
+            />
+          </label>
           <AdminSelect ariaLabel="筛选反馈状态" value={statusFilter} onChange={setStatusFilter} options={[...statusOptions]} />
           <AdminSelect ariaLabel="筛选反馈语言" value={localeFilter} onChange={setLocaleFilter} options={[...localeOptions]} />
         </div>
