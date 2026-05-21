@@ -18,6 +18,7 @@ export async function SiteHeader({ locale = "zh", currentPath = "/" }: SiteHeade
     { href: localePath(locale, "/articles"), label: t(locale, "nav.articles") },
     { href: localePath(locale, "/series"), label: t(locale, "nav.series") },
     { href: localePath(locale, "/tools"), label: t(locale, "nav.tools") },
+    { href: localePath(locale, "/ai-terms"), label: t(locale, "nav.aiTerms") },
     { href: localePath(locale, "/about"), label: t(locale, "nav.about") },
   ];
   const normalizedPath = normalizePath(currentPath);
