@@ -723,7 +723,7 @@ export async function getAdminAiTermById(id: string) {
 export async function listAiTermCategories(locale: AiTermLocale = "zh") {
   try {
     const db = await getDb();
-    return db
+    return await db
       .select({
         id: aiTermCategories.id,
         name: aiTermCategories.name,

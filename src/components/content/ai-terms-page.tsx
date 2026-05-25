@@ -165,7 +165,16 @@ const copy = {
     },
     viewAll: "查看全部",
     heat(value: number) {
-      return `${Math.max(0, value).toLocaleString("zh-CN")} 热度`;
+      return `热度 ${Math.max(0, value).toLocaleString("zh-CN")} / 100`;
+    },
+    difficulty(value: string) {
+      return (
+        {
+          beginner: "入门",
+          intermediate: "进阶",
+          advanced: "高阶",
+        }[value] ?? value
+      );
     },
     updated(value: Date | string | number) {
       return `更新 ${formatRelativeDate(value, "zh")}`;
@@ -198,7 +207,16 @@ const copy = {
     },
     viewAll: "View all",
     heat(value: number) {
-      return `${Math.max(0, value).toLocaleString("en-US")} heat`;
+      return `${Math.max(0, value).toLocaleString("en-US")} / 100 heat`;
+    },
+    difficulty(value: string) {
+      return (
+        {
+          beginner: "Beginner",
+          intermediate: "Intermediate",
+          advanced: "Advanced",
+        }[value] ?? value
+      );
     },
     updated(value: Date | string | number) {
       return `Updated ${formatRelativeDate(value, "en")}`;
@@ -213,6 +231,7 @@ const copy = {
     allTerms: string;
     currentPath: string;
     description: string;
+    difficulty: (value: string) => string;
     eyebrow: string;
     heat: (value: number) => string;
     noResults: string;
@@ -394,7 +413,7 @@ function TermCard({ term, locale }: { locale: Locale; term: DisplayTerm }) {
           </h3>
           <p className="mt-2 text-sm font-semibold text-muted">{term.fullName || term.shortConcept}</p>
         </div>
-        <span className="shrink-0 rounded-md border border-accent/24 bg-accent/8 px-2 py-1 text-xs font-semibold text-accent">{term.difficulty}</span>
+        <span className="shrink-0 rounded-md border border-accent/24 bg-accent/8 px-2 py-1 text-xs font-semibold text-accent">{copy[locale].difficulty(term.difficulty)}</span>
       </div>
       <p className="mt-4 line-clamp-3 min-h-20 text-sm leading-7 text-muted">{term.shortDesc}</p>
       <div className="mt-5 flex flex-wrap gap-2">

@@ -2,7 +2,7 @@
 
 import { AlertTriangle, BookOpenText, Brain, ChevronDown, ChevronRight, Gauge, Layers3, Lightbulb, UserRound, X, ZoomIn, ZoomOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { Locale } from "@/lib/site";
 import type { ArticleContentBlock, LayeredBlockType, ReadingMode } from "./types";
@@ -91,16 +91,18 @@ const codeCopyLabels: Record<Locale, { copy: string; copied: string; failed: str
   },
 };
 
-const imagePreviewLabels: Record<Locale, { close: string; dialog: string; zoomIn: string; zoomOut: string }> = {
+const imagePreviewLabels: Record<Locale, { close: string; dialog: string; open: string; zoomIn: string; zoomOut: string }> = {
   zh: {
     close: "关闭图片预览",
     dialog: "图片预览",
+    open: "打开图片预览",
     zoomIn: "放大图片",
     zoomOut: "还原图片",
   },
   en: {
     close: "Close image preview",
     dialog: "Image preview",
+    open: "Open image preview",
     zoomIn: "Zoom image",
     zoomOut: "Reset image zoom",
   },
@@ -140,7 +142,7 @@ function LayerBlock({
       <button
         type="button"
         className={cn(
-          "flex w-full cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-2 text-left transition focus-visible:outline-none",
+          "flex w-full cursor-pointer items-center justify-between gap-4 rounded-md px-2 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
           meta.triggerTone,
         )}
         onClick={() => setOpen((value) => !value)}
@@ -179,6 +181,9 @@ export function ArticleReader({
   const [mode, setMode] = useState<ReadingMode>(initialMode);
   const [previewImage, setPreviewImage] = useState<{ alt: string; src: string } | null>(null);
   const [previewZoomed, setPreviewZoomed] = useState(false);
+  const imageTriggerRef = useRef<HTMLImageElement | null>(null);
+  const previewCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previewZoomButtonRef = useRef<HTMLButtonElement | null>(null);
   const storageKey = `${storageKeyPrefix}.${locale}`;
 
   useEffect(() => {
@@ -264,22 +269,85 @@ export function ArticleReader({
   }, [defaultMode, storageKey, supportsReadingMode]);
 
   useEffect(() => {
+    const root = document.querySelector("[data-article-reader]");
+
+    if (!root) {
+      return;
+    }
+
+    const readerRoot = root;
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+
+    function syncImagePreviewSemantics() {
+      const images = Array.from(readerRoot.querySelectorAll(".article-prose img"));
+      const canPreview = mediaQuery.matches;
+
+      for (const image of images) {
+        if (!(image instanceof HTMLImageElement)) {
+          continue;
+        }
+
+        if (!canPreview) {
+          if (image.dataset.imagePreviewTabindexManaged === "true") {
+            image.removeAttribute("tabindex");
+            delete image.dataset.imagePreviewTabindexManaged;
+          }
+          if (image.dataset.imagePreviewRoleManaged === "true") {
+            image.removeAttribute("role");
+            delete image.dataset.imagePreviewRoleManaged;
+          }
+          if (image.dataset.imagePreviewLabelManaged === "true") {
+            image.removeAttribute("aria-label");
+            delete image.dataset.imagePreviewLabelManaged;
+          }
+          continue;
+        }
+
+        if (!image.hasAttribute("tabindex")) {
+          image.tabIndex = 0;
+          image.dataset.imagePreviewTabindexManaged = "true";
+        }
+        if (!image.hasAttribute("role")) {
+          image.setAttribute("role", "button");
+          image.dataset.imagePreviewRoleManaged = "true";
+        }
+        if (!image.hasAttribute("aria-label")) {
+          const label = image.alt ? `${imagePreviewLabels[locale].open}: ${image.alt}` : imagePreviewLabels[locale].open;
+          image.setAttribute("aria-label", label);
+          image.dataset.imagePreviewLabelManaged = "true";
+        }
+      }
+    }
+
+    syncImagePreviewSemantics();
+    mediaQuery.addEventListener("change", syncImagePreviewSemantics);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncImagePreviewSemantics);
+    };
+  }, [blocks, locale, mode]);
+
+  useEffect(() => {
     if (!previewImage) {
       return;
     }
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => {
+      previewCloseButtonRef.current?.focus();
+    });
 
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setPreviewImage(null);
+        closeImagePreview();
       }
     }
 
     document.addEventListener("keydown", closeOnEscape);
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
@@ -293,6 +361,50 @@ export function ArticleReader({
   function closeImagePreview() {
     setPreviewImage(null);
     setPreviewZoomed(false);
+    window.requestAnimationFrame(() => {
+      imageTriggerRef.current?.focus();
+      imageTriggerRef.current = null;
+    });
+  }
+
+  function keepPreviewFocus(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const focusableControls = [previewCloseButtonRef.current, previewZoomButtonRef.current].filter((control): control is HTMLButtonElement => Boolean(control));
+
+    if (focusableControls.length === 0) {
+      return;
+    }
+
+    const currentIndex = focusableControls.indexOf(document.activeElement as HTMLButtonElement);
+
+    if (event.shiftKey) {
+      if (currentIndex <= 0) {
+        event.preventDefault();
+        focusableControls[focusableControls.length - 1]?.focus();
+      }
+      return;
+    }
+
+    if (currentIndex === focusableControls.length - 1) {
+      event.preventDefault();
+      focusableControls[0]?.focus();
+    }
+  }
+
+  function openImagePreviewForImage(target: HTMLImageElement) {
+    if (!target.closest(".article-prose") || !window.matchMedia("(max-width: 1023px)").matches) {
+      return;
+    }
+
+    setPreviewZoomed(false);
+    imageTriggerRef.current = target;
+    setPreviewImage({
+      alt: target.alt,
+      src: target.currentSrc || target.src,
+    });
   }
 
   function openImagePreview(event: MouseEvent<HTMLDivElement>) {
@@ -302,20 +414,23 @@ export function ArticleReader({
       return;
     }
 
-    if (!target.closest(".article-prose") || !window.matchMedia("(max-width: 1023px)").matches) {
+    event.preventDefault();
+    openImagePreviewForImage(target);
+  }
+
+  function openImagePreviewFromKeyboard(event: ReactKeyboardEvent<HTMLDivElement>) {
+    const target = event.target;
+
+    if (!(target instanceof HTMLImageElement) || (event.key !== "Enter" && event.key !== " ")) {
       return;
     }
 
     event.preventDefault();
-    setPreviewZoomed(false);
-    setPreviewImage({
-      alt: target.alt,
-      src: target.currentSrc || target.src,
-    });
+    openImagePreviewForImage(target);
   }
 
   return (
-    <div className="min-w-0" data-article-reader onClick={openImagePreview}>
+    <div className="min-w-0" data-article-reader onClick={openImagePreview} onKeyDown={openImagePreviewFromKeyboard}>
       {supportsReadingMode ? (
         <div className="z-10 mb-6 rounded-md border border-line bg-paper/86 p-2 shadow-sm backdrop-blur-sm sm:sticky sm:top-0 md:mb-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -358,11 +473,12 @@ export function ArticleReader({
       )}
 
       {previewImage ? (
-        <div className="article-image-preview" role="dialog" aria-modal="true" aria-label={imagePreviewLabels[locale].dialog} onClick={closeImagePreview}>
-          <button type="button" className="article-image-preview-close" aria-label={imagePreviewLabels[locale].close} onClick={closeImagePreview}>
+        <div className="article-image-preview" role="dialog" aria-modal="true" aria-label={imagePreviewLabels[locale].dialog} onClick={closeImagePreview} onKeyDown={keepPreviewFocus}>
+          <button ref={previewCloseButtonRef} type="button" className="article-image-preview-close" aria-label={imagePreviewLabels[locale].close} onClick={closeImagePreview}>
             <X className="h-5 w-5" />
           </button>
           <button
+            ref={previewZoomButtonRef}
             type="button"
             className="article-image-preview-zoom"
             aria-label={previewZoomed ? imagePreviewLabels[locale].zoomOut : imagePreviewLabels[locale].zoomIn}

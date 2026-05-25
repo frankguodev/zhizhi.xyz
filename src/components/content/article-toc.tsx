@@ -174,11 +174,11 @@ export function ArticleToc({ items, locale = "zh", variant }: ArticleTocProps) {
   if (variant === "mobile") {
     return (
       <details ref={detailsRef} className="mb-5 min-w-0 rounded-md border border-line bg-surface p-4 lg:hidden">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-foreground">
+        <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35">
           <ListTree className="h-4 w-4 text-accent" />
           {copy[locale].summary}
         </summary>
-        <div className="mt-4">{nav}</div>
+        <div className="article-mobile-toc-scroll mt-4 max-h-[50dvh] overflow-y-auto pr-1">{nav}</div>
       </details>
     );
   }

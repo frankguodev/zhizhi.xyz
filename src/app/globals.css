@@ -231,6 +231,11 @@ html[data-theme="dark"] .site-grid {
   display: none;
 }
 
+.article-mobile-toc-scroll {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 .vein-link {
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 42%);
   border-left: 3px solid var(--accent);
@@ -693,6 +698,8 @@ html[data-theme="dark"] .hero-primary-action:hover {
   margin: 1.6rem 0;
   max-width: 100%;
   overflow-x: auto;
+  position: relative;
+  scrollbar-gutter: stable;
   width: 100%;
 }
 
@@ -862,6 +869,10 @@ html[data-theme="dark"] .article-prose blockquote {
   background: color-mix(in srgb, var(--accent) 9%, var(--paper));
   color: var(--accent);
   outline: none;
+}
+
+.article-code-copy:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 html[data-theme="dark"] .article-code-copy {
@@ -1337,7 +1348,7 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
   .article-prose h3,
   .article-prose h4 {
     margin-top: 1.8em;
-    scroll-margin-top: 1rem;
+    scroll-margin-top: 5rem;
   }
 
   .article-prose h1 {
@@ -1396,6 +1407,10 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
     font-size: 0.88rem;
     margin-left: 0;
     margin-right: 0;
+    box-shadow:
+      inset -1.25rem 0 1rem -1.25rem color-mix(in srgb, var(--accent) 54%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent),
+      0 10px 24px color-mix(in srgb, var(--foreground) 5%, transparent);
   }
 
   .article-prose th,

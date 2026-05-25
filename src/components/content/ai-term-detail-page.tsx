@@ -29,6 +29,11 @@ const copy = {
     heat: "热度",
     related: "相关标签",
     updated: "更新",
+    difficulties: {
+      beginner: "入门",
+      intermediate: "进阶",
+      advanced: "高阶",
+    },
   },
   en: {
     back: "Back to AI terms",
@@ -37,6 +42,11 @@ const copy = {
     heat: "Heat",
     related: "Related tags",
     updated: "Updated",
+    difficulties: {
+      beginner: "Beginner",
+      intermediate: "Intermediate",
+      advanced: "Advanced",
+    },
   },
 } satisfies Record<
   Locale,
@@ -44,6 +54,7 @@ const copy = {
     back: string;
     currentPathPrefix: string;
     difficulty: string;
+    difficulties: Record<AiTermDetailLike["difficulty"], string>;
     heat: string;
     related: string;
     updated: string;
@@ -69,6 +80,10 @@ function taxonomyHref(locale: Locale, item: AiTermTaxonomyItem) {
   return `${base}?category=${encodeURIComponent(item.slug)}#all-terms`;
 }
 
+function formatHeatScore(score: number) {
+  return `${score} / 100`;
+}
+
 export function AiTermDetailPage({ blocks, locale, term, tocItems }: AiTermDetailPageProps) {
   const pageCopy = copy[locale];
   const currentPath = `${pageCopy.currentPathPrefix}/${term.slug}`;
@@ -80,8 +95,8 @@ export function AiTermDetailPage({ blocks, locale, term, tocItems }: AiTermDetai
       <main className="flex-1 bg-background">
         <article>
           <header className="site-grid border-b border-line">
-            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-12">
-              <div className="article-reading-surface article-reading-surface-no-rail overflow-hidden rounded-md border border-line px-4 py-6 sm:px-5 md:px-10 md:py-10">
+            <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 md:py-8">
+              <div className="article-reading-surface article-reading-surface-no-rail min-w-0 overflow-hidden rounded-md border border-line px-4 py-6 sm:px-5 md:px-8 md:py-8">
                 <Link href={listHref} className="inline-flex items-center gap-2 rounded-md text-sm font-semibold text-muted transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35">
                   <ArrowLeft className="h-4 w-4" />
                   {pageCopy.back}
@@ -94,11 +109,11 @@ export function AiTermDetailPage({ blocks, locale, term, tocItems }: AiTermDetai
                   ))}
                   <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface/70 px-2.5 py-1">
                     <LibraryBig className="h-4 w-4 text-accent" />
-                    {pageCopy.difficulty}: {term.difficulty}
+                    {pageCopy.difficulty}: {pageCopy.difficulties[term.difficulty]}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface/70 px-2.5 py-1">
                     <Flame className="h-4 w-4 text-accent" />
-                    {pageCopy.heat}: {term.heatScore}
+                    {pageCopy.heat}: {formatHeatScore(term.heatScore)}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface/70 px-2.5 py-1">
                     <CalendarDays className="h-4 w-4 text-accent" />
