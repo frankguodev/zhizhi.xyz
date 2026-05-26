@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 const script = `
 (() => {
   try {
@@ -14,5 +12,5 @@ const script = `
 `;
 
 export function ThemeScript() {
-  return <Script id="zhizhi-theme-script" dangerouslySetInnerHTML={{ __html: script }} />;
+  return <script id="zhizhi-theme-script" dangerouslySetInnerHTML={{ __html: script }} />;
 }

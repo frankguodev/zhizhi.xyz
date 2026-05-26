@@ -1,42 +1,59 @@
 "use client";
 
 import { MoonStar, SunMedium } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const storageKey = "zhizhi.theme";
+const themeChangeEvent = "zhizhi.theme.change";
 
 type Theme = "light" | "dark";
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
-  window.localStorage.setItem(storageKey, theme);
+  try {
+    window.localStorage.setItem(storageKey, theme);
+  } catch {
+    // Keep the visual theme working even when storage is unavailable.
+  }
+}
+
+function getThemeSnapshot(): Theme {
+  if (typeof document === "undefined") {
+    return "light";
+  }
+
+  const current = document.documentElement.dataset.theme;
+  if (current === "dark" || current === "light") {
+    return current;
+  }
+
+  try {
+    return window.localStorage.getItem(storageKey) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+function getServerSnapshot(): Theme {
+  return "light";
+}
+
+function subscribeToThemeChange(onStoreChange: () => void) {
+  window.addEventListener(themeChangeEvent, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+
+  return () => {
+    window.removeEventListener(themeChangeEvent, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof document === "undefined") {
-      return "light";
-    }
-
-    const current = document.documentElement.dataset.theme;
-    if (current === "dark" || current === "light") {
-      return current;
-    }
-
-    try {
-      const stored = window.localStorage.getItem(storageKey);
-      return stored === "dark" ? "dark" : "light";
-    } catch {
-      return "light";
-    }
-  });
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+  const theme = useSyncExternalStore(subscribeToThemeChange, getThemeSnapshot, getServerSnapshot);
 
   function toggleTheme() {
-    setTheme((value) => (value === "light" ? "dark" : "light"));
+    applyTheme(theme === "light" ? "dark" : "light");
+    window.dispatchEvent(new Event(themeChangeEvent));
   }
 
   return (
