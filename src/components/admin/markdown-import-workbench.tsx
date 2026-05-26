@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { ArrowRight, Database, FileText, FileUp, Loader2, ScanSearch } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArticleMediaManager } from "@/components/admin/article-media-manager";
 import { handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
+import { XLongformPreview } from "@/components/admin/x-longform-preview";
 import { ArticleReader } from "@/components/content/article-reader";
 import { QualityReport } from "@/components/content/quality-report";
 import type { ArticleContentBlock } from "@/components/content/types";
@@ -31,7 +32,7 @@ type SavedDraftLink = {
   locale: ArticleRecord["locale"];
 };
 
-type PreviewTab = "summary" | "quality" | "preview";
+type PreviewTab = "summary" | "quality" | "preview" | "xLongform";
 
 const maxMarkdownChars = 800_000;
 
@@ -307,7 +308,7 @@ export function MarkdownImportWorkbench() {
     }
   }
 
-  async function runPreview() {
+  const runPreview = useCallback(async (nextTab: PreviewTab = "summary") => {
     setLoading(true);
     setError(null);
     setSaveState({ status: "idle", message: "" });
@@ -331,13 +332,25 @@ export function MarkdownImportWorkbench() {
 
       setPreview(data as PreviewResult);
       setPreviewedMarkdown(markdown);
-      setPreviewTab("summary");
+      setPreviewTab(nextTab);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : "解析失败");
     } finally {
       setLoading(false);
     }
-  }
+  }, [markdown]);
+
+  useEffect(() => {
+    if (previewTab !== "xLongform" || !markdown.trim() || previewedMarkdown === markdown || loading) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void runPreview("xLongform");
+    }, 650);
+
+    return () => window.clearTimeout(timer);
+  }, [loading, markdown, previewTab, previewedMarkdown, runPreview]);
 
   async function saveDraft() {
     if (!previewFresh) {
@@ -439,7 +452,7 @@ export function MarkdownImportWorkbench() {
               <button
                 type="button"
                 className="admin-btn admin-btn-primary inline-flex h-11 items-center justify-center gap-2 px-5 font-semibold disabled:opacity-60"
-                onClick={runPreview}
+                onClick={() => void runPreview()}
                 disabled={loading}
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanSearch className="h-4 w-4" />}
@@ -513,7 +526,7 @@ export function MarkdownImportWorkbench() {
         ) : (
           <>
             <div className="admin-surface p-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="文章导入预览面板">
                 <WorkbenchTabButton active={previewTab === "summary"} label="解析结果" onClick={() => setPreviewTab("summary")} />
                 <WorkbenchTabButton
                   active={previewTab === "quality"}
@@ -521,6 +534,7 @@ export function MarkdownImportWorkbench() {
                   onClick={() => setPreviewTab("quality")}
                 />
                 <WorkbenchTabButton active={previewTab === "preview"} label="文章预览" onClick={() => setPreviewTab("preview")} />
+                <WorkbenchTabButton active={previewTab === "xLongform"} label="X 长文" onClick={() => setPreviewTab("xLongform")} />
               </div>
             </div>
 
@@ -579,6 +593,8 @@ export function MarkdownImportWorkbench() {
               </div>
             </div>
             ) : null}
+
+            {previewTab === "xLongform" ? <XLongformPreview article={preview.article} markdown={markdown} /> : null}
           </>
         )}
       </section>
@@ -590,6 +606,8 @@ export function MarkdownImportWorkbench() {
 function WorkbenchTabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
+      role="tab"
+      aria-selected={active}
       className={active ? "admin-btn h-10 bg-accent px-3 text-sm font-semibold text-accent-ink" : "admin-btn h-10 px-3 text-sm font-semibold text-muted"}
       type="button"
       onClick={onClick}

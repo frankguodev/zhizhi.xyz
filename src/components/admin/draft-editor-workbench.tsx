@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Eye, ExternalLink, Loader2, Rocket, Save, ScanSearch } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { ArticleMediaManager } from "@/components/admin/article-media-manager";
 import { handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
+import { XLongformPreview } from "@/components/admin/x-longform-preview";
 import { ArticleReader } from "@/components/content/article-reader";
 import { QualityReport } from "@/components/content/quality-report";
 import type { ArticleContentBlock } from "@/components/content/types";
@@ -36,7 +37,7 @@ type SaveState = {
 };
 
 type EditorMode = "full" | "frontmatter" | "content";
-type PreviewTab = "info" | "quality" | "preview";
+type PreviewTab = "info" | "quality" | "preview" | "xLongform";
 
 function getErrorMessage(data: unknown, fallback: string) {
   if (typeof data === "object" && data !== null && "error" in data && typeof data.error === "string") {
@@ -210,8 +211,9 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
   const [publishedArticleUrl, setPublishedArticleUrl] = useState("");
   const [editorMode, setEditorMode] = useState<EditorMode>("full");
   const [previewTab, setPreviewTab] = useState<PreviewTab>(
-    requestedPanel === "info" || requestedPanel === "preview" || requestedPanel === "quality" ? requestedPanel : "quality",
+    requestedPanel === "info" || requestedPanel === "preview" || requestedPanel === "quality" || requestedPanel === "xLongform" ? requestedPanel : "quality",
   );
+  const [xLongformSyncedMarkdown, setXLongformSyncedMarkdown] = useState(initialData.markdown);
   const [lastSavedAt, setLastSavedAt] = useState(initialData.article.updatedAt || "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const routeLocale = initialData.article.locale;
@@ -376,6 +378,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
       const nextData = result as DraftEditorData;
       setData(nextData);
       setMarkdown(nextData.markdown);
+      setXLongformSyncedMarkdown(nextData.markdown);
       window.localStorage.removeItem(backupKey);
       setBackupAvailable(false);
       const savedAt = formatSavedTime(new Date());
@@ -414,6 +417,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
         markdown: data.markdown,
         logs: data.logs,
       });
+      setXLongformSyncedMarkdown(markdown);
       setSaveState({
         status: tab === "quality" ? "checked" : "previewed",
         message: tab === "quality" ? "检查完成，未写入数据库。" : "预览已刷新，未写入数据库。",
@@ -423,6 +427,53 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
       setSaveState({ status: "error", message: error instanceof Error ? error.message : `${label}失败` });
     }
   }
+
+  const refreshXLongformPreview = useCallback(async () => {
+    setSaveState({ status: "previewing", message: "正在同步 X 长文预览..." });
+    setPublishedArticleUrl("");
+
+    try {
+      const response = await fetch("/api/admin/articles/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdown }),
+      });
+      const result = await response.json();
+
+      if (handleAdminUnauthorized(response)) {
+        throw new Error("登录已过期，正在跳转后台登录。");
+      }
+
+      if (!response.ok) {
+        const hint = getHintMessage(result);
+        const message = getErrorMessage(result, "X 长文预览同步失败");
+        throw new Error(hint ? `${message}\n${hint}` : message);
+      }
+
+      const previewData = result as Omit<DraftEditorData, "markdown" | "logs">;
+      setData({
+        ...previewData,
+        markdown: data.markdown,
+        logs: data.logs,
+      });
+      setXLongformSyncedMarkdown(markdown);
+      setSaveState({ status: "previewed", message: "X 长文预览已根据当前 Markdown 同步，未写入数据库。" });
+    } catch (error) {
+      setSaveState({ status: "error", message: error instanceof Error ? error.message : "X 长文预览同步失败" });
+    }
+  }, [data.logs, data.markdown, markdown]);
+
+  useEffect(() => {
+    if (previewTab !== "xLongform" || !markdown.trim() || xLongformSyncedMarkdown === markdown || busy) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void refreshXLongformPreview();
+    }, 650);
+
+    return () => window.clearTimeout(timer);
+  }, [busy, markdown, previewTab, refreshXLongformPreview, xLongformSyncedMarkdown]);
 
   async function publishDraft() {
     setSaveState({ status: "publishing", message: "正在发布..." });
@@ -688,7 +739,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
 
       <section className="space-y-6">
         <div className="admin-surface p-3">
-          <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="文章编辑预览面板">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="文章编辑预览面板">
             <WorkbenchTabButton active={previewTab === "info"} label={infoTabLabel} onClick={() => setPreviewTab("info")} />
             <WorkbenchTabButton
               active={previewTab === "quality"}
@@ -696,6 +747,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
               onClick={() => setPreviewTab("quality")}
             />
             <WorkbenchTabButton active={previewTab === "preview"} label="文章预览" onClick={() => setPreviewTab("preview")} />
+            <WorkbenchTabButton active={previewTab === "xLongform"} label="X 长文" onClick={() => setPreviewTab("xLongform")} />
           </div>
         </div>
 
@@ -721,6 +773,8 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
           </div>
         </div>
         ) : null}
+
+        {previewTab === "xLongform" ? <XLongformPreview article={data.article} markdown={markdown} /> : null}
       </section>
       </div>
     </>
