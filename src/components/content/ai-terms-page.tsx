@@ -152,6 +152,11 @@ const copy = {
     popularSearches: "热门搜索",
     mapTitle: "词条地图",
     mapHint: "从概念、分类和新近更新进入",
+    browseByCategory: "按分类浏览",
+    browseByCategoryHint: "从一个 AI 方向进入，再沿着相关概念继续读。",
+    categoryFallback: "围绕一个 AI 方向收纳相关概念、工具和实践路径。",
+    browseByScenario: "常见入口",
+    browseByScenarioHint: "按高频概念和最近趋势快速定位。",
     trending: "趋势词条",
     worlds: "探索 AI 世界",
     recent: "最近加入",
@@ -185,6 +190,8 @@ const copy = {
     noResults: "暂时没有匹配的词条",
     noResultsHint: "可以换一个关键词，或先从热门搜索进入。后台发布词条后，这里会自动展示真实数据。",
     quote: "让新概念变得可理解，才是真正开始使用它的第一步。",
+    methodologyTitle: "整理方式",
+    methodologyBody: "每个词条优先回答三个问题：它是什么、为什么重要、普通读者应该怎样理解和使用它。",
   },
   en: {
     currentPath: "/en/ai-terms",
@@ -197,6 +204,11 @@ const copy = {
     popularSearches: "Popular searches",
     mapTitle: "Term Map",
     mapHint: "Start from concepts, categories, and recent updates",
+    browseByCategory: "Browse by Category",
+    browseByCategoryHint: "Start from one AI direction, then follow related concepts.",
+    categoryFallback: "A focused path for related AI concepts, tools, and practice patterns.",
+    browseByScenario: "Popular Entry Points",
+    browseByScenarioHint: "Jump into frequent concepts and current trends.",
     trending: "Trending AI Terms",
     worlds: "Explore AI Worlds",
     recent: "Recently Added",
@@ -230,6 +242,8 @@ const copy = {
     noResults: "No matching terms yet",
     noResultsHint: "Try another keyword or start from popular searches. Published terms will appear here automatically.",
     quote: "Making AI language easier to understand is where real use begins.",
+    methodologyTitle: "How Terms Are Organized",
+    methodologyBody: "Each term focuses on three questions: what it is, why it matters, and how a reader can understand or use it.",
   },
 } satisfies Record<
   Locale,
@@ -244,9 +258,16 @@ const copy = {
     noResults: string;
     noResultsHint: string;
     popularSearches: string;
+    browseByCategory: string;
+    browseByCategoryHint: string;
+    categoryFallback: string;
+    browseByScenario: string;
+    browseByScenarioHint: string;
     mapHint: string;
     mapTitle: string;
     quote: string;
+    methodologyTitle: string;
+    methodologyBody: string;
     latest: string;
     readTerm: string;
     recent: string;
@@ -365,17 +386,35 @@ function SectionHeading({ action, actionHref, icon, title }: { action?: string; 
   );
 }
 
+function DirectoryLink({ description, href, icon, label, meta }: { description: string; href: string; icon: ReactNode; label: string; meta?: string }) {
+  return (
+    <Link
+      className="group flex min-h-20 min-w-0 items-start gap-3 rounded-md border border-line bg-paper/56 p-4 transition hover:border-accent/42 hover:bg-accent/6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+      href={href}
+    >
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-accent/22 bg-accent/8 text-accent">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between gap-3">
+          <span className="break-words text-base font-semibold text-foreground transition group-hover:text-accent [overflow-wrap:anywhere]">{label}</span>
+          {meta ? <span className="shrink-0 text-xs font-semibold text-muted">{meta}</span> : null}
+        </span>
+        <span className="mt-1.5 line-clamp-2 block text-sm leading-6 text-muted">{description}</span>
+      </span>
+    </Link>
+  );
+}
+
 function TrendCard({ index, term, locale }: { index: number; locale: Locale; term: DisplayTerm }) {
   return (
-    <Link className="motion-surface block h-full min-w-0 rounded-md border border-line bg-paper/72 p-5 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
-      <div className="flex items-start gap-4">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-accent/35 bg-accent text-sm font-semibold text-accent-ink">{index + 1}</span>
+    <Link className="motion-surface block h-full min-w-0 rounded-md border border-line bg-paper/62 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-accent/30 bg-accent/10 text-sm font-semibold text-accent">{index + 1}</span>
         <div className="min-w-0">
-          <h3 className="break-words text-lg font-semibold text-foreground [overflow-wrap:anywhere]">{term.term}</h3>
+          <h3 className="break-words text-base font-semibold text-foreground [overflow-wrap:anywhere]">{term.term}</h3>
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{term.shortConcept}</p>
         </div>
       </div>
-      <div className="mt-6 flex items-center justify-between gap-3 text-xs font-semibold text-muted">
+      <div className="mt-4 flex items-center justify-between gap-3 text-xs font-semibold text-muted">
         <span className="inline-flex items-center gap-1 text-accent">
           <Flame className="h-3.5 w-3.5" />
           {copy[locale].heat(term.heatScore)}
@@ -390,12 +429,12 @@ function WorldCard({ index, locale, termCount, world }: { index: number; locale:
   const Icon = icons[index % icons.length];
 
   return (
-    <Link className="motion-surface flex h-full min-w-0 flex-col rounded-md border border-line bg-paper/66 p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={categoryPath(locale, world.slug)}>
+    <Link className="motion-surface flex h-full min-w-0 flex-col rounded-md border border-line bg-paper/58 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={categoryPath(locale, world.slug)}>
       <span className="flex h-9 w-9 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-accent">
         <Icon className="h-4 w-4" />
       </span>
-      <h3 className="mt-6 break-words text-lg font-semibold text-foreground [overflow-wrap:anywhere]">{world.name}</h3>
-      <p className="mt-3 line-clamp-3 min-h-16 text-sm leading-7 text-muted">{world.description || "围绕一个 AI 方向收纳相关概念、工具和实践路径。"}</p>
+      <h3 className="mt-5 break-words text-lg font-semibold text-foreground [overflow-wrap:anywhere]">{world.name}</h3>
+      <p className="mt-3 line-clamp-3 min-h-16 text-sm leading-7 text-muted">{world.description || copy[locale].categoryFallback}</p>
       <p className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-semibold text-accent">
         {copy[locale].worldTermCount(termCount)}
         <ArrowRight className="h-4 w-4" />
@@ -406,9 +445,9 @@ function WorldCard({ index, locale, termCount, world }: { index: number; locale:
 
 function RecentItem({ term, locale }: { locale: Locale; term: DisplayTerm }) {
   return (
-    <Link className="block h-full min-w-0 rounded-md border border-line/70 bg-paper/50 p-4 transition hover:border-accent/28 hover:bg-accent/5 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
-      <div className="flex gap-4">
-        <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-accent">
+    <Link className="block h-full min-w-0 rounded-md border border-line/70 bg-paper/44 p-4 transition hover:border-accent/28 hover:bg-accent/5 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
+      <div className="flex gap-3">
+        <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-accent">
           <LibraryBig className="h-4 w-4" />
         </span>
         <div className="min-w-0">
@@ -424,7 +463,7 @@ function RecentItem({ term, locale }: { locale: Locale; term: DisplayTerm }) {
 function TermCard({ term, locale }: { locale: Locale; term: DisplayTerm }) {
   return (
     <Link className="group block h-full min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
-      <article id={`term-${term.slug}`} className="home-popular-card flex h-full min-w-0 flex-col rounded-md border border-line p-6 shadow-sm">
+      <article id={`term-${term.slug}`} className="home-popular-card flex h-full min-w-0 flex-col rounded-md border border-line p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h3 className="break-words text-xl font-semibold text-foreground transition group-hover:text-accent [overflow-wrap:anywhere]">
@@ -435,7 +474,7 @@ function TermCard({ term, locale }: { locale: Locale; term: DisplayTerm }) {
           </div>
           <span className="shrink-0 rounded-md border border-accent/24 bg-accent/8 px-2 py-1 text-xs font-semibold text-accent">{copy[locale].difficulty(term.difficulty)}</span>
         </div>
-        <p className="mt-5 line-clamp-3 min-h-20 text-sm leading-7 text-muted">{term.shortDesc}</p>
+        <p className="mt-4 line-clamp-3 min-h-20 text-sm leading-7 text-muted">{term.shortDesc}</p>
         <div className="mt-6 flex flex-wrap gap-2">
           {term.tags.slice(0, 3).map((tag) => (
             <span key={tag.slug} className="rounded-md border border-line/70 bg-background/70 px-2.5 py-1 text-xs font-semibold text-muted">
@@ -482,16 +521,16 @@ export function AiTermsPage({ categories, categorySlug, locale, query, terms }: 
 
         <section className="site-grid border-b border-line" aria-labelledby="ai-terms-title">
           <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-16">
-            <div className="max-w-4xl">
+            <div className="mx-auto max-w-4xl text-center">
               <p className="eyebrow text-accent">{pageCopy.eyebrow}</p>
-              <h1 id="ai-terms-title" className="mt-5 max-w-3xl break-words text-[2.45rem] font-semibold leading-tight text-foreground [overflow-wrap:anywhere] sm:text-5xl md:text-6xl">
+              <h1 id="ai-terms-title" className="mx-auto mt-5 max-w-3xl break-words text-[2.45rem] font-semibold leading-tight text-foreground [overflow-wrap:anywhere] sm:text-5xl md:text-6xl">
                 {pageCopy.titleStart}
                 <span className="block text-accent">{pageCopy.titleAccent}</span>
               </h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-muted md:text-lg">{pageCopy.description}</p>
+              <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted md:text-lg">{pageCopy.description}</p>
             </div>
 
-            <form className="mt-9 max-w-4xl md:mt-10" action={pageCopy.currentPath}>
+            <form className="mx-auto mt-9 max-w-3xl md:mt-10" action={pageCopy.currentPath}>
               <label className="sr-only" htmlFor="ai-term-search">
                 {pageCopy.searchLabel}
               </label>
@@ -506,9 +545,9 @@ export function AiTermsPage({ categories, categorySlug, locale, query, terms }: 
               </div>
             </form>
 
-            <div className="mt-7 max-w-4xl">
+            <div className="mx-auto mt-7 max-w-4xl text-center">
               <p className="text-sm font-semibold text-muted">{pageCopy.popularSearches}</p>
-              <div className="article-toc-scroll -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
+              <div className="article-toc-scroll -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
                 {popularQueries.map((item) => (
                   <Link key={item} className="inline-flex min-h-9 shrink-0 items-center rounded-md border border-line bg-paper/70 px-3 py-2 text-xs font-semibold text-muted transition hover:border-accent/45 hover:bg-accent/6 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 aria-[current=page]:border-accent/45 aria-[current=page]:bg-accent/10 aria-[current=page]:text-accent" href={searchPath(locale, item)} aria-current={query?.toLowerCase() === item.toLowerCase() ? "page" : undefined}>
                     {item}
@@ -520,22 +559,48 @@ export function AiTermsPage({ categories, categorySlug, locale, query, terms }: 
         </section>
 
         <section className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-16">
-            <SectionHeading action={pageCopy.allTermsAnchor} actionHref="#all-terms" icon={<Flame className="h-5 w-5" />} title={pageCopy.trending} />
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {(trendingTerms.length > 0 ? trendingTerms : displayTerms.slice(0, 5)).map((term, index) => (
-                <TrendCard key={term.slug} index={index} locale={locale} term={term} />
-              ))}
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:py-16 lg:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <div className="mb-6">
+                <p className="eyebrow text-accent">{pageCopy.browseByCategory}</p>
+                <h2 className="mt-3 text-2xl font-semibold text-foreground">{pageCopy.worlds}</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{pageCopy.browseByCategoryHint}</p>
+              </div>
+              <div className="grid gap-3">
+                {worlds.map((world, index) => (
+                  <DirectoryLink
+                    key={world.slug}
+                    description={world.description || pageCopy.categoryFallback}
+                    href={categoryPath(locale, world.slug)}
+                    icon={index % 2 === 0 ? <Boxes className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    label={world.name}
+                    meta={copy[locale].worldTermCount(displayTerms.filter((term) => term.categories.some((category) => category.slug === world.slug)).length || 1)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-6">
+                <p className="eyebrow text-accent">{pageCopy.browseByScenario}</p>
+                <h2 className="mt-3 text-2xl font-semibold text-foreground">{pageCopy.trending}</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">{pageCopy.browseByScenarioHint}</p>
+              </div>
+              <div className="grid gap-3">
+                {(trendingTerms.length > 0 ? trendingTerms : displayTerms.slice(0, 5)).map((term, index) => (
+                  <TrendCard key={term.slug} index={index} locale={locale} term={term} />
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="border-b border-line bg-surface/35">
+        <section className="border-b border-line bg-surface/30">
           <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-16">
-            <SectionHeading action={pageCopy.allTermsAnchor} actionHref="#all-terms" icon={<Boxes className="h-5 w-5" />} title={pageCopy.worlds} />
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {worlds.map((world, index) => (
-                <WorldCard key={world.slug} index={index} locale={locale} termCount={displayTerms.filter((term) => term.categories.some((category) => category.slug === world.slug)).length || 1} world={world} />
+            <SectionHeading action={pageCopy.allTermsAnchor} actionHref="#all-terms" icon={<Sparkles className="h-5 w-5" />} title={pageCopy.recent} />
+            <div className="grid gap-4 md:grid-cols-2">
+              {recentTerms.map((term) => (
+                <RecentItem key={term.slug} locale={locale} term={term} />
               ))}
             </div>
           </div>
@@ -543,10 +608,10 @@ export function AiTermsPage({ categories, categorySlug, locale, query, terms }: 
 
         <section className="border-b border-line">
           <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-16">
-            <SectionHeading action={pageCopy.allTermsAnchor} actionHref="#all-terms" icon={<Sparkles className="h-5 w-5" />} title={pageCopy.recent} />
-            <div className="grid gap-5 md:grid-cols-2">
-              {recentTerms.map((term) => (
-                <RecentItem key={term.slug} locale={locale} term={term} />
+            <SectionHeading action={pageCopy.allTermsAnchor} actionHref="#all-terms" icon={<Boxes className="h-5 w-5" />} title={pageCopy.worlds} />
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {worlds.map((world, index) => (
+                <WorldCard key={world.slug} index={index} locale={locale} termCount={displayTerms.filter((term) => term.categories.some((category) => category.slug === world.slug)).length || 1} world={world} />
               ))}
             </div>
           </div>
@@ -582,12 +647,18 @@ export function AiTermsPage({ categories, categorySlug, locale, query, terms }: 
           )}
         </section>
 
-        <section className="border-t border-line">
-          <div className="mx-auto max-w-6xl px-4 py-12 text-center sm:px-6 md:py-14">
-            <p className="mx-auto max-w-3xl text-xl leading-8 text-foreground">
-              <span className="text-accent">“</span>
-              {pageCopy.quote}
-            </p>
+        <section className="border-t border-line bg-surface/25">
+          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 md:py-14">
+            <div className="grid gap-5 md:grid-cols-[0.75fr_1.25fr] md:items-start">
+              <div>
+                <p className="eyebrow text-accent">{pageCopy.methodologyTitle}</p>
+                <h2 className="mt-3 text-2xl font-semibold text-foreground">{pageCopy.mapTitle}</h2>
+              </div>
+              <div className="rounded-md border border-line bg-paper/52 p-5">
+                <p className="text-base leading-8 text-foreground">{pageCopy.methodologyBody}</p>
+                <p className="mt-4 text-sm leading-7 text-muted">{pageCopy.quote}</p>
+              </div>
+            </div>
           </div>
         </section>
       </main>
