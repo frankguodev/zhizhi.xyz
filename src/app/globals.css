@@ -15,6 +15,8 @@ html[data-theme="light"] {
   --accent-3: #3859a8;
   --accent-ink: #f8fffb;
   --amber: #b56a24;
+  --radius-control: 8px;
+  --radius-surface: 10px;
   --shadow-soft: 0 18px 48px rgba(20, 33, 31, 0.08);
   --shadow-quiet: 0 1px 0 rgba(20, 33, 31, 0.04), 0 16px 44px rgba(20, 33, 31, 0.06);
 }
@@ -33,6 +35,8 @@ html[data-theme="dark"] {
   --accent-3: #8f8069;
   --accent-ink: #14110a;
   --amber: #f4c84a;
+  --radius-control: 8px;
+  --radius-surface: 10px;
   --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.38);
   --shadow-quiet: 0 1px 0 rgba(230, 224, 211, 0.035), 0 18px 56px rgba(0, 0, 0, 0.3);
 }
@@ -47,6 +51,8 @@ html[data-theme="dark"] {
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-amber: var(--amber);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-surface);
   --font-sans: var(--font-geist-sans), var(--font-noto-sans-sc), Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -65,7 +71,6 @@ body {
   background:
     linear-gradient(115deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 30rem),
     linear-gradient(245deg, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent 34rem),
-    repeating-linear-gradient(0deg, transparent 0 27px, color-mix(in srgb, var(--line) 22%, transparent) 28px),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), var(--font-noto-sans-sc), Arial, sans-serif;
@@ -92,16 +97,36 @@ a {
   text-decoration: none;
 }
 
+.rounded-md {
+  border-radius: var(--radius-control);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-surface);
+}
+
+.rounded-t-lg {
+  border-top-left-radius: var(--radius-surface);
+  border-top-right-radius: var(--radius-surface);
+}
+
+.article-reading-surface.rounded-md,
+.home-latest-card.rounded-md,
+.home-popular-card.rounded-md,
+.index-surface.rounded-md,
+.node-surface.rounded-md,
+.reading-sheet.rounded-md,
+.vein-map.rounded-md {
+  border-radius: var(--radius-surface);
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent-2) 24%, transparent);
 }
 
 .site-grid {
   background-image:
-    linear-gradient(color-mix(in srgb, var(--line) 46%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 46%, transparent) 1px, transparent 1px),
-    linear-gradient(120deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 26rem);
-  background-size: 44px 44px, 44px 44px, auto;
+    linear-gradient(120deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 26rem);
 }
 
 html[data-theme="dark"] body {
@@ -114,10 +139,7 @@ html[data-theme="dark"] body {
 
 html[data-theme="dark"] .site-grid {
   background-image:
-    linear-gradient(color-mix(in srgb, var(--line) 18%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 18%, transparent) 1px, transparent 1px),
     linear-gradient(120deg, color-mix(in srgb, var(--accent) 3%, transparent), transparent 28rem);
-  background-size: 48px 48px, 48px 48px, auto;
 }
 
 .glass-surface {
@@ -159,8 +181,7 @@ html[data-theme="dark"] .site-grid {
 
 .reading-sheet {
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--paper) 98%, transparent), color-mix(in srgb, var(--surface) 94%, transparent)),
-    repeating-linear-gradient(90deg, transparent 0 13px, color-mix(in srgb, var(--line) 16%, transparent) 14px);
+    linear-gradient(180deg, color-mix(in srgb, var(--paper) 98%, transparent), color-mix(in srgb, var(--surface) 94%, transparent));
   box-shadow: var(--shadow-quiet);
 }
 
@@ -193,7 +214,7 @@ html[data-theme="dark"] .site-grid {
     linear-gradient(120deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 18rem),
     color-mix(in srgb, var(--surface) 72%, var(--paper));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   box-shadow: var(--shadow-quiet);
   margin-left: 0;
   margin-right: 0;
@@ -203,7 +224,7 @@ html[data-theme="dark"] .site-grid {
 
 .article-cover-image {
   aspect-ratio: 16 / 9;
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   display: block;
   height: auto;
   object-fit: cover;
@@ -641,7 +662,7 @@ html[data-theme="dark"] .hero-primary-action:hover {
 .article-prose code {
   background: color-mix(in srgb, var(--accent) 7%, var(--paper));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: color-mix(in srgb, var(--accent) 60%, var(--foreground));
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.9em;
@@ -653,7 +674,7 @@ html[data-theme="dark"] .hero-primary-action:hover {
     linear-gradient(180deg, color-mix(in srgb, var(--surface) 74%, transparent), color-mix(in srgb, var(--paper) 90%, transparent)),
     linear-gradient(120deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 22rem);
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent);
   color: color-mix(in srgb, var(--foreground) 92%, var(--accent));
   overflow-x: auto;
@@ -687,7 +708,7 @@ html[data-theme="dark"] .hero-primary-action:hover {
     color-mix(in srgb, var(--paper) 84%, var(--surface));
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
   border-collapse: separate;
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   border-spacing: 0;
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--foreground) 4%, transparent),
@@ -804,7 +825,7 @@ html[data-theme="dark"] .article-prose blockquote {
   align-items: center;
   background: color-mix(in srgb, var(--paper) 82%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
@@ -1013,7 +1034,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
 
 .article-prose img {
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   display: block;
   height: auto;
   margin: 1.6rem auto;
@@ -1054,7 +1075,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
 
 .article-image-preview img {
   border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   box-shadow: 0 18px 56px color-mix(in srgb, #000 34%, transparent);
   display: block;
   cursor: zoom-in;
@@ -1110,7 +1131,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
     linear-gradient(120deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 16rem),
     color-mix(in srgb, var(--surface) 74%, var(--paper));
   border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   box-shadow: var(--shadow-quiet);
   margin-bottom: 1.6rem;
   padding: 0.45rem;
@@ -1127,7 +1148,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
     color-mix(in srgb, var(--surface) 74%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 15%, var(--line));
   border-left: 4px solid var(--accent);
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   color: var(--muted);
   padding: 0.95rem 1.05rem;
 }
@@ -1154,7 +1175,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
     linear-gradient(180deg, color-mix(in srgb, var(--paper) 92%, transparent), color-mix(in srgb, var(--surface) 84%, transparent));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
   border-left: 3px solid color-mix(in srgb, var(--accent) 72%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   margin: 0 0 2.2rem;
   padding: 1.05rem 1.15rem 1.1rem 1.2rem;
   position: relative;
@@ -1210,7 +1231,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
     linear-gradient(180deg, color-mix(in srgb, var(--paper) 92%, transparent), color-mix(in srgb, var(--surface) 86%, transparent));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
   border-left: 3px solid color-mix(in srgb, var(--accent) 72%, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   box-shadow: var(--shadow-quiet);
   margin: 2.1rem 0 0;
   padding: 1rem 1.05rem 1.08rem;
@@ -1245,7 +1266,7 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
   align-items: center;
   background: color-mix(in srgb, var(--paper) 78%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 17%, var(--line));
-  border-radius: 7px;
+  border-radius: var(--radius-control);
   color: color-mix(in srgb, var(--foreground) 84%, var(--accent));
   display: flex;
   font-size: 0.92rem;
@@ -1396,7 +1417,7 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
   }
 
   .article-code-copy {
-    border-radius: 5px;
+    border-radius: var(--radius-control);
     height: 1.72rem;
     right: 0.48rem;
     top: 0.48rem;
@@ -1512,7 +1533,7 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
 }
 
 .admin-btn {
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   cursor: pointer;
   transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
@@ -1609,14 +1630,14 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
 .tools-markdown-preview blockquote {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
   border-left: 3px solid var(--accent);
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
   color: var(--muted);
   padding: 0.75rem 0.9rem;
 }
 
 .tools-markdown-preview code {
   background: color-mix(in srgb, var(--accent) 8%, var(--paper));
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   color: var(--foreground);
   font-family: var(--font-mono);
   font-size: 0.82em;
@@ -1626,7 +1647,7 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
 .tools-markdown-preview pre {
   background: color-mix(in srgb, var(--foreground) 6%, var(--paper));
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-surface);
   overflow: auto;
   padding: 1.75rem 0.85rem 0.85rem;
   position: relative;
@@ -1681,7 +1702,7 @@ html[data-theme="dark"] .article-prose .article-official-resources a:focus-visib
 
 .tools-markdown-preview img {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   display: block;
   height: auto;
   margin: 1rem 0;
