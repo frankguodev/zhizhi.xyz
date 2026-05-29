@@ -11,6 +11,7 @@ import { checkAiTermQuality } from "@/lib/ai-term-quality";
 import { parseAiTermImport } from "@/lib/ai-term-import";
 import { listAiTermOperationLogs, writeAdminAiTermOperationLog } from "@/lib/admin-operation-logs";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { scanAiTermFable } from "@/lib/markdown";
 
 const paramsSchema = z.object({
   locale: z.enum(["zh", "en"]),
@@ -79,7 +80,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
       ...aiTerm,
       contentMd: aiTerm.contentMd,
       categories: aiTerm.categories,
-      tags: aiTerm.tags,
       relations: aiTerm.relations.map((relation) => ({
         slug: relation.slug,
         relationType: relation.relationType,
@@ -89,8 +89,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
     });
 
     const logs = await listAiTermOperationLogs(aiTerm.id, 12);
+    const markdown = aiTermToMarkdown(aiTerm);
+    const fable = scanAiTermFable(aiTerm.contentMd, aiTerm.locale);
 
-    return json({ aiTerm, markdown: aiTermToMarkdown(aiTerm), quality, logs });
+    return json({ aiTerm, fable, markdown, quality, logs });
   } catch (error) {
     return databaseError(error);
   }
@@ -123,7 +125,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ loca
     return json(
       {
         error: error instanceof Error ? error.message : "AI 词条 Markdown 解析失败。",
-        hint: "请检查 Frontmatter YAML 缩进、引号、数组、relations/categories/tags 格式，以及正文是否保留了一级标题。",
+        hint: "请检查 Frontmatter YAML 缩进、引号、数组、relations/categories 格式，以及正文是否保留了一级标题。",
       },
       { status: 400 },
     );
@@ -156,8 +158,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ loca
     });
 
     const logs = await listAiTermOperationLogs(result.aiTerm.id, 12);
+    const fable = scanAiTermFable(result.aiTerm.contentMd, result.aiTerm.locale);
 
-    return json({ ...result, quality, logs });
+    return json({ ...result, fable, quality, logs });
   } catch (error) {
     return databaseError(error);
   }
@@ -194,7 +197,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ lo
         ...existing,
         contentMd: existing.contentMd,
         categories: existing.categories,
-        tags: existing.tags,
         relations: existing.relations.map((relation) => ({
           slug: relation.slug,
           relationType: relation.relationType,

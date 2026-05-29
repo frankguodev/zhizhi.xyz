@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     return json(
       {
         error: error instanceof Error ? error.message : "AI 词条 Markdown 解析失败。",
-        hint: "请检查 Frontmatter YAML 缩进、引号、数组、relations/categories/tags 格式，以及正文是否保留了一级标题。",
+        hint: "请检查 Frontmatter YAML 缩进、引号、数组、relations/categories 格式，以及正文是否保留了一级标题。",
       },
       { status: 400 },
     );
@@ -164,7 +164,6 @@ export async function PATCH(request: Request) {
         ...previous,
         contentMd: previous.contentMd,
         categories: previous.categories,
-        tags: previous.tags,
         relations: previous.relations.map((relation) => ({
           slug: relation.slug,
           relationType: relation.relationType,

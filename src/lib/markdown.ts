@@ -8,7 +8,20 @@ import type { ArticleContentBlock, LayeredBlockType } from "@/components/content
 import type { Locale } from "@/lib/site";
 
 const directivePattern = /^:::(detail|example|warning|advanced|author)(?:\s+(.+))?\s*$/;
+const fableDirectivePattern = /^:::fable(?:\s+(.+))?\s*$/;
 const closingPattern = /^:::$/;
+
+export type AiTermFableBlock = {
+  id: string;
+  title: string;
+  html: string;
+};
+
+export type AiTermFableScan = {
+  exists: boolean;
+  title: string | null;
+  closed: boolean;
+};
 
 type HastNode = {
   type?: string;
@@ -169,4 +182,111 @@ export async function parseLayeredMarkdown(markdown: string, locale: Locale = "z
 
   await flushMarkdown();
   return blocks;
+}
+
+function extractFableTitle(rawTitle: string | undefined, inner: string[], locale: Locale) {
+  if (rawTitle?.trim()) {
+    return { title: rawTitle.trim(), content: inner };
+  }
+
+  const firstMeaningfulLine = inner.findIndex((line) => line.trim());
+  if (firstMeaningfulLine >= 0) {
+    const line = inner[firstMeaningfulLine].trim();
+    const titleMatch = line.match(/^title:\s*["']?(.+?)["']?\s*$/i);
+    if (titleMatch?.[1]) {
+      return {
+        title: titleMatch[1].trim(),
+        content: inner.filter((_, index) => index !== firstMeaningfulLine),
+      };
+    }
+
+    const headingMatch = line.match(/^#{2,4}\s+(.+)$/);
+    if (headingMatch?.[1]) {
+      return {
+        title: headingMatch[1].trim(),
+        content: inner.filter((_, index) => index !== firstMeaningfulLine),
+      };
+    }
+  }
+
+  return {
+    title: locale === "en" ? "A Short Fable" : "寓言故事",
+    content: inner,
+  };
+}
+
+export async function parseAiTermMarkdown(markdown: string, locale: Locale = "zh"): Promise<{ blocks: ArticleContentBlock[]; fable: AiTermFableBlock | null }> {
+  const lines = markdown.split(/\r?\n/);
+  const withoutFable: string[] = [];
+  let fable: AiTermFableBlock | null = null;
+
+  for (let cursor = 0; cursor < lines.length; cursor++) {
+    const match = lines[cursor].match(fableDirectivePattern);
+
+    if (!match) {
+      withoutFable.push(lines[cursor]);
+      continue;
+    }
+
+    const inner: string[] = [];
+    cursor++;
+
+    while (cursor < lines.length && !closingPattern.test(lines[cursor].trim())) {
+      inner.push(lines[cursor]);
+      cursor++;
+    }
+
+    if (!fable) {
+      const extracted = extractFableTitle(match[1], inner, locale);
+      const content = extracted.content.join("\n").trim();
+
+      if (content) {
+        fable = {
+          id: "fable-0",
+          title: extracted.title,
+          html: await markdownToHtml(content, locale),
+        };
+      }
+    }
+  }
+
+  return {
+    blocks: await parseLayeredMarkdown(withoutFable.join("\n"), locale),
+    fable,
+  };
+}
+
+export function scanAiTermFable(markdown: string, locale: Locale = "zh"): AiTermFableScan {
+  const lines = markdown.split(/\r?\n/);
+
+  for (let cursor = 0; cursor < lines.length; cursor++) {
+    const match = lines[cursor].match(fableDirectivePattern);
+
+    if (!match) {
+      continue;
+    }
+
+    const inner: string[] = [];
+    cursor++;
+
+    while (cursor < lines.length && !closingPattern.test(lines[cursor].trim())) {
+      inner.push(lines[cursor]);
+      cursor++;
+    }
+
+    const closed = cursor < lines.length;
+    const extracted = extractFableTitle(match[1], inner, locale);
+
+    return {
+      exists: true,
+      title: extracted.title,
+      closed,
+    };
+  }
+
+  return {
+    exists: false,
+    title: null,
+    closed: true,
+  };
 }

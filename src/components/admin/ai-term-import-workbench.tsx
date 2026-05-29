@@ -3,10 +3,13 @@
 import { Database, FileText, Loader2, ScanSearch } from "lucide-react";
 import { useMemo, useState } from "react";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
+import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import type { SaveAiTermInput } from "@/lib/ai-terms";
+import type { AiTermFableScan } from "@/lib/markdown";
 
 type PreviewResult = {
   aiTerm: SaveAiTermInput;
+  fable: AiTermFableScan;
   importWarnings: string[];
   frontmatter: Record<string, unknown>;
 };
@@ -21,6 +24,11 @@ type SaveResponse = {
     locale?: string;
     slug?: string;
   };
+};
+
+type UploadedDiagramMedia = {
+  url: string;
+  alt?: string;
 };
 
 const sampleMarkdown = `---
@@ -61,12 +69,6 @@ categories:
     description: "AI 基础设施、协议和连接能力相关词条。"
     sort_order: 10
 
-tags:
-  - name: "Agent"
-    slug: "agent"
-  - name: "Tool Calling"
-    slug: "tool-calling"
-
 relations:
   - term: "Tool Calling"
     slug: "tool-calling"
@@ -96,6 +98,10 @@ twitter:
   title: "MCP 是什么？"
   description: "理解 MCP 在 AI 世界里的位置。"
   image: ""
+
+diagram:
+  image: ""
+  image_alt: ""
 
 source:
   source_note: "示例词条，发布前需要替换为真实资料归档和人工审核内容。"
@@ -144,6 +150,65 @@ function formatValue(value: unknown) {
   return String(value);
 }
 
+function splitMarkdown(markdown: string) {
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  const match = normalized.match(/^---\n([\s\S]*?)\n---\n?/);
+
+  if (!match) {
+    return { hasFrontmatter: false, frontmatter: "", content: normalized };
+  }
+
+  return {
+    hasFrontmatter: true,
+    frontmatter: match[1],
+    content: normalized.slice(match[0].length),
+  };
+}
+
+function frontmatterString(markdown: string, key: string) {
+  const { frontmatter } = splitMarkdown(markdown);
+  const pattern = new RegExp(`(^|\\n)${key}:\\s*["']?([^"'\\n]+)["']?(?=\\n|$)`);
+  return frontmatter.match(pattern)?.[2]?.trim() ?? "";
+}
+
+function joinMarkdown(frontmatter: string, content: string) {
+  const cleanFrontmatter = frontmatter.trim();
+  const normalizedContent = content.replace(/^\n+/, "");
+  return cleanFrontmatter ? `---\n${cleanFrontmatter}\n---\n\n${normalizedContent}` : normalizedContent;
+}
+
+function upsertYamlScalar(source: string, key: string, value: string) {
+  const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  const line = `  ${key}: "${escaped}"`;
+  const pattern = new RegExp(`(^|\\n)\\s{2}${key}:.*(?=\\n|$)`);
+
+  if (pattern.test(source)) {
+    return source.replace(pattern, (match, prefix: string) => `${prefix}${line}`);
+  }
+
+  return `${source.replace(/\s+$/g, "")}\n${line}`;
+}
+
+function upsertDiagramFrontmatter(markdown: string, image: string, imageAlt: string) {
+  const parts = splitMarkdown(markdown);
+  const diagramBlock = parts.frontmatter.match(/(^|\n)diagram:\n((?:  .*(?:\n|$))*)/);
+  let nextFrontmatter = parts.frontmatter;
+
+  if (diagramBlock) {
+    const block = diagramBlock[0].replace(/^\n/, "");
+    let nextBlock = upsertYamlScalar(block, "image", image);
+    nextBlock = upsertYamlScalar(nextBlock, "image_alt", imageAlt);
+    nextFrontmatter = nextFrontmatter.replace(block, nextBlock);
+  } else {
+    const diagram = `diagram:\n  image: "${image.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"\n  image_alt: "${imageAlt.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+    nextFrontmatter = nextFrontmatter.includes("\nsource:")
+      ? nextFrontmatter.replace(/\nsource:/, `\n${diagram}\n\nsource:`)
+      : `${nextFrontmatter.trim()}\n\n${diagram}`;
+  }
+
+  return parts.hasFrontmatter ? joinMarkdown(nextFrontmatter, parts.content) : markdown;
+}
+
 export function AiTermImportWorkbench() {
   const [markdown, setMarkdown] = useState(sampleMarkdown);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -162,6 +227,13 @@ export function AiTermImportWorkbench() {
     [markdown, preview?.aiTerm.slug],
   );
   const frontmatterKeys = useMemo(() => Object.keys(preview?.frontmatter ?? {}), [preview]);
+  const uploadTarget = useMemo(
+    () => ({
+      locale: preview?.aiTerm.locale ?? frontmatterString(markdown, "locale"),
+      slug: preview?.aiTerm.slug ?? frontmatterString(markdown, "slug"),
+    }),
+    [markdown, preview?.aiTerm.locale, preview?.aiTerm.slug],
+  );
 
   async function handlePreview() {
     setLoading(true);
@@ -226,6 +298,13 @@ export function AiTermImportWorkbench() {
     } catch (saveError) {
       setSaveState({ status: "error", message: saveError instanceof Error ? saveError.message : "AI 词条保存失败。" });
     }
+  }
+
+  function applyDiagramUpload(media: UploadedDiagramMedia) {
+    setMarkdown((value) => upsertDiagramFrontmatter(value, media.url, media.alt ?? ""));
+    setPreview(null);
+    setPreviewedMarkdown("");
+    setSaveState({ status: "idle", message: "词条图解已写入 Frontmatter，请重新解析预览后保存。" });
   }
 
   return (
@@ -299,6 +378,19 @@ export function AiTermImportWorkbench() {
             {saveState.message}
           </p>
         ) : null}
+
+        <MediaUploadPanel
+          altPlaceholder="例如：MCP 连接 AI 应用、工具和数据源的图解"
+          applyLabel="设为图解"
+          description="上传后会写入 Frontmatter 的 diagram.image，不会插入正文。"
+          insertOnUpload={false}
+          onUpload={applyDiagramUpload}
+          scope="ai-term"
+          targetLocale={uploadTarget.locale}
+          targetRole="diagram"
+          targetSlug={uploadTarget.slug}
+          title="词条图解上传"
+        />
       </section>
 
       <aside className="space-y-4">
@@ -316,8 +408,11 @@ export function AiTermImportWorkbench() {
                   ["状态", preview.aiTerm.status],
                   ["可见性", preview.aiTerm.visibility],
                   ["分享图", preview.aiTerm.shareImage],
+                  ["词条图解", preview.aiTerm.diagramImage],
+                  ["图解说明", preview.aiTerm.diagramImageAlt],
+                  ["寓言故事", preview.fable.exists ? preview.fable.title ?? "已检测到" : "未检测到"],
+                  ["寓言块闭合", preview.fable.closed ? "正常" : "缺少闭合 :::"],
                   ["分类数", preview.aiTerm.categories?.length ?? 0],
-                  ["标签数", preview.aiTerm.tags?.length ?? 0],
                   ["关联数", preview.aiTerm.relations?.length ?? 0],
                   ["Frontmatter", frontmatterKeys.length],
                 ].map(([label, value]) => (
@@ -337,6 +432,17 @@ export function AiTermImportWorkbench() {
                 <h3 className="text-sm font-semibold text-foreground">给普通人的描述</h3>
                 <p className="mt-2 leading-6 text-muted">{preview.aiTerm.shortDesc}</p>
               </div>
+
+              {preview.aiTerm.diagramImage ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">词条图解预览</h3>
+                  <figure className="mt-2 overflow-hidden border border-line bg-background">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview.aiTerm.diagramImage} alt={preview.aiTerm.diagramImageAlt ?? ""} className="max-h-72 w-full object-contain" />
+                    {preview.aiTerm.diagramImageAlt ? <figcaption className="border-t border-line px-3 py-2 text-xs text-muted">{preview.aiTerm.diagramImageAlt}</figcaption> : null}
+                  </figure>
+                </div>
+              ) : null}
 
               {preview.importWarnings.length > 0 ? (
                 <div>
@@ -358,7 +464,7 @@ export function AiTermImportWorkbench() {
 
         {preview ? (
           <section className="border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold text-foreground">分类与标签</h2>
+            <h2 className="text-lg font-semibold text-foreground">分类</h2>
             <div className="mt-4 space-y-4 text-sm">
               <div>
                 <h3 className="font-semibold text-muted">分类</h3>
@@ -366,16 +472,6 @@ export function AiTermImportWorkbench() {
                   {(preview.aiTerm.categories ?? []).map((category) => (
                     <span key={category.slug} className="border border-line bg-background px-3 py-1 font-semibold text-foreground">
                       {category.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-muted">标签</h3>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(preview.aiTerm.tags ?? []).map((tag) => (
-                    <span key={tag.slug} className="border border-line bg-background px-3 py-1 text-muted">
-                      {tag.name}
                     </span>
                   ))}
                 </div>

@@ -5,7 +5,17 @@ import { useRef, useState } from "react";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 
 type MediaUploadPanelProps = {
-  onInsertMarkdown: (markdown: string) => void;
+  altPlaceholder?: string;
+  applyLabel?: string;
+  description?: string;
+  insertOnUpload?: boolean;
+  onInsertMarkdown?: (markdown: string) => void;
+  onUpload?: (media: UploadedMediaItem) => void;
+  scope?: "article" | "ai-term";
+  targetLocale?: string;
+  targetRole?: "diagram";
+  targetSlug?: string;
+  title?: string;
 };
 
 type UploadResponse = {
@@ -64,7 +74,19 @@ function uploadFailureMessage(response: Response, payload: UploadResponse | null
   return adminApiErrorMessage(payload, "图片上传失败。");
 }
 
-export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
+export function MediaUploadPanel({
+  altPlaceholder = "用于 Markdown alt",
+  applyLabel = "插入",
+  description = "支持 JPG、PNG、WebP、GIF，单张不超过 5MB。",
+  insertOnUpload = true,
+  onInsertMarkdown,
+  onUpload,
+  scope = "article",
+  targetLocale,
+  targetRole,
+  targetSlug,
+  title = "图片上传",
+}: MediaUploadPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -100,6 +122,16 @@ export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
 
     const body = new FormData();
     body.append("file", file);
+    body.append("scope", scope);
+    if (targetLocale) {
+      body.append("locale", targetLocale);
+    }
+    if (targetSlug) {
+      body.append("slug", targetSlug);
+    }
+    if (targetRole) {
+      body.append("role", targetRole);
+    }
 
     try {
       const response = await fetch("/api/admin/media", {
@@ -122,14 +154,17 @@ export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
         markdown: markdownWithAlt(payload.media, altText),
       };
       setMarkdown(media.markdown);
-      setMessage(`已上传 ${formatSize(payload.media.size)}，可插入 Markdown。`);
+      setMessage(insertOnUpload ? `已上传 ${formatSize(payload.media.size)}，可插入 Markdown。` : `已上传 ${formatSize(payload.media.size)}，可使用“${applyLabel}”。`);
       setMessageTone("success");
       setRecentMedia((current) => {
         const next = [media, ...current.filter((item) => item.key !== media.key)];
         return next.slice(0, maxRecentMedia);
       });
       setRecentOpen(true);
-      onInsertMarkdown(media.markdown);
+      onUpload?.(media);
+      if (insertOnUpload) {
+        onInsertMarkdown?.(media.markdown);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "图片上传失败。");
       setMessageTone("error");
@@ -161,8 +196,8 @@ export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
     <div className="admin-card-flat min-w-0 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-accent">图片上传</p>
-          <p className="mt-1 text-sm text-muted">支持 JPG、PNG、WebP、GIF，单张不超过 5MB。</p>
+          <p className="text-sm font-semibold text-accent">{title}</p>
+          <p className="mt-1 text-sm text-muted">{description}</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1">
@@ -172,7 +207,7 @@ export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
               value={altText}
               onChange={(event) => setAltText(event.target.value)}
               maxLength={160}
-              placeholder="用于 Markdown alt"
+              placeholder={altPlaceholder}
             />
           </label>
           <input
@@ -208,7 +243,7 @@ export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
           </button>
         </div>
       </div>
-      {markdown ? <code className="mt-3 block break-all bg-surface p-3 text-xs text-muted">{markdown}</code> : null}
+      {markdown && insertOnUpload ? <code className="mt-3 block break-all bg-surface p-3 text-xs text-muted">{markdown}</code> : null}
       {recentMedia.length > 0 ? (
         <div className="mt-4 border-t border-line pt-4">
           <button
@@ -241,10 +276,15 @@ export function MediaUploadPanel({ onInsertMarkdown }: MediaUploadPanelProps) {
                       <button
                         className="admin-btn admin-btn-secondary inline-flex h-9 items-center justify-center gap-1 px-3 text-xs font-semibold"
                         type="button"
-                        onClick={() => onInsertMarkdown(item.markdown)}
+                        onClick={() => {
+                          onUpload?.(item);
+                          if (insertOnUpload) {
+                            onInsertMarkdown?.(item.markdown);
+                          }
+                        }}
                       >
                         <ImagePlus className="h-3.5 w-3.5" />
-                        插入
+                        {applyLabel}
                       </button>
                       <button
                         className="admin-btn admin-btn-secondary inline-flex h-9 items-center justify-center gap-1 px-3 text-xs font-semibold text-muted"

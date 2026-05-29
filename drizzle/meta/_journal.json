@@ -50,6 +50,20 @@
       "when": 1779168000000,
       "tag": "0006_ai_terms",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1780012800000,
+      "tag": "0007_ai_term_diagram_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1780012801000,
+      "tag": "0008_remove_ai_term_tags",
+      "breakpoints": true
     }
   ]
 }

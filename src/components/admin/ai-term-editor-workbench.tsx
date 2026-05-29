@@ -6,12 +6,15 @@ import { ArrowLeft, Archive, CheckCircle2, Eye, Loader2, RotateCcw, Save, ScanSe
 import { useState } from "react";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
+import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
 import type { AdminAiTermDetail } from "@/lib/ai-terms";
 import type { AiTermQualityReport } from "@/lib/ai-term-quality";
+import type { AiTermFableScan } from "@/lib/markdown";
 
 type AiTermEditorData = {
   aiTerm: AdminAiTermDetail;
+  fable: AiTermFableScan;
   markdown: string;
   quality: AiTermQualityReport;
   importWarnings?: string[];
@@ -33,6 +36,11 @@ type EditorMode = "full" | "frontmatter" | "content";
 type PreviewTab = "info" | "quality" | "preview";
 type ConfirmAction = "publish" | "archive" | "restore" | "delete";
 
+type UploadedDiagramMedia = {
+  url: string;
+  alt?: string;
+};
+
 function splitMarkdown(markdown: string) {
   const normalized = markdown.replace(/\r\n/g, "\n");
   const match = normalized.match(/^---\n([\s\S]*?)\n---\n?/);
@@ -52,6 +60,38 @@ function joinMarkdown(frontmatter: string, content: string) {
   const cleanFrontmatter = frontmatter.trim();
   const normalizedContent = content.replace(/^\n+/, "");
   return cleanFrontmatter ? `---\n${cleanFrontmatter}\n---\n\n${normalizedContent}` : normalizedContent;
+}
+
+function upsertYamlScalar(source: string, key: string, value: string) {
+  const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
+  const line = `  ${key}: "${escaped}"`;
+  const pattern = new RegExp(`(^|\\n)\\s{2}${key}:.*(?=\\n|$)`);
+
+  if (pattern.test(source)) {
+    return source.replace(pattern, (match, prefix: string) => `${prefix}${line}`);
+  }
+
+  return `${source.replace(/\s+$/g, "")}\n${line}`;
+}
+
+function upsertDiagramFrontmatter(markdown: string, image: string, imageAlt: string) {
+  const parts = splitMarkdown(markdown);
+  const diagramBlock = parts.frontmatter.match(/(^|\n)diagram:\n((?:  .*(?:\n|$))*)/);
+  let nextFrontmatter = parts.frontmatter;
+
+  if (diagramBlock) {
+    const block = diagramBlock[0].replace(/^\n/, "");
+    let nextBlock = upsertYamlScalar(block, "image", image);
+    nextBlock = upsertYamlScalar(nextBlock, "image_alt", imageAlt);
+    nextFrontmatter = nextFrontmatter.replace(block, nextBlock);
+  } else {
+    const diagram = `diagram:\n  image: "${image.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"\n  image_alt: "${imageAlt.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
+    nextFrontmatter = nextFrontmatter.includes("\nsource:")
+      ? nextFrontmatter.replace(/\nsource:/, `\n${diagram}\n\nsource:`)
+      : `${nextFrontmatter.trim()}\n\n${diagram}`;
+  }
+
+  return parts.hasFrontmatter ? joinMarkdown(nextFrontmatter, parts.content) : markdown;
 }
 
 function countLines(value: string) {
@@ -124,6 +164,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
 
       const preview = result as {
         aiTerm: Partial<AdminAiTermDetail>;
+        fable: AiTermFableScan;
         quality: AiTermQualityReport;
         importWarnings?: string[];
       };
@@ -137,6 +178,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
           updatedAt: value.aiTerm.updatedAt,
           viewCount: value.aiTerm.viewCount,
         },
+        fable: preview.fable,
         quality: preview.quality,
         importWarnings: preview.importWarnings,
       }));
@@ -214,6 +256,11 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
     } catch (error) {
       setSaveState({ status: "error", message: error instanceof Error ? error.message : "AI 词条操作失败。" });
     }
+  }
+
+  function applyDiagramUpload(media: UploadedDiagramMedia) {
+    setMarkdown((value) => upsertDiagramFrontmatter(value, media.url, media.alt ?? ""));
+    setSaveState({ status: "idle", message: "词条图解已写入 Frontmatter，保存后生效。" });
   }
 
   function requestAction(action: ConfirmAction) {
@@ -326,6 +373,21 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
               spellCheck={false}
             />
 
+            <div className="mt-4">
+              <MediaUploadPanel
+                altPlaceholder="例如：MCP 连接 AI 应用、工具和数据源的图解"
+                applyLabel="设为图解"
+                description="上传后会写入 Frontmatter 的 diagram.image，不会插入正文。"
+                insertOnUpload={false}
+                onUpload={applyDiagramUpload}
+                scope="ai-term"
+                targetLocale={data.aiTerm.locale}
+                targetRole="diagram"
+                targetSlug={data.aiTerm.slug}
+                title="词条图解上传"
+              />
+            </div>
+
             {saveState.message ? (
               <p
                 className={saveState.status === "error" ? "mt-3 whitespace-pre-line text-sm font-medium text-red-700" : "mt-3 text-sm font-medium text-accent"}
@@ -362,7 +424,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
             </div>
           </div>
 
-          {previewTab === "info" ? <InfoPanel aiTerm={data.aiTerm} logs={data.logs ?? []} /> : null}
+          {previewTab === "info" ? <InfoPanel aiTerm={data.aiTerm} fable={data.fable} logs={data.logs ?? []} /> : null}
           {previewTab === "quality" ? <QualityPanel report={data.quality} warnings={data.importWarnings ?? []} /> : null}
           {previewTab === "preview" ? <PreviewPanel aiTerm={data.aiTerm} /> : null}
         </section>
@@ -395,9 +457,11 @@ function TabButton({ active, label, onClick }: { active: boolean; label: string;
 
 function InfoPanel({
   aiTerm,
+  fable,
   logs,
 }: {
   aiTerm: AdminAiTermDetail;
+  fable: AiTermFableScan;
   logs: NonNullable<AiTermEditorData["logs"]>;
 }) {
   return (
@@ -411,6 +475,10 @@ function InfoPanel({
           <Meta label="可见性" value={aiTerm.visibility} />
           <Meta label="热度" value={String(aiTerm.heatScore)} />
           <Meta label="质量分" value={String(aiTerm.qualityScore)} />
+          <Meta label="词条图解" value={aiTerm.diagramImage ?? "未设置"} />
+          <Meta label="图解说明" value={aiTerm.diagramImageAlt ?? "未设置"} />
+          <Meta label="寓言故事" value={fable.exists ? fable.title ?? "已检测到" : "未检测到"} />
+          <Meta label="寓言块闭合" value={fable.closed ? "正常" : "缺少闭合 :::"} />
         </dl>
         <Link href={publicPath(aiTerm)} className="admin-btn admin-btn-secondary mt-4 inline-flex h-10 items-center gap-2 px-4 text-sm font-semibold">
           <Eye className="h-4 w-4" />
@@ -476,15 +544,17 @@ function PreviewPanel({ aiTerm }: { aiTerm: AdminAiTermDetail }) {
       <h2 className="mt-4 text-3xl font-semibold text-foreground">{aiTerm.term}</h2>
       <p className="mt-3 text-lg font-semibold text-foreground">{aiTerm.shortConcept}</p>
       <p className="mt-3 break-words leading-7 text-muted [overflow-wrap:anywhere]">{aiTerm.shortDesc}</p>
+      {aiTerm.diagramImage ? (
+        <figure className="mt-5 overflow-hidden border border-line bg-background">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={aiTerm.diagramImage} alt={aiTerm.diagramImageAlt ?? ""} className="max-h-72 w-full object-contain" />
+          {aiTerm.diagramImageAlt ? <figcaption className="border-t border-line px-3 py-2 text-xs text-muted">{aiTerm.diagramImageAlt}</figcaption> : null}
+        </figure>
+      ) : null}
       <div className="mt-5 flex flex-wrap gap-2">
         {aiTerm.categories.map((category) => (
           <span key={category.slug} className="border border-line bg-background px-2 py-1 text-xs text-muted">
             {category.name}
-          </span>
-        ))}
-        {aiTerm.tags.map((tag) => (
-          <span key={tag.slug} className="border border-line bg-background px-2 py-1 text-xs text-muted">
-            #{tag.name}
           </span>
         ))}
       </div>

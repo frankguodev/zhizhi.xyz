@@ -11,7 +11,6 @@ type TaxonomyItem = AdminAiTermTaxonomyItem & { kind: AiTermTaxonomyKind };
 
 type FilterState = {
   locale: "all" | AiTermLocale;
-  kind: "all" | AiTermTaxonomyKind;
   q: string;
 };
 
@@ -26,15 +25,9 @@ const localeOptions = [
   { value: "en", label: "English" },
 ];
 
-const kindOptions = [
-  { value: "all", label: "全部类型" },
-  { value: "category", label: "分类" },
-  { value: "tag", label: "标签" },
-];
-
 export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: TaxonomyItem[] }) {
   const [taxonomy, setTaxonomy] = useState(initialTaxonomy);
-  const [filters, setFilters] = useState<FilterState>({ locale: "all", kind: "all", q: "" });
+  const [filters, setFilters] = useState<FilterState>({ locale: "all", q: "" });
   const [editing, setEditing] = useState<Record<string, TaxonomyItem>>({});
   const [mergeTarget, setMergeTarget] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<TaxonomyItem | null>(null);
@@ -44,7 +37,6 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
     const q = filters.q.trim().toLowerCase();
     return taxonomy.filter((item) => {
       if (filters.locale !== "all" && item.locale !== filters.locale) return false;
-      if (filters.kind !== "all" && item.kind !== filters.kind) return false;
       if (!q) return true;
       return item.name.toLowerCase().includes(q) || item.slug.toLowerCase().includes(q);
     });
@@ -70,13 +62,13 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
           kind: item.kind,
           id: item.id,
           name: draft.name,
-          description: item.kind === "category" ? draft.description ?? "" : undefined,
-          sortOrder: item.kind === "category" ? draft.sortOrder : undefined,
+          description: draft.description ?? "",
+          sortOrder: draft.sortOrder,
         }),
       });
       const data = await response.json();
       if (handleAdminUnauthorized(response)) return;
-      if (!response.ok) throw new Error(adminApiErrorMessage(data, "保存分类/标签失败。"));
+      if (!response.ok) throw new Error(adminApiErrorMessage(data, "保存分类失败。"));
       const payload = data as { taxonomy?: TaxonomyItem[] };
       setTaxonomy(payload.taxonomy ?? taxonomy);
       setEditing((value) => {
@@ -86,7 +78,7 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
       });
       setSaveState({ status: "saved", message: `已保存 ${draft.name}` });
     } catch (error) {
-      setSaveState({ status: "error", message: error instanceof Error ? error.message : "保存分类/标签失败。" });
+      setSaveState({ status: "error", message: error instanceof Error ? error.message : "保存分类失败。" });
     }
   }
 
@@ -106,12 +98,12 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
       });
       const data = await response.json();
       if (handleAdminUnauthorized(response)) return;
-      if (!response.ok) throw new Error(adminApiErrorMessage(data, "合并分类/标签失败。"));
+      if (!response.ok) throw new Error(adminApiErrorMessage(data, "合并分类失败。"));
       const payload = data as { taxonomy?: TaxonomyItem[] };
       setTaxonomy(payload.taxonomy ?? taxonomy);
       setSaveState({ status: "saved", message: `已合并 ${item.name}` });
     } catch (error) {
-      setSaveState({ status: "error", message: error instanceof Error ? error.message : "合并分类/标签失败。" });
+      setSaveState({ status: "error", message: error instanceof Error ? error.message : "合并分类失败。" });
     }
   }
 
@@ -125,12 +117,12 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
       });
       const data = await response.json();
       if (handleAdminUnauthorized(response)) return;
-      if (!response.ok) throw new Error(adminApiErrorMessage(data, "删除分类/标签失败。"));
+      if (!response.ok) throw new Error(adminApiErrorMessage(data, "删除分类失败。"));
       const payload = data as { taxonomy?: TaxonomyItem[] };
       setTaxonomy(payload.taxonomy ?? taxonomy);
       setSaveState({ status: "saved", message: `已删除 ${item.name}` });
     } catch (error) {
-      setSaveState({ status: "error", message: error instanceof Error ? error.message : "删除分类/标签失败。" });
+      setSaveState({ status: "error", message: error instanceof Error ? error.message : "删除分类失败。" });
     }
   }
 
@@ -138,8 +130,8 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
     <div className="space-y-6">
       <AdminConfirmDialog
         open={Boolean(confirmDelete)}
-        title="删除分类/标签"
-        description="只有没有关联词条的分类或标签才能删除。有关联时请先合并。"
+        title="删除分类"
+        description="只有没有关联词条的分类才能删除。有关联时请先合并。"
         confirmLabel="删除"
         busy={saveState.status === "acting"}
         details={confirmDelete ? <div className="border border-line bg-background p-3 text-sm font-semibold">{confirmDelete.name}</div> : null}
@@ -151,14 +143,10 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
         }}
       />
 
-      <section className="grid gap-3 border border-line bg-surface p-4 md:grid-cols-[140px_140px_minmax(220px,1fr)]">
+      <section className="grid gap-3 border border-line bg-surface p-4 md:grid-cols-[140px_minmax(220px,1fr)]">
         <label className="grid gap-1">
           <span className="text-xs font-semibold text-muted">语言</span>
-          <AdminSelect ariaLabel="筛选分类标签语言" value={filters.locale} onChange={(next) => setFilters((value) => ({ ...value, locale: next as FilterState["locale"] }))} options={localeOptions} />
-        </label>
-        <label className="grid gap-1">
-          <span className="text-xs font-semibold text-muted">类型</span>
-          <AdminSelect ariaLabel="筛选分类标签类型" value={filters.kind} onChange={(next) => setFilters((value) => ({ ...value, kind: next as FilterState["kind"] }))} options={kindOptions} />
+          <AdminSelect ariaLabel="筛选分类语言" value={filters.locale} onChange={(next) => setFilters((value) => ({ ...value, locale: next as FilterState["locale"] }))} options={localeOptions} />
         </label>
         <label className="grid gap-1">
           <span className="text-xs font-semibold text-muted">搜索</span>
@@ -180,7 +168,6 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
           <thead className="border-b border-line bg-background text-xs uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">名称</th>
-              <th className="px-4 py-3">类型</th>
               <th className="px-4 py-3">描述/排序</th>
               <th className="px-4 py-3">关联</th>
               <th className="px-4 py-3">合并到</th>
@@ -197,16 +184,11 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
                     <input value={draft.name} onChange={(event) => updateDraft(item.id, { name: event.target.value })} className="h-9 w-full border border-line bg-background px-2 text-sm" />
                     <div className="mt-1 text-xs text-muted">{item.locale}/{item.slug}</div>
                   </td>
-                  <td className="px-4 py-4">{item.kind === "category" ? "分类" : "标签"}</td>
                   <td className="px-4 py-4">
-                    {item.kind === "category" ? (
-                      <div className="grid gap-2">
-                        <input value={draft.description ?? ""} onChange={(event) => updateDraft(item.id, { description: event.target.value })} placeholder="分类描述" className="h-9 border border-line bg-background px-2 text-sm" />
-                        <input value={draft.sortOrder} onChange={(event) => updateDraft(item.id, { sortOrder: Number.parseInt(event.target.value, 10) || 0 })} className="h-9 w-24 border border-line bg-background px-2 text-sm" inputMode="numeric" />
-                      </div>
-                    ) : (
-                      <span className="text-muted">标签暂无描述字段</span>
-                    )}
+                    <div className="grid gap-2">
+                      <input value={draft.description ?? ""} onChange={(event) => updateDraft(item.id, { description: event.target.value })} placeholder="分类描述" className="h-9 border border-line bg-background px-2 text-sm" />
+                      <input value={draft.sortOrder} onChange={(event) => updateDraft(item.id, { sortOrder: Number.parseInt(event.target.value, 10) || 0 })} className="h-9 w-24 border border-line bg-background px-2 text-sm" inputMode="numeric" />
+                    </div>
                   </td>
                   <td className="px-4 py-4">{item.termCount}</td>
                   <td className="px-4 py-4">
@@ -237,7 +219,7 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
         </table>
       </section>
 
-      <section className="grid gap-3 xl:hidden" aria-label="分类标签移动端列表">
+      <section className="grid gap-3 xl:hidden" aria-label="分类移动端列表">
         {filtered.length > 0 ? (
           filtered.map((item) => {
             const draft = editing[item.id] ?? item;
@@ -247,7 +229,7 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
               <article key={item.id} className="admin-surface p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-accent">{item.kind === "category" ? "分类" : "标签"}</p>
+                    <p className="text-xs font-semibold text-accent">分类</p>
                     <p className="mt-1 break-all text-xs text-muted">{item.locale}/{item.slug}</p>
                   </div>
                   <span className="shrink-0 border border-line bg-background px-2 py-1 text-xs font-semibold text-muted">关联 {item.termCount}</span>
@@ -258,20 +240,14 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
                     名称
                     <input value={draft.name} onChange={(event) => updateDraft(item.id, { name: event.target.value })} className="h-10 border border-line bg-background px-2 text-sm text-foreground" />
                   </label>
-                  {item.kind === "category" ? (
-                    <>
-                      <label className="grid gap-1 text-xs font-semibold text-muted">
-                        描述
-                        <input value={draft.description ?? ""} onChange={(event) => updateDraft(item.id, { description: event.target.value })} placeholder="分类描述" className="h-10 border border-line bg-background px-2 text-sm text-foreground" />
-                      </label>
-                      <label className="grid gap-1 text-xs font-semibold text-muted">
-                        排序
-                        <input value={draft.sortOrder} onChange={(event) => updateDraft(item.id, { sortOrder: Number.parseInt(event.target.value, 10) || 0 })} className="h-10 border border-line bg-background px-2 text-sm text-foreground" inputMode="numeric" />
-                      </label>
-                    </>
-                  ) : (
-                    <p className="border border-line bg-background p-3 text-sm text-muted">标签暂无描述字段</p>
-                  )}
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    描述
+                    <input value={draft.description ?? ""} onChange={(event) => updateDraft(item.id, { description: event.target.value })} placeholder="分类描述" className="h-10 border border-line bg-background px-2 text-sm text-foreground" />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    排序
+                    <input value={draft.sortOrder} onChange={(event) => updateDraft(item.id, { sortOrder: Number.parseInt(event.target.value, 10) || 0 })} className="h-10 border border-line bg-background px-2 text-sm text-foreground" inputMode="numeric" />
+                  </label>
                   <label className="grid gap-1 text-xs font-semibold text-muted">
                     合并到
                     <AdminSelect
@@ -298,7 +274,7 @@ export function AiTermTaxonomyWorkbench({ initialTaxonomy }: { initialTaxonomy: 
             );
           })
         ) : (
-          <div className="admin-surface p-8 text-center text-muted">没有匹配的分类或标签。</div>
+          <div className="admin-surface p-8 text-center text-muted">没有匹配的分类。</div>
         )}
       </section>
     </div>

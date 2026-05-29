@@ -23,7 +23,7 @@ function readOption(name, fallback) {
 }
 
 const optionValueIndexes = new Set();
-for (const name of ["--db", "--env", "--password"]) {
+for (const name of ["--config", "--db", "--env", "--password"]) {
   const index = args.indexOf(name);
   if (index !== -1 && args[index + 1] && !args[index + 1].startsWith("--")) {
     optionValueIndexes.add(index + 1);
@@ -32,6 +32,7 @@ for (const name of ["--db", "--env", "--password"]) {
 
 const database = readOption("--db", "zhizhi");
 const envName = readOption("--env", "");
+const configPath = readOption("--config", "");
 const password = readOption("--password", process.env.ADMIN_PASSWORD ?? "");
 const email = args.find((arg, index) => !arg.startsWith("--") && !optionValueIndexes.has(index));
 
@@ -88,6 +89,10 @@ const wranglerArgs = ["d1", "execute", database, mode, "--json", "--command", sq
 
 if (envName) {
   wranglerArgs.push("--env", envName);
+}
+
+if (configPath) {
+  wranglerArgs.push("--config", configPath);
 }
 
 const result = spawnSync(process.execPath, [wranglerBin, ...wranglerArgs], {

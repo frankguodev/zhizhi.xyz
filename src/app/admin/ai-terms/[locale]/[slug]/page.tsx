@@ -5,6 +5,7 @@ import { requireAdminPage } from "@/lib/admin-auth";
 import { listAiTermOperationLogs } from "@/lib/admin-operation-logs";
 import { aiTermToMarkdown, getAdminAiTerm } from "@/lib/ai-terms";
 import { checkAiTermQuality } from "@/lib/ai-term-quality";
+import { scanAiTermFable } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,6 @@ export default async function AdminAiTermEditorPage({ params }: { params: Promis
     ...aiTerm,
     contentMd: aiTerm.contentMd,
     categories: aiTerm.categories,
-    tags: aiTerm.tags,
     relations: aiTerm.relations.map((relation) => ({
       slug: relation.slug,
       relationType: relation.relationType,
@@ -44,6 +44,8 @@ export default async function AdminAiTermEditorPage({ params }: { params: Promis
     })),
   });
   const logs = await listAiTermOperationLogs(aiTerm.id, 12).catch(() => []);
+  const markdown = aiTermToMarkdown(aiTerm);
+  const fable = scanAiTermFable(aiTerm.contentMd, aiTerm.locale);
 
   return (
     <AdminPageShell
@@ -52,7 +54,7 @@ export default async function AdminAiTermEditorPage({ params }: { params: Promis
       title={`编辑：${aiTerm.term}`}
       description="编辑 AI 词条 Markdown，检查发布质量，并执行发布、归档、恢复或删除操作。"
     >
-      <AiTermEditorWorkbench initialData={{ aiTerm, markdown: aiTermToMarkdown(aiTerm), quality, logs }} />
+      <AiTermEditorWorkbench initialData={{ aiTerm, fable, markdown, quality, logs }} />
     </AdminPageShell>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowRight, Boxes, BrainCircuit, CircuitBoard, Clock3, Cpu, Network, Orbit, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, Clock3, Search, Sparkles, TrendingUp } from "lucide-react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { AiTermSummary, AiTermTaxonomyItem } from "@/lib/ai-terms";
@@ -8,7 +8,6 @@ import { siteConfig, type Locale } from "@/lib/site";
 
 type AiTermsPageProps = {
   categorySlug?: string;
-  categories: AiTermTaxonomyItem[];
   locale: Locale;
   query?: string;
   terms: AiTermSummary[];
@@ -22,7 +21,6 @@ type DisplayTerm = {
   shortConcept: string;
   shortDesc: string;
   slug: string;
-  tags: AiTermTaxonomyItem[];
   term: string;
   termZh: string | null;
   trending: boolean;
@@ -38,11 +36,6 @@ export const fallbackAiTerms: DisplayTerm[] = [
     shortConcept: "模型上下文协议",
     shortDesc: "让应用以统一方式把工具、数据和上下文提供给大模型。",
     slug: "mcp",
-    tags: [
-      { id: "tag-agent", name: "Agent", slug: "agent" },
-      { id: "tag-protocol", name: "Protocol", slug: "protocol" },
-      { id: "tag-anthropic", name: "Anthropic", slug: "anthropic" },
-    ],
     term: "MCP",
     termZh: "模型上下文协议",
     trending: true,
@@ -56,11 +49,6 @@ export const fallbackAiTerms: DisplayTerm[] = [
     shortConcept: "AI 智能体",
     shortDesc: "能够感知环境、制定步骤、调用工具并持续完成任务的 AI 系统。",
     slug: "agent",
-    tags: [
-      { id: "tag-ai", name: "AI", slug: "ai" },
-      { id: "tag-autonomy", name: "Autonomy", slug: "autonomy" },
-      { id: "tag-workflow", name: "Workflow", slug: "workflow" },
-    ],
     term: "Agent",
     termZh: "AI 智能体",
     trending: true,
@@ -74,11 +62,6 @@ export const fallbackAiTerms: DisplayTerm[] = [
     shortConcept: "检索增强生成",
     shortDesc: "先从知识库取回相关资料，再交给大模型生成更可靠的答案。",
     slug: "rag",
-    tags: [
-      { id: "tag-llm", name: "LLM", slug: "llm" },
-      { id: "tag-retrieval", name: "Retrieval", slug: "retrieval" },
-      { id: "tag-infra", name: "AI Infra", slug: "ai-infra" },
-    ],
     term: "RAG",
     termZh: "检索增强生成",
     trending: false,
@@ -92,11 +75,6 @@ export const fallbackAiTerms: DisplayTerm[] = [
     shortConcept: "氛围编程",
     shortDesc: "用自然语言描述意图，让 AI 承担更多实现、重构和调试工作。",
     slug: "vibe-coding",
-    tags: [
-      { id: "tag-coding", name: "AI Coding", slug: "ai-coding" },
-      { id: "tag-workflow", name: "Workflow", slug: "workflow" },
-      { id: "tag-productivity", name: "Productivity", slug: "productivity" },
-    ],
     term: "Vibe Coding",
     termZh: "氛围编程",
     trending: true,
@@ -110,11 +88,6 @@ export const fallbackAiTerms: DisplayTerm[] = [
     shortConcept: "上下文工程",
     shortDesc: "围绕任务组织上下文，让大模型更稳定地理解目标和边界。",
     slug: "context-engineering",
-    tags: [
-      { id: "tag-prompting", name: "Prompting", slug: "prompting" },
-      { id: "tag-llm", name: "LLM", slug: "llm" },
-      { id: "tag-best", name: "Best Practice", slug: "best-practice" },
-    ],
     term: "Context Engineering",
     termZh: "上下文工程",
     trending: true,
@@ -128,11 +101,6 @@ export const fallbackAiTerms: DisplayTerm[] = [
     shortConcept: "工具调用",
     shortDesc: "让大模型在回答之外调用函数、API 或外部工具完成动作。",
     slug: "tool-calling",
-    tags: [
-      { id: "tag-llm", name: "LLM", slug: "llm" },
-      { id: "tag-api", name: "API", slug: "api" },
-      { id: "tag-integration", name: "Integration", slug: "integration" },
-    ],
     term: "Tool Calling",
     termZh: "工具调用",
     trending: false,
@@ -150,20 +118,14 @@ const copy = {
     searchPlaceholder: "搜索 AI 词条、概念、工具...",
     searchLabel: "搜索词条",
     mapTitle: "词条地图",
-    mapHint: "从概念、分类和新近更新进入",
-    categoryFallback: "围绕一个 AI 方向收纳相关概念、工具和实践路径。",
+    mapHint: "从概念和新近更新进入",
     trending: "趋势词条",
-    worlds: "探索 AI 世界",
     recent: "最近加入",
     allTerms: "全部词条",
-    allTermsAnchor: "查看全部词条",
     currentFilter: "当前筛选",
     latest: "最新",
     readTerm: "阅读词条",
     termsCount(count: number) {
-      return `${count} 个词条`;
-    },
-    worldTermCount(count: number) {
       return `${count} 个词条`;
     },
     viewAll: "查看全部",
@@ -188,20 +150,14 @@ const copy = {
     searchPlaceholder: "Search AI terms, concepts, tools...",
     searchLabel: "Search terms",
     mapTitle: "Term Map",
-    mapHint: "Start from concepts, categories, and recent updates",
-    categoryFallback: "A focused path for related AI concepts, tools, and practice patterns.",
+    mapHint: "Start from concepts and recent updates",
     trending: "Trending AI Terms",
-    worlds: "Explore AI Worlds",
     recent: "Recently Added",
     allTerms: "All Terms",
-    allTermsAnchor: "View all terms",
     currentFilter: "Current filter",
     latest: "Latest",
     readTerm: "Read term",
     termsCount(count: number) {
-      return `${count} terms`;
-    },
-    worldTermCount(count: number) {
       return `${count} terms`;
     },
     viewAll: "View all",
@@ -228,7 +184,6 @@ const copy = {
     heat: (value: number) => string;
     noResults: string;
     noResultsHint: string;
-    categoryFallback: string;
     mapHint: string;
     mapTitle: string;
     quote: string;
@@ -242,23 +197,15 @@ const copy = {
     termsCount: (count: number) => string;
     titleAccent: string;
     titleStart: string;
-    allTermsAnchor: string;
     trending: string;
     updated: (value: Date | string | number) => string;
     viewAll: string;
-    worldTermCount: (count: number) => string;
-    worlds: string;
   }
 >;
 
 export function aiTermPath(locale: Locale, slug: string) {
   const base = locale === "en" ? "/en/ai-terms" : "/ai-terms";
   return `${base}/${encodeURIComponent(slug)}`;
-}
-
-function categoryPath(locale: Locale, slug: string) {
-  const base = locale === "en" ? "/en/ai-terms" : "/ai-terms";
-  return `${base}?category=${encodeURIComponent(slug)}#all-terms`;
 }
 
 function formatRelativeDate(value: Date | string | number, locale: Locale) {
@@ -286,7 +233,6 @@ function normalizeTerms(terms: AiTermSummary[], query?: string, categorySlug?: s
     shortConcept: term.shortConcept,
     shortDesc: term.shortDesc,
     slug: term.slug,
-    tags: term.tags,
     term: term.term,
     termZh: term.termZh,
     trending: term.trending,
@@ -304,17 +250,6 @@ function normalizeTerms(terms: AiTermSummary[], query?: string, categorySlug?: s
   return mapped.filter((term) => [term.term, term.termZh, term.fullName, term.shortConcept, term.shortDesc].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedQuery)));
 }
 
-function getWorlds(categories: AiTermTaxonomyItem[], terms: DisplayTerm[]) {
-  const fromData = categories.length > 0 ? categories : terms.flatMap((term) => term.categories);
-  const unique = new Map<string, AiTermTaxonomyItem>();
-
-  for (const category of fromData) {
-    unique.set(category.slug, category);
-  }
-
-  return Array.from(unique.values()).slice(0, 5);
-}
-
 function SectionHeading({ action, actionHref, icon, title }: { action?: string; actionHref?: string; icon: ReactNode; title: string }) {
   return (
     <div className="mb-5 flex items-center justify-between gap-4">
@@ -329,26 +264,6 @@ function SectionHeading({ action, actionHref, icon, title }: { action?: string; 
         </Link>
       ) : null}
     </div>
-  );
-}
-
-function WorldCard({ index, locale, termCount, world }: { index: number; locale: Locale; termCount: number; world: AiTermTaxonomyItem }) {
-  const icons = [BrainCircuit, Network, Cpu, CircuitBoard, Orbit];
-  const Icon = icons[index % icons.length];
-
-  return (
-    <Link className="motion-surface flex aspect-square min-w-0 flex-col justify-between rounded-lg border border-line bg-paper/58 p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={categoryPath(locale, world.slug)}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-accent/22 bg-accent/8 text-accent">
-        <Icon className="h-4 w-4" />
-      </span>
-      <span className="min-w-0">
-        <span className="line-clamp-2 break-words text-base font-semibold leading-6 text-foreground [overflow-wrap:anywhere]">{world.name}</span>
-        <span className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{world.description || copy[locale].categoryFallback}</span>
-      </span>
-      <span className="text-xs font-semibold text-accent">
-        {copy[locale].worldTermCount(termCount)}
-      </span>
-    </Link>
   );
 }
 
@@ -383,13 +298,6 @@ function TermCard({ term, locale }: { locale: Locale; term: DisplayTerm }) {
           </div>
         </div>
         <p className="mt-4 line-clamp-3 min-h-20 text-sm leading-7 text-muted">{term.shortDesc}</p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          {term.tags.slice(0, 3).map((tag) => (
-            <span key={tag.slug} className="rounded-md border border-line/70 bg-background/70 px-2.5 py-1 text-xs font-semibold text-muted">
-              {tag.name}
-            </span>
-          ))}
-        </div>
         <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-5 text-xs font-semibold text-muted">
           <span>{copy[locale].updated(term.updatedAt)}</span>
           <span className="inline-flex items-center gap-1 rounded-md text-accent transition group-hover:text-foreground">
@@ -402,11 +310,10 @@ function TermCard({ term, locale }: { locale: Locale; term: DisplayTerm }) {
   );
 }
 
-export function AiTermsPage({ categories, categorySlug, locale, query, terms }: AiTermsPageProps) {
+export function AiTermsPage({ categorySlug, locale, query, terms }: AiTermsPageProps) {
   const pageCopy = copy[locale];
   const displayTerms = normalizeTerms(terms, query, categorySlug);
   const recentTerms = [...displayTerms].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5);
-  const worlds = getWorlds(categories, displayTerms);
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -458,17 +365,6 @@ export function AiTermsPage({ categories, categorySlug, locale, query, terms }: 
             <div className="overflow-hidden rounded-lg border border-line/70 bg-paper/44">
               {recentTerms.map((term) => (
                 <RecentItem key={term.slug} locale={locale} term={term} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="border-b border-line bg-surface/30">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
-            <SectionHeading action={pageCopy.allTermsAnchor} actionHref="#all-terms" icon={<Boxes className="h-5 w-5" />} title={pageCopy.worlds} />
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-              {worlds.map((world, index) => (
-                <WorldCard key={world.slug} index={index} locale={locale} termCount={displayTerms.filter((term) => term.categories.some((category) => category.slug === world.slug)).length || 1} world={world} />
               ))}
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin-auth";
-import { deleteArticleImage, uploadArticleImage } from "@/lib/media";
+import { deleteMediaImage, uploadImage, type MediaUploadScope } from "@/lib/media";
 
 const maxMultipartRequestSize = 6 * 1024 * 1024;
 const noStoreHeaders = {
@@ -73,13 +73,31 @@ export async function POST(request: Request) {
 
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
+  const scopeValue = formData?.get("scope");
+  const scope: MediaUploadScope = scopeValue === "ai-term" ? "ai-term" : "article";
+  const localeValue = formData?.get("locale");
+  const slugValue = formData?.get("slug");
+  const roleValue = formData?.get("role");
 
   if (!(file instanceof File)) {
     return json({ error: "请选择要上传的图片。" }, { status: 400 });
   }
 
+  if (scope === "ai-term" && roleValue === "diagram") {
+    const locale = typeof localeValue === "string" ? localeValue.trim() : "";
+    const slug = typeof slugValue === "string" ? slugValue.trim() : "";
+
+    if ((locale !== "zh" && locale !== "en") || !slug) {
+      return json({ error: "上传词条图解前，请先在 Frontmatter 中填写有效 locale 和 slug，或先解析预览。", status: 400 }, { status: 400 });
+    }
+  }
+
   try {
-    const media = await uploadArticleImage(file);
+    const media = await uploadImage(file, scope, {
+      locale: typeof localeValue === "string" ? localeValue : undefined,
+      slug: typeof slugValue === "string" ? slugValue : undefined,
+      role: roleValue === "diagram" ? "diagram" : undefined,
+    });
     return json({ media });
   } catch (error) {
     return uploadErrorResponse(error);
@@ -100,7 +118,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    await deleteArticleImage(key);
+    await deleteMediaImage(key);
     await deleteMediaCache(request, key);
     return json({ ok: true });
   } catch (error) {

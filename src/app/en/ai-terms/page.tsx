@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AiTermsPage } from "@/components/content/ai-terms-page";
-import { listAiTermCategories, listPublicAiTerms } from "@/lib/ai-terms";
+import { listPublicAiTerms } from "@/lib/ai-terms";
 import { siteConfig } from "@/lib/site";
 
 const description = "AI terms, concepts, tools, and emerging ideas explained in a calm knowledge map.";
@@ -43,10 +43,7 @@ export default async function EnglishAiTermsRoute({ searchParams }: EnglishAiTer
   const params = await searchParams;
   const query = params?.q?.trim() || undefined;
   const categorySlug = params?.category?.trim() || undefined;
-  const [terms, categories] = await Promise.all([
-    listPublicAiTerms({ locale: "en", q: query, categorySlug, sort: query ? "latest" : "featured", limit: 48 }),
-    listAiTermCategories("en"),
-  ]);
+  const terms = await listPublicAiTerms({ locale: "en", q: query, categorySlug, sort: query ? "latest" : "featured", limit: 48 });
 
-  return <AiTermsPage categories={categories} categorySlug={categorySlug} locale="en" query={query} terms={terms} />;
+  return <AiTermsPage categorySlug={categorySlug} locale="en" query={query} terms={terms} />;
 }

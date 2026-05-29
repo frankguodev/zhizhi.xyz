@@ -197,10 +197,9 @@
 - seo_description：
 - seo_keywords：
 
-### 分类与标签候选
+### 分类候选
 
 - categories：
-- tags：
 - aliases：
 
 ### 关联词条候选

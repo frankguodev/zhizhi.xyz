@@ -59,10 +59,10 @@
 - `type`、`difficulty`、`status`、`visibility`
 - `heat_score`、`quality_score`、`trending`
 - `content.format`、`content.version`
-- `categories`、`tags`
+- `categories`
 - `seo`、`source`、`structured_data`
 
-推荐字段：`term_zh`、`full_name`、`tagline`、`beginner_notes`、`relations`、`open_graph`、`twitter`。
+推荐字段：`term_zh`、`full_name`、`tagline`、`beginner_notes`、`relations`、`open_graph`、`twitter`、`diagram`。
 
 ## 3. 字段合法性
 
@@ -75,7 +75,7 @@
 - `trending` 是否为布尔值。
 - `content.format` 是否为 `markdown`。
 - `content.version` 是否为 `ai-term-md-v1`。
-- `categories` 是否 1-3 个，`tags` 是否 3-10 个，`relations` 是否 3-8 个或有合理缺省。
+- `categories` 是否 1-3 个，`relations` 是否 3-8 个或有合理缺省。
 - `relation_type` 是否属于：`related`、`similar`、`opposite`、`upstream`、`downstream`、`ecosystem`。
 
 ## 4. 正文质量
@@ -85,6 +85,7 @@
 - 是否解释了容易误解的地方和常见场景。
 - 是否避免百科腔、论文腔、官方说明腔。
 - 是否存在重复、空洞、过度技术化或内部备注残留。
+- 如果包含寓言故事，是否使用 `:::fable 标题` 到 `:::` 的独立块，且故事只用于建立理解直觉、不替代定义。
 
 ## 5. 事实与来源
 
@@ -101,6 +102,9 @@
 - `robots` 是否合理。
 - `open_graph` / `twitter` 是否适合分享。
 - `open_graph.image` 与 `twitter.image` 是否一致；没有图片路径不阻塞，但要记录“未提供分享图，后台导入后可补充。”
+- `diagram.image` 是否只填写真实可访问路径；优先检查是否为 `/media/ai-terms/{locale}/{slug}/diagram-{uuid}.{ext}` 这类 R2 媒体代理路径，推荐 WebP；没有词条图解不阻塞，但要记录“未提供词条图解，后台导入后可补充。”
+- 词条图解画幅是否适合 16:9 前台展示，避免重要文字或图形靠边。
+- 有 `diagram.image` 时，`diagram.image_alt` 是否描述清楚图解内容。
 - `structured_data.schema_type` 是否为 `DefinedTerm`，字段是否和词条主体一致。
 
 ## 7. 后台导入风险
@@ -108,7 +112,7 @@
 - YAML 缩进是否正确。
 - 字符串中冒号、引号、特殊符号是否正确包裹。
 - 数组是否出现空字符串项。
-- `categories` / `tags` / `relations` 结构是否稳定。
+- `categories` / `relations` 结构是否稳定。
 - 字段类型是否稳定，例如不要把布尔值写成字符串。
 - 正文中是否包含额外 frontmatter 分隔符 `---`。
 

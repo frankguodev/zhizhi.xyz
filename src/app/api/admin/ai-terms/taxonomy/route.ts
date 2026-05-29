@@ -9,7 +9,7 @@ import {
 import { requireAdminApi } from "@/lib/admin-auth";
 
 const updateSchema = z.object({
-  kind: z.enum(["category", "tag"]),
+  kind: z.enum(["category"]),
   id: z.string().min(1),
   name: z.string().trim().min(1).max(80).optional(),
   description: z.string().trim().max(300).nullable().optional(),
@@ -17,13 +17,13 @@ const updateSchema = z.object({
 });
 
 const mergeSchema = z.object({
-  kind: z.enum(["category", "tag"]),
+  kind: z.enum(["category"]),
   sourceId: z.string().min(1),
   targetId: z.string().min(1),
 });
 
 const deleteSchema = z.object({
-  kind: z.enum(["category", "tag"]),
+  kind: z.enum(["category"]),
   id: z.string().min(1),
 });
 
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
   try {
     const taxonomy = await listAdminAiTermTaxonomy({
       locale: locale === "zh" || locale === "en" ? locale : "all",
-      kind: kind === "category" || kind === "tag" ? kind : "all",
+      kind: kind === "category" ? kind : "all",
     });
     return json({ taxonomy });
   } catch (error) {
@@ -72,11 +72,11 @@ export async function PATCH(request: Request) {
 
   const body = await request.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
-  if (!parsed.success) return json({ error: "请提供有效的分类/标签更新字段。" }, { status: 400 });
+  if (!parsed.success) return json({ error: "请提供有效的分类更新字段。" }, { status: 400 });
 
   try {
     const item = await updateAiTermTaxonomy(parsed.data);
-    if (!item) return json({ error: "未找到要更新的分类/标签。" }, { status: 404 });
+    if (!item) return json({ error: "未找到要更新的分类。" }, { status: 404 });
     const taxonomy = await listAdminAiTermTaxonomy();
     return json({ item, taxonomy });
   } catch (error) {
@@ -111,7 +111,7 @@ export async function DELETE(request: Request) {
 
   try {
     const result = await deleteAiTermTaxonomy(parsed.data.kind, parsed.data.id);
-    if (!result.deleted) return json({ error: "该分类/标签仍有关联词条，请先合并或移除关联后再删除。" }, { status: 409 });
+    if (!result.deleted) return json({ error: "该分类仍有关联词条，请先合并或移除关联后再删除。" }, { status: 409 });
     const taxonomy = await listAdminAiTermTaxonomy();
     return json({ result, taxonomy });
   } catch (error) {

@@ -107,7 +107,7 @@ const adminNavGroups: Array<{
       {
         key: "aiTermsTaxonomy",
         href: "/admin/ai-terms/taxonomy",
-        label: "分类标签",
+        label: "词条分类",
         icon: PanelsTopLeft,
       },
     ],

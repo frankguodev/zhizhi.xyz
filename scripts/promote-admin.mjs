@@ -22,8 +22,9 @@ function readOption(name, fallback) {
 
 const database = readOption("--db", "zhizhi");
 const envName = readOption("--env", "");
+const configPath = readOption("--config", "");
 const optionValueIndexes = new Set();
-for (const name of ["--db", "--env"]) {
+for (const name of ["--config", "--db", "--env"]) {
   const index = args.indexOf(name);
   if (index !== -1 && args[index + 1] && !args[index + 1].startsWith("--")) {
     optionValueIndexes.add(index + 1);
@@ -57,6 +58,10 @@ const wranglerArgs = ["d1", "execute", database, mode, "--json", "--command", sq
 
 if (envName) {
   wranglerArgs.push("--env", envName);
+}
+
+if (configPath) {
+  wranglerArgs.push("--config", configPath);
 }
 
 const result = spawnSync(process.execPath, [wranglerBin, ...wranglerArgs], {

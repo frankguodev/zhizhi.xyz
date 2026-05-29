@@ -73,6 +73,7 @@
 - `source.human_reviewed` 固定为 `false`。
 - `status` 默认保持 `draft`。
 - 没有真实分享图路径时，`open_graph.image` 和 `twitter.image` 保持空字符串。
+- 没有真实词条图解路径时，`diagram.image` 保持空字符串；真实词条图解路径应来自 R2 媒体代理，优先使用 `/media/ai-terms/{locale}/{slug}/diagram-{uuid}.{ext}` 形式，推荐 WebP。
 
 ## 3. 生成 check
 
@@ -92,6 +93,8 @@
 - 不要编造图片路径、canonical URL、发布时间或新来源。
 - 确保 `status: "draft"`，等待人工审查后再导入后台。
 - 没有真实图片路径时，`open_graph.image` 和 `twitter.image` 保持空字符串；可以补充自然的 `open_graph.image_alt` 候选。
+- 没有真实词条图解路径时，`diagram.image` 保持空字符串；可以补充自然的 `diagram.image_alt` 候选。真实图解上传到 R2 后再写入 `/media/ai-terms/{locale}/{slug}/diagram-{uuid}.{ext}` 形式路径，推荐 WebP。
+- 词条图解建议按 16:9 画幅准备，前台详情页按 16:9 容器展示。
 - 保存为：`./summery/aiterms/pro/{{TERM}}.md`
 
 ## 5. 可选：生成封面图 brief 和本地封面图
@@ -103,6 +106,7 @@
 - 再根据 brief 调用可用的图片生成能力，生成本地封面图：`./summery/aiterms/cover/{{TERM}}_cover.jpg`
 - 如果当前环境没有可用图片生成能力，仍然保存 brief，并在最终输出说明中明确“未生成本地封面图”。
 - 本地封面图不等于线上可访问路径，不要把本地路径写入 `open_graph.image` 或 `twitter.image`。
+- 本地封面图也不等于词条图解，不要把本地封面路径写入 `diagram.image`。
 - 真实图片上传后台或 R2 后，再把线上真实路径填入 `open_graph.image` 和 `twitter.image`。
 
 封面 brief 必须包含：
@@ -138,6 +142,7 @@
 - 不使用未经证实的判断、夸张口号、复杂 3D、霓虹赛博、人物肖像或品牌 Logo 堆砌。
 - `image_alt` 描述画面和概念，不要堆关键词。
 - 接入提醒必须写明：没有真实图片路径前，`pro` 中 `open_graph.image` 和 `twitter.image` 保持空字符串。
+- 接入提醒必须写明：封面图不是词条图解，没有真实图解路径前，`pro` 中 `diagram.image` 保持空字符串。
 
 本地封面图要求：
 
@@ -154,7 +159,7 @@
 - 按 `04-AI词条寓言故事_prompt.md` 的规则生成。
 - 优先读取 `./summery/aiterms/pro/{{TERM}}.md`。
 - 保存为：`./summery/aiterms/story/{{TERM}}_寓言故事.md`。
-- 寓言故事是独立素材，不要自动写入 pro。
+- 寓言故事默认是独立素材，不要自动写入 pro；如后续人工融合进 pro，必须放在正文里的 `:::fable 标题` 到 `:::` 独立块中。
 
 # 最终输出说明
 

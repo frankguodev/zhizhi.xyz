@@ -71,7 +71,6 @@ content:
   version: "ai-term-md-v1"
 
 categories: []
-tags: []
 relations: []
 
 seo:
@@ -93,6 +92,10 @@ twitter:
   title: ""
   description: ""
   image: ""
+
+diagram:
+  image: ""
+  image_alt: ""
 
 source:
   source_note: ""
@@ -119,6 +122,12 @@ structured_data:
 ## 给小白的理解
 
 ...
+
+:::fable 可选寓言故事标题
+
+...
+
+:::
 
 ## 它本质上是什么？
 
@@ -166,15 +175,16 @@ structured_data:
 - `status` 默认 `draft`，除非用户明确要求发布。
 - `visibility` 默认 `public`。
 - `heat_score` 和 `quality_score` 是 0-100 的编辑判断，不要伪装成精确统计。
-- `categories` 输出 1-3 个，偏导航和筛选。
-- `tags` 输出 3-10 个，偏产品、技术、社区词。
+- `categories` 输出 1-3 个，作为后台内部归类；前台不展示分类。
 - `relations` 输出 3-8 个，优先从“相关概念”提取；`relation_type` 只能使用 `related`、`similar`、`opposite`、`upstream`、`downstream`、`ecosystem`。
 - 数组项结构：
   - `categories`：`name`、`slug`、`description`、`sort_order`
-  - `tags`：`name`、`slug`
   - `relations`：`term`、`slug`、`relation_type`、`description`、`sort_order`
 - `seo.description` 自然说明它是什么、为什么值得了解、适合谁看，不要堆关键词。
 - `open_graph.image` 和 `twitter.image` 必须保持一致；没有用户提供图片路径时保持空字符串。
+- `diagram.image` 是词条详情页用于解释概念的图解路径，不等同于社交分享图；线上路径应来自 R2 媒体代理，格式优先为 `/media/ai-terms/{locale}/{slug}/diagram-{uuid}.{ext}`，推荐 WebP。
+- 词条图解建议使用 16:9 画幅，避免前台详情页出现明显裁切或留白。
+- `diagram.image_alt` 有图解时必须填写描述性说明；没有图解路径时可以留空。
 - `source.human_reviewed` 固定写 `false`，最终仍等待人工审查。
 - `source.last_verified_at` 优先使用初稿中记录的核查日期；没有则留空。
 - `source.published_at` 默认留空，除非用户明确提供日期。
@@ -197,6 +207,7 @@ structured_data:
 - 字段名稳定，能被后台解析。
 - 参考资料链接只能来自输入稿件中已有来源或已核查来源。
 - 内容适合普通用户阅读。
+- 如果正文包含寓言故事，必须使用 `:::fable 标题` 到 `:::` 的独立块；没有寓言故事时不要输出空块。
 
 # 自检清单
 
@@ -204,8 +215,10 @@ structured_data:
 
 - slug、type、difficulty、status、visibility 是否合法。
 - `content.version` 是否为 `ai-term-md-v1`。
-- categories、tags、relations 数量是否合理。
+- categories、relations 数量是否合理。
 - open_graph.image 与 twitter.image 是否一致。
+- 有 diagram.image 时 diagram.image_alt 是否已填写。
+- 如果有寓言故事，是否使用 `:::fable` 独立块且没有替代定义。
 - 正文是否删除了内部生产备注。
 - 是否没有编造事实、链接和图片路径。
 

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getMediaBucket, isValidArticleMediaKey } from "@/lib/media";
+import { getMediaBucket, isValidMediaKey } from "@/lib/media";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +83,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
   const { key } = await params;
   const objectKey = key.join("/");
 
-  if (!isValidArticleMediaKey(objectKey)) {
+  if (!isValidMediaKey(objectKey)) {
     notFound();
   }
 

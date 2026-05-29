@@ -60,7 +60,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ lo
       ...existing,
       contentMd: existing.contentMd,
       categories: existing.categories,
-      tags: existing.tags,
       relations: existing.relations.map((relation) => ({
         slug: relation.slug,
         relationType: relation.relationType,

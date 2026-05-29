@@ -16,12 +16,6 @@ const categorySchema = z.object({
   translation_key: z.string().optional().catch(undefined),
 });
 
-const tagSchema = z.object({
-  name: z.string().catch(""),
-  slug: z.string().catch(""),
-  translation_key: z.string().optional().catch(undefined),
-});
-
 const relationSchema = z.object({
   term: z.string().optional().catch(undefined),
   slug: z.string().catch(""),
@@ -56,7 +50,6 @@ const frontmatterSchema = z.object({
     })
     .catch({ format: "markdown", version: "ai-term-md-v1" }),
   categories: z.array(categorySchema).catch([]),
-  tags: z.array(tagSchema).catch([]),
   aliases: z.array(z.string()).optional().catch(undefined),
   relations: z.array(relationSchema).catch([]),
   seo: z
@@ -83,6 +76,12 @@ const frontmatterSchema = z.object({
       title: z.string().optional().catch(undefined),
       description: z.string().optional().catch(undefined),
       image: z.string().optional().catch(undefined),
+    })
+    .catch({}),
+  diagram: z
+    .object({
+      image: z.string().optional().catch(undefined),
+      image_alt: z.string().optional().catch(undefined),
     })
     .catch({}),
   source: z
@@ -162,6 +161,7 @@ function buildMetadata(data: Record<string, unknown>) {
   const sections = [
     ["openGraph", recordValue(data.open_graph ?? data.openGraph)],
     ["twitter", recordValue(data.twitter)],
+    ["diagram", recordValue(data.diagram)],
     ["structuredData", recordValue(data.structured_data ?? data.structuredData)],
   ] as const;
   const aliases = Array.isArray(data.aliases) ? data.aliases.map(String).map((item) => item.trim()).filter(Boolean) : [];
@@ -234,23 +234,6 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
     })
     .filter((category): category is NonNullable<typeof category> => Boolean(category));
 
-  const tags = data.tags
-    .map((tag) => {
-      const name = cleanString(tag.name);
-      const tagSlug = cleanString(tag.slug) || (name ? inferSlug(name) : undefined);
-
-      if (!name || !tagSlug) {
-        return null;
-      }
-
-      return {
-        name,
-        slug: tagSlug,
-        translationKey: cleanString(tag.translation_key) || tagSlug,
-      };
-    })
-    .filter((tag): tag is NonNullable<typeof tag> => Boolean(tag));
-
   const relations = data.relations
     .map((relation) => {
       const relationSlug = cleanString(relation.slug) || (relation.term ? inferSlug(relation.term) : undefined);
@@ -270,10 +253,6 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
 
   if (categories.length === 0) {
     warnings.push("未解析到有效 categories，保存时不会建立词条分类关系。");
-  }
-
-  if (tags.length === 0) {
-    warnings.push("未解析到有效 tags，保存时不会建立词条标签关系。");
   }
 
   return {
@@ -305,6 +284,8 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
       robots: cleanString(data.seo.robots) || "index, follow",
       shareImage,
       shareImageAlt: normalizeNullable(data.open_graph.image_alt),
+      diagramImage: normalizeNullable(data.diagram.image),
+      diagramImageAlt: normalizeNullable(data.diagram.image_alt),
       metadata: buildMetadata(rawFrontmatter),
       sourceNote: normalizeNullable(data.source.source_note),
       aiAssisted: data.source.ai_assisted ?? true,
@@ -312,7 +293,6 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
       publishedAt: normalizeDate(data.source.published_at),
       lastVerifiedAt: normalizeDate(data.source.last_verified_at),
       categories,
-      tags,
       relations,
     },
     frontmatter: rawFrontmatter,

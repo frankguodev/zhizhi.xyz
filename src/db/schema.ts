@@ -316,6 +316,8 @@ export const aiTerms = sqliteTable(
     robots: text("robots"),
     shareImage: text("share_image"),
     shareImageAlt: text("share_image_alt"),
+    diagramImage: text("diagram_image"),
+    diagramImageAlt: text("diagram_image_alt"),
     metadataJson: text("metadata_json", { mode: "json" }),
     sourceNote: text("source_note"),
     aiAssisted: integer("ai_assisted", { mode: "boolean" }).notNull().default(true),
@@ -374,35 +376,6 @@ export const aiTermCategoryRelations = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.termId, table.categoryId] }),
     index("ai_term_category_relations_category_idx").on(table.categoryId, table.sortOrder),
-  ],
-);
-
-export const aiTermTags = sqliteTable(
-  "ai_term_tags",
-  {
-    id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
-    translationKey: text("translation_key").notNull(),
-    name: text("name").notNull(),
-    slug: text("slug").notNull(),
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
-  },
-  (table) => [
-    uniqueIndex("ai_term_tags_locale_slug_unique").on(table.locale, table.slug),
-    index("ai_term_tags_translation_key_idx").on(table.translationKey),
-  ],
-);
-
-export const aiTermTagRelations = sqliteTable(
-  "ai_term_tag_relations",
-  {
-    termId: text("term_id").notNull().references(() => aiTerms.id, { onDelete: "cascade" }),
-    tagId: text("tag_id").notNull().references(() => aiTermTags.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    primaryKey({ columns: [table.termId, table.tagId] }),
-    index("ai_term_tag_relations_tag_idx").on(table.tagId),
   ],
 );
 

@@ -1,4 +1,5 @@
 import type { SaveAiTermInput } from "@/lib/ai-terms";
+import { scanAiTermFable } from "@/lib/markdown";
 
 export type AiTermQualityLevel = "error" | "warning" | "suggestion";
 
@@ -41,6 +42,7 @@ export function checkAiTermQuality(aiTerm: SaveAiTermInput): AiTermQualityReport
   const twitter = nestedRecord(metadata, "twitter");
   const ogImage = nestedString(openGraph, "image");
   const twitterImage = nestedString(twitter, "image");
+  const fable = scanAiTermFable(aiTerm.contentMd, aiTerm.locale);
 
   function add(issue: AiTermQualityIssue) {
     issues.push(issue);
@@ -70,12 +72,12 @@ export function checkAiTermQuality(aiTerm: SaveAiTermInput): AiTermQualityReport
     add({ id: "missing-h1", level: "warning", title: "缺少一级标题", detail: "正文建议保留一个清晰的 # 一级标题。", target: "content" });
   }
 
-  if ((aiTerm.categories ?? []).length === 0) {
-    add({ id: "missing-categories", level: "error", title: "缺少分类", detail: "至少需要一个 categories 项，方便前台聚合和导航。", target: "frontmatter" });
+  if (fable.exists && !fable.closed) {
+    add({ id: "unclosed-fable-block", level: "error", title: "寓言故事块未闭合", detail: "检测到 :::fable 但缺少闭合的 :::，会导致后续正文被误判为寓言故事。", target: "content" });
   }
 
-  if ((aiTerm.tags ?? []).length === 0) {
-    add({ id: "missing-tags", level: "warning", title: "缺少标签", detail: "建议至少添加一个 tags 项。", target: "frontmatter" });
+  if ((aiTerm.categories ?? []).length === 0) {
+    add({ id: "missing-categories", level: "error", title: "缺少分类", detail: "至少需要一个 categories 项，方便前台聚合和导航。", target: "frontmatter" });
   }
 
   if (!aiTerm.seoTitle || textLength(aiTerm.seoTitle) < 10) {
@@ -110,6 +112,14 @@ export function checkAiTermQuality(aiTerm: SaveAiTermInput): AiTermQualityReport
 
   if ((ogImage || twitterImage || aiTerm.shareImage) && !aiTerm.shareImageAlt) {
     add({ id: "missing-share-image-alt", level: "suggestion", title: "缺少分享图说明", detail: "建议提供 open_graph.image_alt。", target: "frontmatter" });
+  }
+
+  if (!aiTerm.diagramImage) {
+    add({ id: "missing-diagram-image", level: "warning", title: "缺少词条解释信息图", detail: "每个 AI 词条详情页都应提供 diagram.image，用于顶部解释信息图。", target: "frontmatter" });
+  }
+
+  if (aiTerm.diagramImage && !aiTerm.diagramImageAlt) {
+    add({ id: "missing-diagram-image-alt", level: "suggestion", title: "缺少词条图解说明", detail: "有 diagram.image 时建议提供 diagram.image_alt。", target: "frontmatter" });
   }
 
   if (aiTerm.status === "published" && !aiTerm.humanReviewed) {

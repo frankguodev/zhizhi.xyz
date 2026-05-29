@@ -4,7 +4,7 @@
 -- 数据库：Cloudflare D1 (SQLite)
 --
 -- 设计原则：
--- 1. 作为独立内容类型，不复用 articles / categories / tags 表，避免和文章系统混淆。
+-- 1. 作为独立内容类型，不复用 articles / categories 等文章系统表，避免和文章系统混淆。
 -- 2. 第一版只保留真正支撑列表页、详情页、SEO、人工审核和关联阅读的字段。
 -- 3. 描述字段保持克制：short_concept / short_desc / tagline 负责首屏与列表，
 --    beginner_notes_json 负责小白理解辅助信息。
@@ -98,11 +98,9 @@ CREATE TABLE IF NOT EXISTS ai_terms (
     -- ## 一句话概念
     -- ## 给小白的理解
     -- ## 它本质上是什么？
-    -- ## 为什么会出现？
-    -- ## 新手容易误解的地方
+    -- ## 容易误解的地方
     -- ## 常见使用场景
     -- ## 它和哪些概念相关？
-    -- ## 未来可能怎么发展？
     -- ## 参考资料
     content_md TEXT NOT NULL,
     -- content_format：正文格式，第一版固定为 markdown，保留字段便于后续兼容
@@ -123,6 +121,7 @@ CREATE TABLE IF NOT EXISTS ai_terms (
     -- {
     --   "openGraph": {},
     --   "twitter": {},
+    --   "diagram": {},
     --   "structuredData": {},
     --   "rawFrontmatter": {}
     -- }
@@ -133,6 +132,9 @@ CREATE TABLE IF NOT EXISTS ai_terms (
     robots TEXT,
     share_image TEXT,
     share_image_alt TEXT,
+    -- 词条图解：用于详情页解释概念，不等同于社交分享图
+    diagram_image TEXT,
+    diagram_image_alt TEXT,
     metadata_json TEXT,
 
     -- 生产与审核信息
@@ -242,50 +244,7 @@ CREATE INDEX IF NOT EXISTS ai_term_category_relations_category_idx
 ON ai_term_category_relations(category_id, sort_order);
 
 -- =========================================================
--- 4. AI 词条标签表
--- 标签偏产品 / 技术 / 社区词，例如 Cursor / Tool Calling / Anthropic
--- 不使用 tags，避免和文章标签冲突。
--- =========================================================
-CREATE TABLE IF NOT EXISTS ai_term_tags (
-    id TEXT PRIMARY KEY,
-    locale TEXT NOT NULL DEFAULT 'zh'
-        CHECK (locale IN ('zh', 'en')),
-    translation_key TEXT NOT NULL,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS ai_term_tags_locale_slug_unique
-ON ai_term_tags(locale, slug);
-
-CREATE INDEX IF NOT EXISTS ai_term_tags_translation_key_idx
-ON ai_term_tags(translation_key);
-
--- =========================================================
--- 5. AI 词条与标签关系表
--- =========================================================
-CREATE TABLE IF NOT EXISTS ai_term_tag_relations (
-    term_id TEXT NOT NULL,
-    tag_id TEXT NOT NULL,
-
-    PRIMARY KEY (term_id, tag_id),
-
-    FOREIGN KEY (term_id)
-        REFERENCES ai_terms(id)
-        ON DELETE CASCADE,
-
-    FOREIGN KEY (tag_id)
-        REFERENCES ai_term_tags(id)
-        ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS ai_term_tag_relations_tag_idx
-ON ai_term_tag_relations(tag_id);
-
--- =========================================================
--- 6. AI 词条关联关系表
+-- 4. AI 词条关联关系表
 -- 用于详情页“强相关概念 / 继续理解”区域。
 -- MVP 导入策略：只写入 related_term_id 已经存在的关联。
 -- 发布稿中的关联词条候选如果尚未入库，先跳过，后续可在后台补建词条后再补关系。
@@ -331,7 +290,7 @@ CREATE INDEX IF NOT EXISTS ai_term_relations_related_idx
 ON ai_term_relations(related_term_id);
 
 -- =========================================================
--- 7. AI 词条全文搜索表
+-- 5. AI 词条全文搜索表
 -- D1 支持 FTS5。注意：中文搜索效果取决于分词能力，
 -- 第一版可先用于英文词、缩写、slug、短描述和正文关键词。
 -- term_id 使用 UNINDEXED 保存 ai_terms.id，方便搜索结果直接回查主表，
@@ -350,7 +309,7 @@ USING fts5(
 );
 
 -- =========================================================
--- 8. AI 词条搜索同步触发器
+-- 6. AI 词条搜索同步触发器
 -- 这里先同步主表，避免 SQL 触发器里做复杂聚合。
 -- =========================================================
 CREATE TRIGGER IF NOT EXISTS ai_terms_ai

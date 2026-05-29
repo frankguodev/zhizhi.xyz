@@ -48,7 +48,6 @@ export async function POST(request: Request) {
           ...aiTerm,
           contentMd: aiTerm.contentMd,
           categories: aiTerm.categories,
-          tags: aiTerm.tags,
           relations: aiTerm.relations.map((relation) => ({
             slug: relation.slug,
             relationType: relation.relationType,

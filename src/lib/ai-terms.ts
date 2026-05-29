@@ -7,8 +7,6 @@ import {
   aiTermCategoryRelations,
   aiTermRelations,
   aiTerms,
-  aiTermTagRelations,
-  aiTermTags,
 } from "@/db/schema";
 
 export type AiTermLocale = "zh" | "en";
@@ -43,11 +41,12 @@ export type AiTermSummary = {
   trending: boolean;
   shareImage: string | null;
   shareImageAlt: string | null;
+  diagramImage: string | null;
+  diagramImageAlt: string | null;
   publishedAt: Date | string | number | null;
   lastVerifiedAt: Date | string | number | null;
   updatedAt: Date | string | number;
   categories: AiTermTaxonomyItem[];
-  tags: AiTermTaxonomyItem[];
 };
 
 export type AiTermRelationSummary = {
@@ -100,7 +99,6 @@ export type ListPublicAiTermsOptions = {
   locale?: AiTermLocale;
   q?: string;
   categorySlug?: string;
-  tagSlug?: string;
   sort?: "featured" | "latest" | "heat" | "quality";
   limit?: number;
   offset?: number;
@@ -127,7 +125,7 @@ export type UpdateAiTermAdminInput = {
 };
 
 export type AiTermAdminAction = "publish" | "archive" | "restore";
-export type AiTermTaxonomyKind = "category" | "tag";
+export type AiTermTaxonomyKind = "category";
 
 export type AdminAiTermTaxonomyItem = {
   id: string;
@@ -177,6 +175,8 @@ export type SaveAiTermInput = {
   robots?: string | null;
   shareImage?: string | null;
   shareImageAlt?: string | null;
+  diagramImage?: string | null;
+  diagramImageAlt?: string | null;
   metadata?: unknown;
   sourceNote?: string | null;
   aiAssisted?: boolean;
@@ -184,7 +184,6 @@ export type SaveAiTermInput = {
   publishedAt?: Date | string | number | null;
   lastVerifiedAt?: Date | string | number | null;
   categories?: Array<Omit<AiTermTaxonomyItem, "id"> & { translationKey?: string }>;
-  tags?: Array<Omit<AiTermTaxonomyItem, "id" | "description" | "sortOrder"> & { translationKey?: string }>;
   relations?: Array<{ slug: string; relationType: AiTermRelationType; description?: string | null; sortOrder?: number }>;
 };
 
@@ -222,10 +221,6 @@ function termIdFor(locale: AiTermLocale, slug: string) {
 
 function categoryIdFor(locale: AiTermLocale, slug: string) {
   return `ai-term-category:${locale}:${slug}`;
-}
-
-function tagIdFor(locale: AiTermLocale, slug: string) {
-  return `ai-term-tag:${locale}:${slug}`;
 }
 
 function relationIdFor(termId: string, relatedTermId: string, relationType: AiTermRelationType) {
@@ -281,7 +276,6 @@ function publicVisibilityCondition() {
 function summaryFromRow(
   row: typeof aiTerms.$inferSelect,
   categoriesByTerm: Map<string, AiTermTaxonomyItem[]>,
-  tagsByTerm: Map<string, AiTermTaxonomyItem[]>,
 ): AiTermSummary {
   return {
     id: row.id,
@@ -300,20 +294,20 @@ function summaryFromRow(
     trending: row.trending,
     shareImage: row.shareImage,
     shareImageAlt: row.shareImageAlt,
+    diagramImage: row.diagramImage,
+    diagramImageAlt: row.diagramImageAlt,
     publishedAt: row.publishedAt,
     lastVerifiedAt: row.lastVerifiedAt,
     updatedAt: row.updatedAt,
     categories: categoriesByTerm.get(row.id) ?? [],
-    tags: tagsByTerm.get(row.id) ?? [],
   };
 }
 
 async function taxonomyForTermIds(termIds: string[]) {
   const categoriesByTerm = new Map<string, AiTermTaxonomyItem[]>();
-  const tagsByTerm = new Map<string, AiTermTaxonomyItem[]>();
 
   if (termIds.length === 0) {
-    return { categoriesByTerm, tagsByTerm };
+    return { categoriesByTerm };
   }
 
   const db = await getDb();
@@ -343,29 +337,7 @@ async function taxonomyForTermIds(termIds: string[]) {
     categoriesByTerm.set(row.termId, list);
   }
 
-  const tagRows = await db
-    .select({
-      termId: aiTermTagRelations.termId,
-      id: aiTermTags.id,
-      name: aiTermTags.name,
-      slug: aiTermTags.slug,
-    })
-    .from(aiTermTagRelations)
-    .innerJoin(aiTermTags, eq(aiTermTagRelations.tagId, aiTermTags.id))
-    .where(inArray(aiTermTagRelations.termId, termIds))
-    .orderBy(asc(aiTermTags.name));
-
-  for (const row of tagRows) {
-    const list = tagsByTerm.get(row.termId) ?? [];
-    list.push({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-    });
-    tagsByTerm.set(row.termId, list);
-  }
-
-  return { categoriesByTerm, tagsByTerm };
+  return { categoriesByTerm };
 }
 
 async function relationSummariesForTerm(termId: string) {
@@ -388,11 +360,10 @@ async function relationSummariesForTerm(termId: string) {
 function detailFromRow(
   row: typeof aiTerms.$inferSelect,
   categoriesByTerm: Map<string, AiTermTaxonomyItem[]>,
-  tagsByTerm: Map<string, AiTermTaxonomyItem[]>,
   relations: AiTermRelationSummary[],
 ): AdminAiTermDetail {
   return {
-    ...summaryFromRow(row, categoriesByTerm, tagsByTerm),
+    ...summaryFromRow(row, categoriesByTerm),
     translationKey: row.translationKey,
     beginnerNotes: row.beginnerNotesJson,
     contentMd: row.contentMd,
@@ -423,6 +394,7 @@ export function aiTermToMarkdown(aiTerm: AdminAiTermDetail) {
   const metadata = metadataRecord(aiTerm.metadata);
   const openGraph = metadataRecord(metadata.openGraph);
   const twitter = metadataRecord(metadata.twitter);
+  const diagram = metadataRecord(metadata.diagram);
   const structuredData = metadata.structuredData;
   const source: Record<string, unknown> = {
     source_note: aiTerm.sourceNote ?? "",
@@ -470,10 +442,6 @@ export function aiTermToMarkdown(aiTerm: AdminAiTermDetail) {
       description: category.description ?? "",
       sort_order: category.sortOrder ?? index + 1,
     })),
-    tags: aiTerm.tags.map((tag) => ({
-      name: tag.name,
-      slug: tag.slug,
-    })),
     relations: aiTerm.relations.map((relation) => ({
       term: relation.term,
       slug: relation.slug,
@@ -501,6 +469,10 @@ export function aiTermToMarkdown(aiTerm: AdminAiTermDetail) {
       description: twitter.description ?? aiTerm.seoDescription ?? "",
       image: twitter.image ?? aiTerm.shareImage ?? "",
     },
+    diagram: {
+      image: diagram.image ?? aiTerm.diagramImage ?? "",
+      image_alt: diagram.image_alt ?? aiTerm.diagramImageAlt ?? "",
+    },
     source,
   };
 
@@ -518,17 +490,6 @@ async function termIdsForCategory(locale: AiTermLocale, categorySlug: string) {
     .from(aiTermCategoryRelations)
     .innerJoin(aiTermCategories, eq(aiTermCategoryRelations.categoryId, aiTermCategories.id))
     .where(and(eq(aiTermCategories.locale, locale), eq(aiTermCategories.slug, categorySlug)));
-
-  return rows.map((row) => row.termId);
-}
-
-async function termIdsForTag(locale: AiTermLocale, tagSlug: string) {
-  const db = await getDb();
-  const rows = await db
-    .select({ termId: aiTermTagRelations.termId })
-    .from(aiTermTagRelations)
-    .innerJoin(aiTermTags, eq(aiTermTagRelations.tagId, aiTermTags.id))
-    .where(and(eq(aiTermTags.locale, locale), eq(aiTermTags.slug, tagSlug)));
 
   return rows.map((row) => row.termId);
 }
@@ -556,14 +517,6 @@ export async function listPublicAiTerms(options: ListPublicAiTermsOptions = {}) 
       conditions.push(inArray(aiTerms.id, termIds));
     }
 
-    if (options.tagSlug) {
-      const termIds = await termIdsForTag(locale, options.tagSlug);
-      if (termIds.length === 0) {
-        return [];
-      }
-      conditions.push(inArray(aiTerms.id, termIds));
-    }
-
     const orderBy =
       options.sort === "latest"
         ? [desc(aiTerms.publishedAt), asc(aiTerms.term)]
@@ -581,8 +534,8 @@ export async function listPublicAiTerms(options: ListPublicAiTermsOptions = {}) 
       .limit(clampLimit(options.limit))
       .offset(normalizeOffset(options.offset));
 
-    const { categoriesByTerm, tagsByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
-    return rows.map((row) => summaryFromRow(row, categoriesByTerm, tagsByTerm));
+    const { categoriesByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
+    return rows.map((row) => summaryFromRow(row, categoriesByTerm));
   } catch {
     return [];
   }
@@ -620,10 +573,10 @@ export async function listAdminAiTerms(options: ListAdminAiTermsOptions = {}) {
     .orderBy(desc(aiTerms.updatedAt), asc(aiTerms.term))
     .limit(clampLimit(options.limit))
     .offset(normalizeOffset(options.offset));
-  const { categoriesByTerm, tagsByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
+  const { categoriesByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
 
   return rows.map((row) => ({
-    ...summaryFromRow(row, categoriesByTerm, tagsByTerm),
+    ...summaryFromRow(row, categoriesByTerm),
     translationKey: row.translationKey,
     status: row.status,
     visibility: row.visibility,
@@ -650,7 +603,7 @@ export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
       return null;
     }
 
-    const { categoriesByTerm, tagsByTerm } = await taxonomyForTermIds([row.id]);
+    const { categoriesByTerm } = await taxonomyForTermIds([row.id]);
     const relationRows = await db
       .select({
         term: aiTerms.term,
@@ -666,7 +619,7 @@ export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
       .orderBy(asc(aiTermRelations.sortOrder), asc(aiTerms.term));
 
     return {
-      ...summaryFromRow(row, categoriesByTerm, tagsByTerm),
+      ...summaryFromRow(row, categoriesByTerm),
       translationKey: row.translationKey,
       beginnerNotes: row.beginnerNotesJson,
       contentMd: row.contentMd,
@@ -676,6 +629,8 @@ export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
       seoKeywords: parseStringList(row.seoKeywords),
       canonicalUrl: row.canonicalUrl,
       robots: row.robots,
+      diagramImage: row.diagramImage,
+      diagramImageAlt: row.diagramImageAlt,
       metadata: row.metadataJson,
       sourceNote: row.sourceNote,
       aiAssisted: row.aiAssisted,
@@ -701,9 +656,9 @@ export async function getAdminAiTerm(locale: AiTermLocale, slug: string) {
     return null;
   }
 
-  const { categoriesByTerm, tagsByTerm } = await taxonomyForTermIds([row.id]);
+  const { categoriesByTerm } = await taxonomyForTermIds([row.id]);
   const relations = await relationSummariesForTerm(row.id);
-  return detailFromRow(row, categoriesByTerm, tagsByTerm, relations);
+  return detailFromRow(row, categoriesByTerm, relations);
 }
 
 export async function getAdminAiTermById(id: string) {
@@ -715,9 +670,9 @@ export async function getAdminAiTermById(id: string) {
     return null;
   }
 
-  const { categoriesByTerm, tagsByTerm } = await taxonomyForTermIds([row.id]);
+  const { categoriesByTerm } = await taxonomyForTermIds([row.id]);
   const relations = await relationSummariesForTerm(row.id);
-  return detailFromRow(row, categoriesByTerm, tagsByTerm, relations);
+  return detailFromRow(row, categoriesByTerm, relations);
 }
 
 export async function listAiTermCategories(locale: AiTermLocale = "zh") {
@@ -771,32 +726,6 @@ export async function listAdminAiTermTaxonomy(options: { locale?: AiTermLocale |
     );
   }
 
-  if (kind === "all" || kind === "tag") {
-    const conditions = locale === "all" ? undefined : eq(aiTermTags.locale, locale);
-    const rows = await db.select().from(aiTermTags).where(conditions).orderBy(asc(aiTermTags.locale), asc(aiTermTags.name));
-    const relationRows = await db.select({ tagId: aiTermTagRelations.tagId }).from(aiTermTagRelations);
-    const counts = new Map<string, number>();
-    for (const row of relationRows) {
-      counts.set(row.tagId, (counts.get(row.tagId) ?? 0) + 1);
-    }
-
-    items.push(
-      ...rows.map((row) => ({
-        kind: "tag" as const,
-        id: row.id,
-        locale: row.locale,
-        translationKey: row.translationKey,
-        name: row.name,
-        slug: row.slug,
-        description: null,
-        sortOrder: 0,
-        termCount: counts.get(row.id) ?? 0,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      })),
-    );
-  }
-
   return items;
 }
 
@@ -804,66 +733,42 @@ export async function updateAiTermTaxonomy(input: UpdateAiTermTaxonomyInput) {
   const db = await getDb();
   const timestamp = new Date();
 
-  if (input.kind === "category") {
-    const set: Partial<typeof aiTermCategories.$inferInsert> = { updatedAt: timestamp };
-    if (input.name !== undefined) set.name = input.name;
-    if (input.description !== undefined) set.description = input.description;
-    if (input.sortOrder !== undefined) set.sortOrder = input.sortOrder;
-    const rows = await db.update(aiTermCategories).set(set).where(eq(aiTermCategories.id, input.id)).returning();
-    return rows[0] ?? null;
-  }
-
-  const set: Partial<typeof aiTermTags.$inferInsert> = { updatedAt: timestamp };
+  const set: Partial<typeof aiTermCategories.$inferInsert> = { updatedAt: timestamp };
   if (input.name !== undefined) set.name = input.name;
-  const rows = await db.update(aiTermTags).set(set).where(eq(aiTermTags.id, input.id)).returning();
+  if (input.description !== undefined) set.description = input.description;
+  if (input.sortOrder !== undefined) set.sortOrder = input.sortOrder;
+  const rows = await db.update(aiTermCategories).set(set).where(eq(aiTermCategories.id, input.id)).returning();
   return rows[0] ?? null;
 }
 
-export async function mergeAiTermTaxonomy(kind: AiTermTaxonomyKind, sourceId: string, targetId: string) {
+export async function mergeAiTermTaxonomy(_kind: AiTermTaxonomyKind, sourceId: string, targetId: string) {
   if (sourceId === targetId) {
     return { merged: 0, deleted: false };
   }
 
   const db = await getDb();
 
-  if (kind === "category") {
-    const sourceRows = await db.select().from(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, sourceId));
-    for (const row of sourceRows) {
-      await db
-        .insert(aiTermCategoryRelations)
-        .values({ termId: row.termId, categoryId: targetId, sortOrder: row.sortOrder })
-        .onConflictDoNothing();
-    }
-    await db.delete(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, sourceId));
-    await db.delete(aiTermCategories).where(eq(aiTermCategories.id, sourceId));
-    return { merged: sourceRows.length, deleted: true };
-  }
-
-  const sourceRows = await db.select().from(aiTermTagRelations).where(eq(aiTermTagRelations.tagId, sourceId));
+  const sourceRows = await db.select().from(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, sourceId));
   for (const row of sourceRows) {
-    await db.insert(aiTermTagRelations).values({ termId: row.termId, tagId: targetId }).onConflictDoNothing();
+    await db
+      .insert(aiTermCategoryRelations)
+      .values({ termId: row.termId, categoryId: targetId, sortOrder: row.sortOrder })
+      .onConflictDoNothing();
   }
-  await db.delete(aiTermTagRelations).where(eq(aiTermTagRelations.tagId, sourceId));
-  await db.delete(aiTermTags).where(eq(aiTermTags.id, sourceId));
+  await db.delete(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, sourceId));
+  await db.delete(aiTermCategories).where(eq(aiTermCategories.id, sourceId));
   return { merged: sourceRows.length, deleted: true };
 }
 
-export async function deleteAiTermTaxonomy(kind: AiTermTaxonomyKind, id: string) {
+export async function deleteAiTermTaxonomy(_kind: AiTermTaxonomyKind, id: string) {
   const db = await getDb();
-  const relations =
-    kind === "category"
-      ? await db.select({ id: aiTermCategoryRelations.termId }).from(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, id)).limit(1)
-      : await db.select({ id: aiTermTagRelations.termId }).from(aiTermTagRelations).where(eq(aiTermTagRelations.tagId, id)).limit(1);
+  const relations = await db.select({ id: aiTermCategoryRelations.termId }).from(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, id)).limit(1);
 
   if (relations.length > 0) {
     return { deleted: false, reason: "in_use" as const };
   }
 
-  if (kind === "category") {
-    await db.delete(aiTermCategories).where(eq(aiTermCategories.id, id));
-  } else {
-    await db.delete(aiTermTags).where(eq(aiTermTags.id, id));
-  }
+  await db.delete(aiTermCategories).where(eq(aiTermCategories.id, id));
 
   return { deleted: true };
 }
@@ -906,6 +811,8 @@ export async function saveAiTerm(input: SaveAiTermInput): Promise<SaveAiTermResu
       robots: input.robots ?? null,
       shareImage: input.shareImage ?? null,
       shareImageAlt: input.shareImageAlt ?? null,
+      diagramImage: input.diagramImage ?? null,
+      diagramImageAlt: input.diagramImageAlt ?? null,
       metadataJson: stringifyJson(input.metadata),
       sourceNote: input.sourceNote ?? null,
       aiAssisted: input.aiAssisted ?? true,
@@ -944,6 +851,8 @@ export async function saveAiTerm(input: SaveAiTermInput): Promise<SaveAiTermResu
         robots: input.robots ?? null,
         shareImage: input.shareImage ?? null,
         shareImageAlt: input.shareImageAlt ?? null,
+        diagramImage: input.diagramImage ?? null,
+        diagramImageAlt: input.diagramImageAlt ?? null,
         metadataJson: stringifyJson(input.metadata),
         sourceNote: input.sourceNote ?? null,
         aiAssisted: input.aiAssisted ?? true,
@@ -985,34 +894,6 @@ export async function saveAiTerm(input: SaveAiTermInput): Promise<SaveAiTermResu
       });
 
     await db.insert(aiTermCategoryRelations).values({ termId, categoryId, sortOrder: index + 1 }).onConflictDoNothing();
-  }
-
-  await db.delete(aiTermTagRelations).where(eq(aiTermTagRelations.termId, termId));
-
-  for (const tag of input.tags ?? []) {
-    const tagSlug = tag.slug || slugify(tag.name);
-    const tagId = tagIdFor(input.locale, tagSlug);
-
-    await db
-      .insert(aiTermTags)
-      .values({
-        id: tagId,
-        locale: input.locale,
-        translationKey: tag.translationKey ?? tagSlug,
-        name: tag.name,
-        slug: tagSlug,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      })
-      .onConflictDoUpdate({
-        target: [aiTermTags.locale, aiTermTags.slug],
-        set: {
-          name: tag.name,
-          updatedAt: timestamp,
-        },
-      });
-
-    await db.insert(aiTermTagRelations).values({ termId, tagId }).onConflictDoNothing();
   }
 
   await db.delete(aiTermRelations).where(eq(aiTermRelations.termId, termId));

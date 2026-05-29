@@ -3,6 +3,7 @@ import { z } from "zod";
 import { parseAiTermImport } from "@/lib/ai-term-import";
 import { checkAiTermQuality } from "@/lib/ai-term-quality";
 import { requireAdminApi } from "@/lib/admin-auth";
+import { scanAiTermFable } from "@/lib/markdown";
 
 const requestSchema = z.object({
   markdown: z.string().trim().min(1).max(800_000),
@@ -39,9 +40,11 @@ export async function POST(request: Request) {
   try {
     const result = parseAiTermImport(parsed.data.markdown);
     const quality = checkAiTermQuality(result.aiTerm);
+    const fable = scanAiTermFable(result.aiTerm.contentMd, result.aiTerm.locale);
 
     return json({
       aiTerm: result.aiTerm,
+      fable,
       importWarnings: result.warnings,
       frontmatter: result.frontmatter,
       quality,
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
     return json(
       {
         error: error instanceof Error ? error.message : "AI 词条 Markdown 解析失败。",
-        hint: "请检查 Frontmatter YAML 缩进、引号、数组、relations/categories/tags 格式，以及正文是否保留了一级标题。",
+        hint: "请检查 Frontmatter YAML 缩进、引号、数组、relations/categories 格式，以及正文是否保留了一级标题。",
       },
       { status: 400 },
     );

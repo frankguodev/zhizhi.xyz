@@ -6,8 +6,8 @@ import { listAdminAiTermTaxonomy } from "@/lib/ai-terms";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "AI 词条分类标签",
-  description: "管理 AI 词条分类和标签，支持重命名、排序、合并和删除未使用项。",
+  title: "AI 词条分类",
+  description: "管理 AI 词条分类，支持重命名、排序、合并和删除未使用项。",
   robots: {
     index: false,
     follow: false,
@@ -22,8 +22,8 @@ export default async function AdminAiTermTaxonomyPage() {
     <AdminPageShell
       active="aiTermsTaxonomy"
       eyebrow="AI 词条库"
-      title="分类与标签"
-      description="管理 AI 词条分类和标签。常见清理动作可以在这里完成：重命名、调整分类排序、合并重复项、删除未使用项。"
+      title="词条分类"
+      description="管理 AI 词条分类。常见清理动作可以在这里完成：重命名、调整分类排序、合并重复项、删除未使用项。"
     >
       <AiTermTaxonomyWorkbench initialTaxonomy={taxonomy} />
     </AdminPageShell>
