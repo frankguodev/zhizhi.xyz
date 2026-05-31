@@ -23,6 +23,105 @@ export type AiTermFableScan = {
   closed: boolean;
 };
 
+export type AiTermBodyDedup = {
+  /** 剥离正文首个一级标题（与详情页 hero 标题重复）。 */
+  stripLeadingTitle?: boolean;
+  /** 剥离「一句话概念」段落（已在 hero 展示）。 */
+  stripSummary?: boolean;
+  /** 剥离「快速理解」段落（已由快速理解卡片承载）。 */
+  stripBeginnerNotes?: boolean;
+  /** 剥离「相关概念」段落（已由相关概念卡片承载）。 */
+  stripRelations?: boolean;
+  /** 抽取「参考资料」段落，折叠进来源与校验卡片。 */
+  extractReferences?: boolean;
+};
+
+const dedupHeadings: Record<Locale, { summary: string[]; beginnerNotes: string[]; relations: string[]; references: string[] }> = {
+  zh: {
+    summary: ["一句话概念"],
+    beginnerNotes: ["快速理解"],
+    relations: ["相关概念"],
+    references: ["参考资料"],
+  },
+  en: {
+    summary: ["in one line", "one-line concept"],
+    beginnerNotes: ["for beginners", "plain explanation"],
+    relations: ["related concepts"],
+    references: ["references", "further reading"],
+  },
+};
+
+function normalizeHeading(value: string) {
+  return value
+    .trim()
+    .replace(/[?？.。:：!！]+$/u, "")
+    .trim()
+    .toLowerCase();
+}
+
+function applyAiTermDedup(body: string, locale: Locale, dedup: AiTermBodyDedup): { body: string; referencesMarkdown: string | null } {
+  const headings = dedupHeadings[locale];
+  const lines = body.split(/\r?\n/);
+  const out: string[] = [];
+  let referenceLines: string[] | null = null;
+  let mode: "keep" | "strip" | "references" = "keep";
+  let leadingTitleStripped = false;
+
+  const matchesHeading = (title: string, set: string[]) => set.some((entry) => normalizeHeading(entry) === normalizeHeading(title));
+
+  for (const line of lines) {
+    const h1 = line.match(/^#(?!#)\s+(.+)$/);
+    if (h1) {
+      mode = "keep";
+      if (dedup.stripLeadingTitle && !leadingTitleStripped) {
+        leadingTitleStripped = true;
+        continue;
+      }
+      out.push(line);
+      continue;
+    }
+
+    const h2 = line.match(/^##(?!#)\s+(.+?)\s*$/);
+    if (h2) {
+      const title = h2[1];
+
+      if (dedup.stripSummary && matchesHeading(title, headings.summary)) {
+        mode = "strip";
+        continue;
+      }
+      if (dedup.stripBeginnerNotes && matchesHeading(title, headings.beginnerNotes)) {
+        mode = "strip";
+        continue;
+      }
+      if (dedup.stripRelations && matchesHeading(title, headings.relations)) {
+        mode = "strip";
+        continue;
+      }
+      if (dedup.extractReferences && matchesHeading(title, headings.references)) {
+        mode = "references";
+        referenceLines = referenceLines ?? [];
+        continue;
+      }
+
+      mode = "keep";
+      out.push(line);
+      continue;
+    }
+
+    if (mode === "keep") {
+      out.push(line);
+    } else if (mode === "references" && referenceLines) {
+      referenceLines.push(line);
+    }
+  }
+
+  const referencesMarkdown = referenceLines && referenceLines.join("\n").trim() ? referenceLines.join("\n").trim() : null;
+  return {
+    body: out.join("\n").replace(/\n{3,}/g, "\n\n").trim(),
+    referencesMarkdown,
+  };
+}
+
 type HastNode = {
   type?: string;
   tagName?: string;
@@ -215,7 +314,11 @@ function extractFableTitle(rawTitle: string | undefined, inner: string[], locale
   };
 }
 
-export async function parseAiTermMarkdown(markdown: string, locale: Locale = "zh"): Promise<{ blocks: ArticleContentBlock[]; fable: AiTermFableBlock | null }> {
+export async function parseAiTermMarkdown(
+  markdown: string,
+  locale: Locale = "zh",
+  dedup: AiTermBodyDedup = {},
+): Promise<{ blocks: ArticleContentBlock[]; fable: AiTermFableBlock | null; referencesHtml: string | null }> {
   const lines = markdown.split(/\r?\n/);
   const withoutFable: string[] = [];
   let fable: AiTermFableBlock | null = null;
@@ -250,9 +353,24 @@ export async function parseAiTermMarkdown(markdown: string, locale: Locale = "zh
     }
   }
 
+  let body = withoutFable.join("\n");
+  let referencesHtml: string | null = null;
+  const hasDedup = Boolean(
+    dedup.stripLeadingTitle || dedup.stripSummary || dedup.stripBeginnerNotes || dedup.stripRelations || dedup.extractReferences,
+  );
+
+  if (hasDedup) {
+    const result = applyAiTermDedup(body, locale, dedup);
+    body = result.body;
+    if (result.referencesMarkdown) {
+      referencesHtml = await markdownToHtml(result.referencesMarkdown, locale);
+    }
+  }
+
   return {
-    blocks: await parseLayeredMarkdown(withoutFable.join("\n"), locale),
+    blocks: await parseLayeredMarkdown(body, locale),
     fable,
+    referencesHtml,
   };
 }
 

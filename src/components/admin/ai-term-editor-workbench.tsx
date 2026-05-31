@@ -41,6 +41,15 @@ type UploadedDiagramMedia = {
   alt?: string;
 };
 
+type DiagramPreview = {
+  url: string;
+  alt: string;
+};
+
+function mediaKeyFromUrl(url: string) {
+  return url.startsWith("/media/") ? url.slice("/media/".length) : url;
+}
+
 function splitMarkdown(markdown: string) {
   const normalized = markdown.replace(/\r\n/g, "\n");
   const match = normalized.match(/^---\n([\s\S]*?)\n---\n?/);
@@ -118,6 +127,13 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
   const [previewTab, setPreviewTab] = useState<PreviewTab>("quality");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
+  const [diagramPreview, setDiagramPreview] = useState<DiagramPreview | null>(() =>
+    initialData.aiTerm.diagramImage
+      ? { url: initialData.aiTerm.diagramImage, alt: initialData.aiTerm.diagramImageAlt ?? "" }
+      : null,
+  );
+  const [confirmDeleteDiagram, setConfirmDeleteDiagram] = useState(false);
+  const [deletingDiagram, setDeletingDiagram] = useState(false);
   const apiBase = `/api/admin/ai-terms/${data.aiTerm.locale}/${data.aiTerm.slug}`;
   const dirty = markdown !== data.markdown;
   const busy = ["checking", "saving", "publishing", "archiving", "restoring", "deleting"].includes(saveState.status);
@@ -211,6 +227,11 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
       const next = result as AiTermEditorData;
       setData(next);
       setMarkdown(next.markdown);
+      setDiagramPreview(
+        next.aiTerm.diagramImage
+          ? { url: next.aiTerm.diagramImage, alt: next.aiTerm.diagramImageAlt ?? "" }
+          : null,
+      );
       setSaveState({ status: "saved", message: "AI 词条已保存。" });
     } catch (error) {
       setSaveState({ status: "error", message: error instanceof Error ? error.message : "保存 AI 词条失败。" });
@@ -260,7 +281,44 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
 
   function applyDiagramUpload(media: UploadedDiagramMedia) {
     setMarkdown((value) => upsertDiagramFrontmatter(value, media.url, media.alt ?? ""));
+    setDiagramPreview({ url: media.url, alt: media.alt ?? "" });
     setSaveState({ status: "idle", message: "词条图解已写入 Frontmatter，保存后生效。" });
+  }
+
+  async function deleteDiagramFromR2() {
+    if (!diagramPreview) {
+      return;
+    }
+
+    const key = mediaKeyFromUrl(diagramPreview.url);
+    setDeletingDiagram(true);
+
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (handleAdminUnauthorized(response)) {
+        throw new Error("登录已过期，正在跳转后台登录。");
+      }
+
+      if (!response.ok) {
+        throw new Error(adminApiErrorMessage(payload, "图片删除失败。"));
+      }
+
+      setMarkdown((value) => upsertDiagramFrontmatter(value, "", ""));
+      setDiagramPreview(null);
+      setConfirmDeleteDiagram(false);
+      setSaveState({ status: "idle", message: "词条图解已从 R2 删除，Frontmatter 已清空，请保存以同步数据库。" });
+    } catch (error) {
+      setSaveState({ status: "error", message: error instanceof Error ? error.message : "图片删除失败。" });
+      setConfirmDeleteDiagram(false);
+    } finally {
+      setDeletingDiagram(false);
+    }
   }
 
   function requestAction(action: ConfirmAction) {
@@ -291,6 +349,27 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
   return (
     <>
       <UnsavedChangesDialog />
+      <AdminConfirmDialog
+        open={confirmDeleteDiagram}
+        title="删除词条图解"
+        description="确认后会从 R2 删除这张图解，并清空 Frontmatter 中的 diagram.image。操作不可撤销，删除后请保存 Markdown 以同步数据库。"
+        confirmLabel="删除图解"
+        tone="danger"
+        busy={deletingDiagram}
+        details={
+          diagramPreview ? (
+            <div className="grid gap-2 border border-line bg-background p-3 text-sm">
+              <div className="overflow-hidden border border-line bg-surface">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={diagramPreview.url} alt={diagramPreview.alt} className="max-h-32 w-full object-contain" />
+              </div>
+              <p className="break-all font-mono text-xs text-muted">{mediaKeyFromUrl(diagramPreview.url)}</p>
+            </div>
+          ) : null
+        }
+        onCancel={() => setConfirmDeleteDiagram(false)}
+        onConfirm={() => void deleteDiagramFromR2()}
+      />
       <AdminConfirmDialog
         open={Boolean(confirmAction && confirmMeta)}
         title={confirmMeta?.title ?? ""}
@@ -374,6 +453,30 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
             />
 
             <div className="mt-4">
+              {diagramPreview ? (
+                <div className="admin-card-flat mb-3 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-semibold text-accent">当前图解</p>
+                    <button
+                      type="button"
+                      className="admin-btn inline-flex h-9 items-center justify-center gap-1 bg-red-50 px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+                      onClick={() => setConfirmDeleteDiagram(true)}
+                      disabled={deletingDiagram || busy}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      从 R2 删除
+                    </button>
+                  </div>
+                  <div className="mt-3 overflow-hidden border border-line bg-background">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={diagramPreview.url} alt={diagramPreview.alt} className="max-h-48 w-full object-contain" />
+                  </div>
+                  {diagramPreview.alt ? (
+                    <p className="mt-2 text-xs text-muted">说明：{diagramPreview.alt}</p>
+                  ) : null}
+                  <p className="mt-1 break-all font-mono text-xs text-muted">{diagramPreview.url}</p>
+                </div>
+              ) : null}
               <MediaUploadPanel
                 altPlaceholder="例如：MCP 连接 AI 应用、工具和数据源的图解"
                 applyLabel="设为图解"

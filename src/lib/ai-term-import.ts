@@ -1,6 +1,7 @@
 import matter from "gray-matter";
 import { z } from "zod";
 import type { AiTermDifficulty, AiTermLocale, AiTermRelationType, AiTermStatus, AiTermType, AiTermVisibility, SaveAiTermInput } from "./ai-terms";
+import { STANDARD_AI_TERM_CATEGORY_BY_SLUG } from "./ai-term-standard-categories";
 
 const aiTermTypes = ["concept", "protocol", "framework", "product", "model", "workflow", "infra", "slang", "company", "method"] as const;
 const aiTermDifficulties = ["beginner", "intermediate", "advanced"] as const;
@@ -219,20 +220,29 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
     .map((category, index) => {
       const name = cleanString(category.name);
       const categorySlug = cleanString(category.slug) || (name ? inferSlug(name) : undefined);
+      const standardCategory = categorySlug ? STANDARD_AI_TERM_CATEGORY_BY_SLUG.get(categorySlug) : undefined;
 
-      if (!name || !categorySlug) {
+      if (!categorySlug || !standardCategory) {
+        if (categorySlug) {
+          warnings.push(`分类 slug "${categorySlug}" 不在标准分类表中，已跳过。`);
+        }
         return null;
       }
 
       return {
-        name,
+        name: data.locale === "en" ? standardCategory.nameEn : standardCategory.name,
         slug: categorySlug,
-        description: normalizeNullable(category.description),
-        sortOrder: category.sort_order || index + 1,
-        translationKey: cleanString(category.translation_key) || categorySlug,
+        description: data.locale === "en" ? standardCategory.descriptionEn : standardCategory.description,
+        sortOrder: standardCategory.sortOrder || index + 1,
+        translationKey: standardCategory.slug,
       };
     })
-    .filter((category): category is NonNullable<typeof category> => Boolean(category));
+    .filter((category): category is NonNullable<typeof category> => Boolean(category))
+    .slice(0, 2);
+
+  if (data.categories.length > categories.length && categories.length === 2) {
+    warnings.push("categories 超过 2 个有效标准分类，已只保留前 2 个。");
+  }
 
   const relations = data.relations
     .map((relation) => {
@@ -243,6 +253,7 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
       }
 
       return {
+        term: normalizeNullable(relation.term),
         slug: relationSlug,
         relationType: relation.relation_type as AiTermRelationType,
         description: normalizeNullable(relation.description),

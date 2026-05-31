@@ -31,6 +31,7 @@
     "admin:promote:remote": "node scripts/promote-admin.mjs --remote",
     "admin:promote:test:local": "node scripts/promote-admin.mjs --local --db zhizhi-test --env test --config wrangler.toml",
     "admin:promote:test": "node scripts/promote-admin.mjs --remote --db zhizhi-test --env test --config wrangler.toml",
+    "ai-term:push:prod": "node scripts/ai-term-push-prod.mjs",
     "remote:stop": "node scripts/remote-stop.mjs",
     "test:public-api": "node scripts/test-public-api.mjs",
     "test:admin-regression": "node scripts/test-admin-regression.mjs",

@@ -127,11 +127,7 @@ export async function POST(request: Request) {
       aiTerm,
       importWarnings: [
         ...result.warnings,
-        ...aiTerm.skippedRelations.map((relation) =>
-          relation.reason === "self"
-            ? `关联词条 ${relation.slug} 指向自身，已跳过。`
-            : `关联词条 ${relation.slug} 未匹配到已存在词条，MVP 阶段已跳过。`,
-        ),
+        ...aiTerm.skippedRelations.map((relation) => `关联词条 ${relation.slug} 指向自身，已跳过。`),
       ],
     });
   } catch (error) {

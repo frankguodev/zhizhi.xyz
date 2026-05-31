@@ -1,112 +1,57 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { ArrowRight, Clock3, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, Search, TrendingUp, X } from "lucide-react";
+import { ArticleFilterSelect } from "@/components/content/article-filter-select";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import type { AiTermSummary, AiTermTaxonomyItem } from "@/lib/ai-terms";
+import type { AiTermSummary } from "@/lib/ai-terms";
+import { cn } from "@/lib/utils";
 import { siteConfig, type Locale } from "@/lib/site";
 
+type CategoryOption = { name: string; slug: string };
+
 type AiTermsPageProps = {
+  categories: CategoryOption[];
+  categoryCounts?: Record<string, number>;
   categorySlug?: string;
+  difficulty?: string;
   locale: Locale;
+  page: number;
+  pageSize: number;
+  popularTerms: { term: string; slug: string }[];
   query?: string;
+  sort: string;
   terms: AiTermSummary[];
+  total: number;
 };
 
-type DisplayTerm = {
-  categories: AiTermTaxonomyItem[];
-  difficulty: string;
-  fullName: string | null;
-  heatScore: number;
-  shortConcept: string;
-  shortDesc: string;
-  slug: string;
-  term: string;
-  termZh: string | null;
-  trending: boolean;
-  updatedAt: Date | string | number;
+type Copy = {
+  currentPath: string;
+  eyebrow: string;
+  titleStart: string;
+  titleAccent: string;
+  description: string;
+  searchPlaceholder: string;
+  searchLabel: string;
+  clearSearch: string;
+  clearAll: string;
+  popular: string;
+  resultCount: (count: number) => string;
+  sortLabel: string;
+  sort: { featured: string; latest: string; heat: string };
+  filterAll: string;
+  filterSubmit: string;
+  categoryLabel: string;
+  difficultyLabel: string;
+  difficulties: { beginner: string; intermediate: string; advanced: string };
+  heat: (value: number) => string;
+  trending: string;
+  noResults: string;
+  noResultsHint: string;
+  paginationLabel: string;
+  prev: string;
+  next: string;
+  pageStatus: (page: number, totalPages: number) => string;
 };
-
-export const fallbackAiTerms: DisplayTerm[] = [
-  {
-    categories: [{ id: "world-coding", name: "AI 编程世界", slug: "ai-coding", description: "工具、概念和趋势", sortOrder: 1 }],
-    difficulty: "beginner",
-    fullName: "Model Context Protocol",
-    heatScore: 98,
-    shortConcept: "模型上下文协议",
-    shortDesc: "让应用以统一方式把工具、数据和上下文提供给大模型。",
-    slug: "mcp",
-    term: "MCP",
-    termZh: "模型上下文协议",
-    trending: true,
-    updatedAt: "2026-05-19",
-  },
-  {
-    categories: [{ id: "world-agent", name: "Agent 世界", slug: "agent-world", description: "自动化和智能体", sortOrder: 2 }],
-    difficulty: "beginner",
-    fullName: "AI Agent",
-    heatScore: 87,
-    shortConcept: "AI 智能体",
-    shortDesc: "能够感知环境、制定步骤、调用工具并持续完成任务的 AI 系统。",
-    slug: "agent",
-    term: "Agent",
-    termZh: "AI 智能体",
-    trending: true,
-    updatedAt: "2026-05-19",
-  },
-  {
-    categories: [{ id: "world-infra", name: "AI 基建世界", slug: "ai-infra", description: "模型、检索和平台", sortOrder: 3 }],
-    difficulty: "beginner",
-    fullName: "Retrieval Augmented Generation",
-    heatScore: 72,
-    shortConcept: "检索增强生成",
-    shortDesc: "先从知识库取回相关资料，再交给大模型生成更可靠的答案。",
-    slug: "rag",
-    term: "RAG",
-    termZh: "检索增强生成",
-    trending: false,
-    updatedAt: "2026-05-18",
-  },
-  {
-    categories: [{ id: "world-coding", name: "AI 编程世界", slug: "ai-coding", description: "工具、概念和趋势", sortOrder: 1 }],
-    difficulty: "intermediate",
-    fullName: "AI-first Coding",
-    heatScore: 61,
-    shortConcept: "氛围编程",
-    shortDesc: "用自然语言描述意图，让 AI 承担更多实现、重构和调试工作。",
-    slug: "vibe-coding",
-    term: "Vibe Coding",
-    termZh: "氛围编程",
-    trending: true,
-    updatedAt: "2026-05-16",
-  },
-  {
-    categories: [{ id: "world-context", name: "上下文工程世界", slug: "context", description: "提示词、上下文和记忆", sortOrder: 4 }],
-    difficulty: "intermediate",
-    fullName: null,
-    heatScore: 58,
-    shortConcept: "上下文工程",
-    shortDesc: "围绕任务组织上下文，让大模型更稳定地理解目标和边界。",
-    slug: "context-engineering",
-    term: "Context Engineering",
-    termZh: "上下文工程",
-    trending: true,
-    updatedAt: "2026-05-15",
-  },
-  {
-    categories: [{ id: "world-agent", name: "Agent 世界", slug: "agent-world", description: "自动化和智能体", sortOrder: 2 }],
-    difficulty: "beginner",
-    fullName: "Tool Calling",
-    heatScore: 54,
-    shortConcept: "工具调用",
-    shortDesc: "让大模型在回答之外调用函数、API 或外部工具完成动作。",
-    slug: "tool-calling",
-    term: "Tool Calling",
-    termZh: "工具调用",
-    trending: false,
-    updatedAt: "2026-05-14",
-  },
-];
 
 const copy = {
   zh: {
@@ -117,29 +62,25 @@ const copy = {
     description: "把 AI 术语、概念、工具和新兴说法，用普通人能读懂的方式整理成一张安静的知识地图。",
     searchPlaceholder: "搜索 AI 词条、概念、工具...",
     searchLabel: "搜索词条",
-    mapTitle: "词条地图",
-    mapHint: "从概念和新近更新进入",
-    trending: "趋势词条",
-    recent: "最近加入",
-    allTerms: "全部词条",
-    currentFilter: "当前筛选",
-    latest: "最新",
-    readTerm: "阅读词条",
-    termsCount(count: number) {
-      return `${count} 个词条`;
-    },
-    viewAll: "查看全部",
-    heat(value: number) {
-      return `热度 ${Math.max(0, value).toLocaleString("zh-CN")} / 100`;
-    },
-    updated(value: Date | string | number) {
-      return `更新 ${formatRelativeDate(value, "zh")}`;
-    },
-    noResults: "暂时没有匹配的词条",
-    noResultsHint: "可以换一个关键词，或回到全部词条重新浏览。后台发布词条后，这里会自动展示真实数据。",
-    quote: "让新概念变得可理解，才是真正开始使用它的第一步。",
-    methodologyTitle: "整理方式",
-    methodologyBody: "每个词条优先回答三个问题：它是什么、为什么重要、普通读者应该怎样理解和使用它。",
+    clearSearch: "清除搜索",
+    clearAll: "清除全部",
+    popular: "热门",
+    resultCount: (count) => `共 ${count.toLocaleString("zh-CN")} 个词条`,
+    sortLabel: "排序",
+    sort: { featured: "趋势", latest: "最新", heat: "最热" },
+    filterAll: "全部",
+    filterSubmit: "筛选",
+    categoryLabel: "分类",
+    difficultyLabel: "难度",
+    difficulties: { beginner: "入门", intermediate: "进阶", advanced: "高阶" },
+    heat: (value) => `热度 ${Math.max(0, value)}`,
+    trending: "趋势",
+    noResults: "没有匹配的词条",
+    noResultsHint: "可以换个关键词，或清除筛选条件重新浏览。后台发布词条后会自动展示真实数据。",
+    paginationLabel: "分页",
+    prev: "上一页",
+    next: "下一页",
+    pageStatus: (page, totalPages) => `第 ${page} / ${totalPages} 页`,
   },
   en: {
     currentPath: "/en/ai-terms",
@@ -149,206 +90,197 @@ const copy = {
     description: "AI terms, concepts, tools, and emerging ideas explained in a calm map for people learning in public.",
     searchPlaceholder: "Search AI terms, concepts, tools...",
     searchLabel: "Search terms",
-    mapTitle: "Term Map",
-    mapHint: "Start from concepts and recent updates",
-    trending: "Trending AI Terms",
-    recent: "Recently Added",
-    allTerms: "All Terms",
-    currentFilter: "Current filter",
-    latest: "Latest",
-    readTerm: "Read term",
-    termsCount(count: number) {
-      return `${count} terms`;
-    },
-    viewAll: "View all",
-    heat(value: number) {
-      return `${Math.max(0, value).toLocaleString("en-US")} / 100 heat`;
-    },
-    updated(value: Date | string | number) {
-      return `Updated ${formatRelativeDate(value, "en")}`;
-    },
-    noResults: "No matching terms yet",
-    noResultsHint: "Try another keyword or return to all terms. Published terms will appear here automatically.",
-    quote: "Making AI language easier to understand is where real use begins.",
-    methodologyTitle: "How Terms Are Organized",
-    methodologyBody: "Each term focuses on three questions: what it is, why it matters, and how a reader can understand or use it.",
+    clearSearch: "Clear search",
+    clearAll: "Clear all",
+    popular: "Popular",
+    resultCount: (count) => `${count.toLocaleString("en-US")} terms`,
+    sortLabel: "Sort",
+    sort: { featured: "Trending", latest: "Latest", heat: "Popular" },
+    filterAll: "All",
+    filterSubmit: "Apply",
+    categoryLabel: "Category",
+    difficultyLabel: "Level",
+    difficulties: { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" },
+    heat: (value) => `Heat ${Math.max(0, value)}`,
+    trending: "Trending",
+    noResults: "No matching terms",
+    noResultsHint: "Try another keyword or clear the filters. Published terms will appear here automatically.",
+    paginationLabel: "Pagination",
+    prev: "Previous",
+    next: "Next",
+    pageStatus: (page, totalPages) => `Page ${page} / ${totalPages}`,
   },
-} satisfies Record<
-  Locale,
-  {
-    allTerms: string;
-    currentPath: string;
-    currentFilter: string;
-    description: string;
-    eyebrow: string;
-    heat: (value: number) => string;
-    noResults: string;
-    noResultsHint: string;
-    mapHint: string;
-    mapTitle: string;
-    quote: string;
-    methodologyTitle: string;
-    methodologyBody: string;
-    latest: string;
-    readTerm: string;
-    recent: string;
-    searchLabel: string;
-    searchPlaceholder: string;
-    termsCount: (count: number) => string;
-    titleAccent: string;
-    titleStart: string;
-    trending: string;
-    updated: (value: Date | string | number) => string;
-    viewAll: string;
-  }
->;
+} satisfies Record<Locale, Copy>;
+
+const SORT_KEYS = ["featured", "latest", "heat"] as const;
+const DIFFICULTY_KEYS = ["beginner", "intermediate", "advanced"] as const;
 
 export function aiTermPath(locale: Locale, slug: string) {
   const base = locale === "en" ? "/en/ai-terms" : "/ai-terms";
   return `${base}/${encodeURIComponent(slug)}`;
 }
 
-function formatRelativeDate(value: Date | string | number, locale: Locale) {
-  const date = value instanceof Date ? value : new Date(value);
+type HrefParams = {
+  q?: string;
+  category?: string;
+  difficulty?: string;
+  sort?: string;
+  page?: number;
+};
 
-  if (Number.isNaN(date.getTime())) {
-    return locale === "en" ? "recently" : "最近";
-  }
-
-  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "zh-CN", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
+function buildHref(basePath: string, params: HrefParams) {
+  const sp = new URLSearchParams();
+  if (params.q) sp.set("q", params.q);
+  if (params.category) sp.set("category", params.category);
+  if (params.difficulty) sp.set("difficulty", params.difficulty);
+  if (params.sort && params.sort !== "featured") sp.set("sort", params.sort);
+  if (params.page && params.page > 1) sp.set("page", String(params.page));
+  const qs = sp.toString();
+  return qs ? `${basePath}?${qs}` : basePath;
 }
 
-function normalizeTerms(terms: AiTermSummary[], query?: string, categorySlug?: string): DisplayTerm[] {
-  const source = terms.length > 0 ? terms : fallbackAiTerms;
-  const normalizedQuery = query?.trim().toLowerCase();
-  const normalizedCategory = categorySlug?.trim().toLowerCase();
-  let mapped = source.map((term) => ({
-    categories: term.categories,
-    difficulty: term.difficulty,
-    fullName: term.fullName,
-    heatScore: term.heatScore,
-    shortConcept: term.shortConcept,
-    shortDesc: term.shortDesc,
-    slug: term.slug,
-    term: term.term,
-    termZh: term.termZh,
-    trending: term.trending,
-    updatedAt: term.updatedAt,
-  }));
-
-  if (normalizedCategory) {
-    mapped = mapped.filter((term) => term.categories.some((category) => category.slug.toLowerCase() === normalizedCategory));
+function paginationItems(current: number, totalPages: number): Array<number | "ellipsis"> {
+  const pages = new Set<number>([1, totalPages]);
+  for (let i = current - 1; i <= current + 1; i++) {
+    if (i >= 1 && i <= totalPages) pages.add(i);
   }
-
-  if (!normalizedQuery) {
-    return mapped;
+  const sorted = [...pages].sort((a, b) => a - b);
+  const items: Array<number | "ellipsis"> = [];
+  let previous = 0;
+  for (const value of sorted) {
+    if (value - previous > 1) items.push("ellipsis");
+    items.push(value);
+    previous = value;
   }
-
-  return mapped.filter((term) => [term.term, term.termZh, term.fullName, term.shortConcept, term.shortDesc].filter(Boolean).some((value) => String(value).toLowerCase().includes(normalizedQuery)));
+  return items;
 }
 
-function SectionHeading({ action, actionHref, icon, title }: { action?: string; actionHref?: string; icon: ReactNode; title: string }) {
+
+function SidebarLink({ active, count, href, label }: { active: boolean; count?: number; href: string; label: string }) {
   return (
-    <div className="mb-5 flex items-center justify-between gap-4">
-      <h2 className="flex min-w-0 items-center gap-2 text-lg font-semibold text-foreground sm:text-xl">
-        <span className="text-accent">{icon}</span>
-        <span className="break-words">{title}</span>
-      </h2>
-      {action && actionHref ? (
-        <Link className="hidden min-h-9 shrink-0 items-center rounded-md px-2.5 py-1 text-sm font-semibold text-accent transition hover:bg-accent/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 sm:inline-flex" href={actionHref}>
-          {action}
-          <ArrowRight className="ml-1 h-4 w-4" />
-        </Link>
+    <Link
+      href={href}
+      aria-current={active ? "true" : undefined}
+      className={cn(
+        "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35",
+        active ? "bg-accent/10 text-accent" : "text-muted hover:bg-accent/6 hover:text-foreground",
+      )}
+    >
+      <span className="min-w-0 truncate">{label}</span>
+      {typeof count === "number" ? (
+        <span className={cn("ml-2 shrink-0 text-xs font-medium", active ? "text-accent/70" : "text-muted/60")}>{count}</span>
       ) : null}
-    </div>
-  );
-}
-
-function RecentItem({ term, locale }: { locale: Locale; term: DisplayTerm }) {
-  return (
-    <Link className="block min-w-0 border-b border-line/70 px-3.5 py-3 transition last:border-b-0 hover:bg-accent/5 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/35 sm:px-4" href={aiTermPath(locale, term.slug)}>
-      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 sm:gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-accent">
-          <Clock3 className="h-4 w-4" />
-        </span>
-        <span className="flex min-w-0 items-baseline gap-2.5 text-left">
-          <span className="max-w-[42%] shrink-0 truncate text-sm font-semibold text-foreground sm:text-base">{term.term}</span>
-          <span className="min-w-0 flex-1 truncate text-sm leading-6 text-muted">{term.shortDesc}</span>
-        </span>
-        <p className="shrink-0 text-right text-xs font-semibold text-muted">{copy[locale].updated(term.updatedAt)}</p>
-      </div>
     </Link>
   );
 }
 
-function TermCard({ term, locale }: { locale: Locale; term: DisplayTerm }) {
+function TermCard({ term, locale }: { locale: Locale; term: AiTermSummary }) {
+  const pageCopy = copy[locale];
+  const subtitle = term.fullName ?? (term.termZh && term.termZh !== term.term ? term.termZh : null);
+  const difficultyLabel = pageCopy.difficulties[term.difficulty];
+
   return (
     <Link className="group block h-full min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
-      <article id={`term-${term.slug}`} className="home-popular-card flex h-full min-w-0 flex-col rounded-md border border-line p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h3 className="break-words text-xl font-semibold text-foreground transition group-hover:text-accent [overflow-wrap:anywhere]">
-              {term.term}
-              {term.trending ? <TrendingUp className="ml-2 inline h-4 w-4 text-accent" /> : null}
-            </h3>
-            <p className="mt-3 break-words text-sm font-semibold leading-6 text-muted [overflow-wrap:anywhere]">{term.fullName || term.shortConcept}</p>
-          </div>
+      <article id={`term-${term.slug}`} className="home-popular-card flex h-full min-w-0 flex-col rounded-md border border-line p-5 shadow-sm transition group-hover:border-accent/30">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="min-w-0 break-words text-lg font-semibold text-foreground transition group-hover:text-accent [overflow-wrap:anywhere]">{term.term}</h3>
+          {term.trending ? (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">
+              <TrendingUp className="h-3.5 w-3.5" />
+              {pageCopy.trending}
+            </span>
+          ) : null}
         </div>
-        <p className="mt-4 line-clamp-3 min-h-20 text-sm leading-7 text-muted">{term.shortDesc}</p>
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-line pt-5 text-xs font-semibold text-muted">
-          <span>{copy[locale].updated(term.updatedAt)}</span>
-          <span className="inline-flex items-center gap-1 rounded-md text-accent transition group-hover:text-foreground">
-            {copy[locale].readTerm}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </span>
+        {subtitle ? <p className="mt-1.5 break-words text-sm font-medium leading-6 text-muted [overflow-wrap:anywhere]">{subtitle}</p> : null}
+        <p className="mt-3 line-clamp-3 min-h-16 text-sm leading-7 text-muted">{term.shortDesc}</p>
+        <div className="mt-auto flex items-center border-t border-line pt-4 text-xs font-semibold text-muted">
+          <span className="rounded border border-line px-1.5 py-0.5">{difficultyLabel}</span>
+          {term.heatScore > 0 ? (
+            <span className="ml-auto inline-flex items-center gap-1">
+              <Flame className="h-3.5 w-3.5 text-accent" />
+              {term.heatScore}
+            </span>
+          ) : null}
         </div>
       </article>
     </Link>
   );
 }
 
-export function AiTermsPage({ categorySlug, locale, query, terms }: AiTermsPageProps) {
+export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, difficulty, locale, page, pageSize, popularTerms, query, sort, terms, total }: AiTermsPageProps) {
   const pageCopy = copy[locale];
-  const displayTerms = normalizeTerms(terms, query, categorySlug);
-  const recentTerms = [...displayTerms].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 5);
+  const basePath = pageCopy.currentPath;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const offset = (currentPage - 1) * pageSize;
+  const hasFilter = Boolean(query || categorySlug || difficulty);
+
+  const popularDeduped: { term: string; slug: string }[] = [];
+  const seenPopular = new Set<string>();
+  for (const item of popularTerms) {
+    if (seenPopular.has(item.term)) continue;
+    seenPopular.add(item.term);
+    popularDeduped.push(item);
+    if (popularDeduped.length >= 8) break;
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: locale === "en" ? "AI Terms" : "AI 词条",
     description: pageCopy.description,
-    url: `${siteConfig.url}${pageCopy.currentPath}`,
+    url: `${siteConfig.url}${basePath}`,
     inLanguage: locale === "en" ? "en" : "zh-CN",
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: total,
+      itemListElement: terms.map((term, index) => ({
+        "@type": "ListItem",
+        position: offset + index + 1,
+        url: `${siteConfig.url}${aiTermPath(locale, term.slug)}`,
+        name: term.term,
+      })),
+    },
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader locale={locale} currentPath={pageCopy.currentPath} />
+      <SiteHeader locale={locale} currentPath={basePath} />
 
       <main className="flex-1 bg-background">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
 
+        {/* Hero + 搜索 */}
         <section className="site-grid border-b border-line" aria-labelledby="ai-terms-title">
-          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-12">
-            <div className="mx-auto max-w-4xl text-center">
-              <p className="eyebrow text-accent">{pageCopy.eyebrow}</p>
-              <h1 id="ai-terms-title" className="mx-auto mt-5 max-w-3xl break-words text-[2.45rem] font-semibold leading-tight text-foreground [overflow-wrap:anywhere] sm:text-5xl md:text-6xl">
+          <div className="mx-auto max-w-6xl px-4 pt-12 pb-8 sm:px-6 md:pt-16 md:pb-10">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-bold uppercase text-accent">{pageCopy.eyebrow}</p>
+              <h1 id="ai-terms-title" className="mx-auto mt-4 max-w-2xl break-words text-3xl font-semibold leading-tight text-foreground [overflow-wrap:anywhere] sm:text-4xl md:text-5xl">
                 {pageCopy.titleStart}
-                <span className="block text-accent">{pageCopy.titleAccent}</span>
+                <span className="text-accent"> {pageCopy.titleAccent}</span>
               </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-base leading-8 text-muted md:text-lg">{pageCopy.description}</p>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-muted md:text-lg">{pageCopy.description}</p>
             </div>
 
-            <form className="mx-auto mt-8 max-w-3xl" action={pageCopy.currentPath}>
+            <form className="mx-auto mt-7 max-w-2xl" action={basePath}>
               <label className="sr-only" htmlFor="ai-term-search">
                 {pageCopy.searchLabel}
               </label>
               {categorySlug ? <input type="hidden" name="category" value={categorySlug} /> : null}
+              {difficulty ? <input type="hidden" name="difficulty" value={difficulty} /> : null}
+              {sort !== "featured" ? <input type="hidden" name="sort" value={sort} /> : null}
               <div className="flex min-h-14 items-center gap-2 rounded-lg border border-line bg-paper/88 px-3 shadow-[var(--shadow-quiet)] focus-within:border-accent/55 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_12%,transparent)] sm:gap-3 sm:px-4">
                 <Search className="h-5 w-5 shrink-0 text-muted" />
                 <input id="ai-term-search" name="q" defaultValue={query} className="h-12 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted" placeholder={pageCopy.searchPlaceholder} />
+                {query ? (
+                  <Link
+                    href={buildHref(basePath, { category: categorySlug, difficulty, sort })}
+                    aria-label={pageCopy.clearSearch}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-accent/8 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  >
+                    <X className="h-4 w-4" />
+                  </Link>
+                ) : null}
                 <button className="inline-flex h-10 min-w-10 shrink-0 cursor-pointer items-center justify-center rounded-md bg-accent px-3 text-sm font-semibold text-accent-ink transition hover:bg-[color-mix(in_srgb,var(--accent)_88%,var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" type="submit">
                   <Search className="h-4 w-4 sm:hidden" />
                   <span className="sr-only sm:not-sr-only">{pageCopy.searchLabel}</span>
@@ -356,50 +288,227 @@ export function AiTermsPage({ categorySlug, locale, query, terms }: AiTermsPageP
               </div>
             </form>
 
-          </div>
-        </section>
-
-        <section className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
-            <SectionHeading icon={<Sparkles className="h-5 w-5" />} title={pageCopy.recent} />
-            <div className="overflow-hidden rounded-lg border border-line/70 bg-paper/44">
-              {recentTerms.map((term) => (
-                <RecentItem key={term.slug} locale={locale} term={term} />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="all-terms" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-foreground">{pageCopy.allTerms}</h2>
-          </div>
-
-          {displayTerms.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {displayTerms.slice(0, 12).map((term) => (
-                <TermCard key={term.slug} locale={locale} term={term} />
-              ))}
-            </div>
-          ) : (
-            <div className="index-surface rounded-md border border-line p-8 text-center">
-              <h3 className="text-xl font-semibold text-foreground">{pageCopy.noResults}</h3>
-              <p className="mx-auto mt-3 max-w-2xl leading-7 text-muted">{pageCopy.noResultsHint}</p>
-            </div>
-          )}
-        </section>
-
-        <section className="border-t border-line bg-surface/25">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
-            <div className="grid gap-5 md:grid-cols-[0.75fr_1.25fr] md:items-start">
-              <div>
-                <p className="eyebrow text-accent">{pageCopy.methodologyTitle}</p>
-                <h2 className="mt-3 text-2xl font-semibold text-foreground">{pageCopy.mapTitle}</h2>
+            {popularDeduped.length > 0 ? (
+              <div className="mx-auto mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-2">
+                <span className="text-xs font-semibold uppercase text-muted">{pageCopy.popular}</span>
+                {popularDeduped.map((item) => (
+                  <Link key={item.slug} href={aiTermPath(locale, item.slug)} className="rounded-md border border-line bg-surface/50 px-2.5 py-1 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-accent">
+                    {item.term}
+                  </Link>
+                ))}
               </div>
-              <div className="rounded-lg border border-line bg-paper/52 p-5">
-                <p className="text-base leading-8 text-foreground">{pageCopy.methodologyBody}</p>
-                <p className="mt-4 text-sm leading-7 text-muted">{pageCopy.quote}</p>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-7 sm:px-6 md:py-9">
+          {/* 移动端筛选表单（桌面隐藏，使用左侧栏） */}
+          <form action={basePath} className="mb-5 grid grid-cols-2 gap-3 lg:hidden">
+            {query ? <input type="hidden" name="q" value={query} /> : null}
+            {sort !== "featured" ? <input type="hidden" name="sort" value={sort} /> : null}
+            <div>
+              <span className="mb-1.5 block text-xs font-semibold uppercase text-muted">{pageCopy.categoryLabel}</span>
+              <span className="relative block">
+                <ArticleFilterSelect
+                  name="category"
+                  value={categorySlug ?? ""}
+                  placeholder={pageCopy.filterAll}
+                  options={categories.map((c) => ({ label: c.name, value: c.slug }))}
+                />
+                <select className="sr-only" defaultValue={categorySlug ?? ""} name="category" tabIndex={-1} aria-hidden="true" data-article-filter="category">
+                  <option value="">{pageCopy.filterAll}</option>
+                  {categories.map((c) => (
+                    <option key={c.slug} value={c.slug}>{c.name}</option>
+                  ))}
+                </select>
+              </span>
+            </div>
+            <div>
+              <span className="mb-1.5 block text-xs font-semibold uppercase text-muted">{pageCopy.difficultyLabel}</span>
+              <span className="relative block">
+                <ArticleFilterSelect
+                  name="difficulty"
+                  value={difficulty ?? ""}
+                  placeholder={pageCopy.filterAll}
+                  options={DIFFICULTY_KEYS.map((key) => ({ label: pageCopy.difficulties[key], value: key }))}
+                />
+                <select className="sr-only" defaultValue={difficulty ?? ""} name="difficulty" tabIndex={-1} aria-hidden="true" data-article-filter="difficulty">
+                  <option value="">{pageCopy.filterAll}</option>
+                  {DIFFICULTY_KEYS.map((key) => (
+                    <option key={key} value={key}>{pageCopy.difficulties[key]}</option>
+                  ))}
+                </select>
+              </span>
+            </div>
+            <div className="col-span-2 flex items-center gap-3">
+              <button
+                type="submit"
+                className="inline-flex h-9 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:bg-[color-mix(in_srgb,var(--accent)_88%,var(--foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              >
+                {pageCopy.filterSubmit}
+              </button>
+              {hasFilter ? (
+                <Link href={basePath} className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition hover:text-foreground">
+                  <X className="h-3.5 w-3.5" />
+                  {pageCopy.clearAll}
+                </Link>
+              ) : null}
+            </div>
+          </form>
+
+          {/* 工具条：计数 + 排序 */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <p className="text-sm font-semibold text-muted">
+              <span>{pageCopy.resultCount(total)}</span>
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="hidden text-xs font-semibold uppercase text-muted sm:inline">{pageCopy.sortLabel}</span>
+              <div className="inline-flex rounded-md border border-line bg-surface/60 p-0.5">
+                {SORT_KEYS.map((key) => {
+                  const active = sort === key;
+                  return (
+                    <Link
+                      key={key}
+                      href={buildHref(basePath, { q: query, category: categorySlug, difficulty, sort: key })}
+                      aria-current={active ? "true" : undefined}
+                      className={cn("rounded-[0.3rem] px-3 py-1.5 text-sm font-semibold transition", active ? "bg-accent/14 text-accent" : "text-muted hover:text-foreground")}
+                    >
+                      {pageCopy.sort[key]}
+                    </Link>
+                  );
+                })}
               </div>
+            </div>
+          </div>
+
+          {/* 双栏：左侧筛选栏（桌面） + 右侧词条网格 */}
+          <div className="mt-6 lg:grid lg:grid-cols-[15rem_1fr] lg:gap-8">
+            {/* 桌面侧栏 */}
+            <aside className="hidden lg:block">
+              <div className="sticky top-24 space-y-6">
+                {categories.length > 0 ? (
+                  <div>
+                    <p className="px-3 text-xs font-semibold uppercase text-muted">{pageCopy.categoryLabel}</p>
+                    <ul className="mt-1 max-h-[55vh] space-y-0.5 overflow-y-auto [scrollbar-width:thin]">
+                      <li>
+                        <SidebarLink active={!categorySlug} href={buildHref(basePath, { q: query, difficulty, sort })} label={pageCopy.filterAll} />
+                      </li>
+                      {categories.map((category) => (
+                        <li key={category.slug}>
+                          <SidebarLink
+                            active={categorySlug === category.slug}
+                            count={categoryCounts[category.slug]}
+                            href={buildHref(basePath, { q: query, category: category.slug, difficulty, sort })}
+                            label={category.name}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <div>
+                  <p className="px-3 text-xs font-semibold uppercase text-muted">{pageCopy.difficultyLabel}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    <li>
+                      <SidebarLink active={!difficulty} href={buildHref(basePath, { q: query, category: categorySlug, sort })} label={pageCopy.filterAll} />
+                    </li>
+                    {DIFFICULTY_KEYS.map((key) => (
+                      <li key={key}>
+                        <SidebarLink
+                          active={difficulty === key}
+                          href={buildHref(basePath, { q: query, category: categorySlug, difficulty: key, sort })}
+                          label={pageCopy.difficulties[key]}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {hasFilter ? (
+                  <Link
+                    href={basePath}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-md border border-line px-3 py-2 text-sm font-semibold text-muted transition hover:border-accent/35 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    {pageCopy.clearAll}
+                  </Link>
+                ) : null}
+              </div>
+            </aside>
+
+            {/* 词条网格 + 分页 */}
+            <div>
+              {terms.length > 0 ? (
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {terms.map((term) => (
+                    <TermCard key={term.slug} locale={locale} term={term} />
+                  ))}
+                </div>
+              ) : (
+                <div className="index-surface rounded-md border border-line p-8 text-center">
+                  <h2 className="text-xl font-semibold text-foreground">{pageCopy.noResults}</h2>
+                  <p className="mx-auto mt-3 max-w-2xl leading-7 text-muted">{pageCopy.noResultsHint}</p>
+                </div>
+              )}
+
+              {totalPages > 1 ? (
+                <nav className="mt-9 flex items-center justify-center gap-1.5" aria-label={pageCopy.paginationLabel}>
+                  {currentPage > 1 ? (
+                    <Link
+                      href={buildHref(basePath, { q: query, category: categorySlug, difficulty, sort, page: currentPage - 1 })}
+                      className="inline-flex h-9 items-center gap-1 rounded-md border border-line px-2.5 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-foreground"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">{pageCopy.prev}</span>
+                    </Link>
+                  ) : (
+                    <span className="inline-flex h-9 items-center gap-1 rounded-md border border-line/60 px-2.5 text-sm font-semibold text-muted/40">
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">{pageCopy.prev}</span>
+                    </span>
+                  )}
+
+                  <span className="px-2 text-sm font-semibold text-muted sm:hidden">{pageCopy.pageStatus(currentPage, totalPages)}</span>
+
+                  <div className="hidden items-center gap-1.5 sm:flex">
+                    {paginationItems(currentPage, totalPages).map((item, index) =>
+                      item === "ellipsis" ? (
+                        <span key={`ellipsis-${index}`} className="px-1 text-sm text-muted">
+                          …
+                        </span>
+                      ) : item === currentPage ? (
+                        <span key={item} aria-current="page" className="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-accent/40 bg-accent/12 px-2 text-sm font-semibold text-accent">
+                          {item}
+                        </span>
+                      ) : (
+                        <Link
+                          key={item}
+                          href={buildHref(basePath, { q: query, category: categorySlug, difficulty, sort, page: item })}
+                          className="inline-flex h-9 min-w-9 items-center justify-center rounded-md border border-line px-2 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-foreground"
+                        >
+                          {item}
+                        </Link>
+                      ),
+                    )}
+                  </div>
+
+                  {currentPage < totalPages ? (
+                    <Link
+                      href={buildHref(basePath, { q: query, category: categorySlug, difficulty, sort, page: currentPage + 1 })}
+                      className="inline-flex h-9 items-center gap-1 rounded-md border border-line px-2.5 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-foreground"
+                    >
+                      <span className="hidden sm:inline">{pageCopy.next}</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <span className="inline-flex h-9 items-center gap-1 rounded-md border border-line/60 px-2.5 text-sm font-semibold text-muted/40">
+                      <span className="hidden sm:inline">{pageCopy.next}</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </span>
+                  )}
+                </nav>
+              ) : null}
             </div>
           </div>
         </section>

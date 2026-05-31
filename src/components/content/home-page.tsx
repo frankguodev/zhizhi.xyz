@@ -266,8 +266,8 @@ export function HomePage({ payload }: HomePageProps) {
         </section>
 
         {payload.latestArticles.length > 0 ? (
-          <section className="border-b border-line bg-background" aria-labelledby="home-latest-title">
-            <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
+          <section aria-labelledby="home-latest-title">
+            <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
               <div>
                 <h2 id="home-latest-title" className="eyebrow text-accent">
                   {pageCopy.latestEyebrow}
@@ -298,18 +298,12 @@ export function HomePage({ payload }: HomePageProps) {
           </section>
         ) : null}
 
-        <section className="border-b border-line bg-background" aria-labelledby="home-popular-title">
-          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 id="home-popular-title" className="eyebrow text-accent">
-                  {pageCopy.popularEyebrow}
-                </h2>
-              </div>
-              <Link className="motion-inline hidden items-center gap-2 text-sm font-semibold text-foreground md:inline-flex" href={pageCopy.articlesHref}>
-                {pageCopy.viewAllArticles}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+        <section aria-labelledby="home-popular-title">
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
+            <div>
+              <h2 id="home-popular-title" className="eyebrow text-accent">
+                {pageCopy.popularEyebrow}
+              </h2>
             </div>
 
             {payload.popularArticles.length > 0 ? (
@@ -361,26 +355,16 @@ export function HomePage({ payload }: HomePageProps) {
               </div>
             )}
 
-            <Link className="motion-inline mt-6 inline-flex items-center gap-2 text-sm font-semibold text-foreground md:hidden" href={pageCopy.articlesHref}>
-              {pageCopy.viewAllArticles}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
         </section>
 
-        <section className="border-b border-line bg-surface/72" aria-labelledby="home-series-title">
-          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-14">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <h2 id="home-series-title" className="eyebrow text-accent">
-                  {pageCopy.seriesEyebrow}
-                </h2>
-                <p className="mt-4 max-w-2xl leading-7 text-muted">{pageCopy.seriesDescription}</p>
-              </div>
-              <Link className="motion-inline hidden items-center gap-2 text-sm font-semibold text-foreground md:inline-flex" href={pageCopy.seriesHref}>
-                {pageCopy.viewAllSeries}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+        <section aria-labelledby="home-series-title">
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
+            <div>
+              <h2 id="home-series-title" className="eyebrow text-accent">
+                {pageCopy.seriesEyebrow}
+              </h2>
+              <p className="mt-4 max-w-2xl leading-7 text-muted">{pageCopy.seriesDescription}</p>
             </div>
 
             {payload.featuredSeries.length > 0 ? (
@@ -413,16 +397,12 @@ export function HomePage({ payload }: HomePageProps) {
               </div>
             )}
 
-            <Link className="motion-inline mt-6 inline-flex items-center gap-2 text-sm font-semibold text-foreground md:hidden" href={pageCopy.seriesHref}>
-              {pageCopy.viewAllSeries}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
         </section>
 
         {payload.externalLinks.length > 0 ? (
-          <section className="border-t border-line bg-surface/72" aria-labelledby="home-external-title">
-            <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[0.82fr_1.18fr] md:py-14">
+          <section aria-labelledby="home-external-title">
+            <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 md:grid-cols-[0.82fr_1.18fr] md:py-10">
               <div>
                 <p className="eyebrow text-accent">{pageCopy.externalEyebrow}</p>
                 <h2 id="home-external-title" className="mt-3 text-2xl font-semibold text-foreground md:text-3xl">

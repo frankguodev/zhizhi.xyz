@@ -398,3 +398,25 @@ export const aiTermRelations = sqliteTable(
     index("ai_term_relations_related_idx").on(table.relatedTermId),
   ],
 );
+
+export const aiTermRelationCandidates = sqliteTable(
+  "ai_term_relation_candidates",
+  {
+    id: text("id").primaryKey(),
+    termId: text("term_id").notNull().references(() => aiTerms.id, { onDelete: "cascade" }),
+    candidateSlug: text("candidate_slug").notNull(),
+    candidateTerm: text("candidate_term"),
+    relationType: text("relation_type", { enum: ["related", "similar", "opposite", "upstream", "downstream", "ecosystem"] })
+      .notNull()
+      .default("related"),
+    description: text("description"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    uniqueIndex("ai_term_relation_candidates_unique").on(table.termId, table.candidateSlug, table.relationType),
+    index("ai_term_relation_candidates_term_idx").on(table.termId, table.sortOrder),
+    index("ai_term_relation_candidates_slug_idx").on(table.candidateSlug),
+  ],
+);

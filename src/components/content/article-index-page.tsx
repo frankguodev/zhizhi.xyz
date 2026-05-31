@@ -199,8 +199,8 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
       <main className="flex-1 bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }} />
 
-        <section className="site-grid border-b border-line" aria-labelledby="article-index-title">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-14">
+        <section className="site-grid" aria-labelledby="article-index-title">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-10">
             <div className="article-reading-surface overflow-hidden rounded-md border border-line px-4 py-7 sm:px-5 md:px-9 md:py-8">
               <div className="grid gap-6 pl-0 md:grid-cols-[1fr_13rem] md:gap-8 md:pl-7">
                 <div className="min-w-0">
@@ -221,11 +221,11 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-12" aria-labelledby="article-index-filter-title">
+        <section className="mx-auto max-w-6xl px-4 pt-5 pb-8 sm:px-6 md:pt-6 md:pb-10" aria-labelledby="article-index-filter-title">
           <h2 id="article-index-filter-title" className="sr-only">
             {pageCopy.filter}
           </h2>
-          <ArticleFilterForm key={filterKey} action={pageCopy.action} className="index-surface rounded-md border border-line p-5 md:pl-10">
+          <ArticleFilterForm key={filterKey} action={pageCopy.action} className="">
             <div className="grid gap-4 md:grid-cols-[1.35fr_0.85fr_0.75fr_auto] md:items-end">
               <label className="block">
                 <span className="mb-2 block text-sm font-semibold text-muted">{pageCopy.search}</span>
@@ -272,7 +272,7 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
             </div>
           </ArticleFilterForm>
 
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
             <p>
               {pageCopy.resultPrefix}{" "}
               <span className="font-semibold text-foreground">{filteredArticles.length}</span>
@@ -280,7 +280,7 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
             </p>
           </div>
 
-          <div className="mt-8 grid gap-5">
+          <div className="mt-5 grid gap-5">
             <ArticleInfiniteList
               key={`${filterKey}:${filteredArticles.map((article) => article.slug).join("|")}`}
               articles={filteredArticles}

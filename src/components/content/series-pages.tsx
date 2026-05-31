@@ -221,8 +221,8 @@ export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; series
       <main className="flex-1 bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }} />
 
-        <section className="site-grid border-b border-line" aria-labelledby="series-index-title">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-14">
+        <section className="site-grid" aria-labelledby="series-index-title">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-10">
             <div className="article-reading-surface overflow-hidden rounded-md border border-line px-4 py-7 sm:px-5 md:px-9 md:py-8">
               <div className="grid gap-6 pl-0 md:grid-cols-[1fr_13rem] md:gap-8 md:pl-7">
                 <div className="min-w-0">
@@ -243,7 +243,7 @@ export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; series
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-12" aria-labelledby="series-list-title">
+        <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-8" aria-labelledby="series-list-title">
           <h2 id="series-list-title" className="sr-only">
             {pageCopy.publishedRoutes}
           </h2>
@@ -303,8 +303,8 @@ export function SeriesDetailContent({ locale, item }: { locale: Locale; item: Pu
       <main className="min-h-screen bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
 
-        <section className="site-grid border-b border-line" aria-labelledby="series-detail-title">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-14">
+        <section className="site-grid" aria-labelledby="series-detail-title">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-10">
             <div className="index-surface overflow-hidden rounded-md border border-line px-4 py-7 sm:px-5 md:px-9 md:py-8">
               {coverImageStyle ? <div className="mb-7 aspect-[16/9] rounded-md border border-line bg-surface bg-cover bg-center shadow-sm sm:aspect-[21/9] md:aspect-[21/8]" style={coverImageStyle} role="img" aria-label={item.title} /> : null}
               <div className="grid gap-6 pl-0 md:grid-cols-[1fr_15rem] md:items-center md:gap-8 md:pl-7">
@@ -339,7 +339,7 @@ export function SeriesDetailContent({ locale, item }: { locale: Locale; item: Pu
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 md:py-12" aria-labelledby="series-articles-title">
+        <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-8" aria-labelledby="series-articles-title">
           <h2 id="series-articles-title" className="sr-only">
             {pageCopy.routeNodes}
           </h2>

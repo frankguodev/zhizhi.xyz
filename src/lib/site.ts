@@ -14,8 +14,8 @@ export const siteConfig = {
     en: "ZhiZhi is a personal knowledge system for high-quality articles, learning paths, layered reading, and reusable writing workflows.",
   },
   social: {
-    email: "hello@zhizhi.xyz",
-    xUrl: "https://x.com",
+    email: "hello@frankguo.com",
+    xUrl: "https://x.com/frankguodev",
     githubUrl: "https://github.com/frankguodev",
   },
 } as const;

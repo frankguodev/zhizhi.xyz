@@ -1,10 +1,12 @@
-import { and, asc, desc, eq, inArray, like, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, like, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import matter from "gray-matter";
+import { revalidateTag, unstable_cache } from "next/cache";
 import { getDb } from "@/db/client";
 import {
   aiTermCategories,
   aiTermCategoryRelations,
+  aiTermRelationCandidates,
   aiTermRelations,
   aiTerms,
 } from "@/db/schema";
@@ -99,6 +101,7 @@ export type ListPublicAiTermsOptions = {
   locale?: AiTermLocale;
   q?: string;
   categorySlug?: string;
+  difficulty?: AiTermDifficulty;
   sort?: "featured" | "latest" | "heat" | "quality";
   limit?: number;
   offset?: number;
@@ -144,7 +147,7 @@ export type SaveAiTermResult = {
   id: string;
   slug: string;
   locale: AiTermLocale;
-  skippedRelations: Array<{ slug: string; reason: "missing" | "self" }>;
+  skippedRelations: Array<{ slug: string; reason: "self" }>;
 };
 
 export type SaveAiTermInput = {
@@ -184,7 +187,7 @@ export type SaveAiTermInput = {
   publishedAt?: Date | string | number | null;
   lastVerifiedAt?: Date | string | number | null;
   categories?: Array<Omit<AiTermTaxonomyItem, "id"> & { translationKey?: string }>;
-  relations?: Array<{ slug: string; relationType: AiTermRelationType; description?: string | null; sortOrder?: number }>;
+  relations?: Array<{ term?: string | null; slug: string; relationType: AiTermRelationType; description?: string | null; sortOrder?: number }>;
 };
 
 export type UpdateAiTermTaxonomyInput = {
@@ -196,6 +199,8 @@ export type UpdateAiTermTaxonomyInput = {
 };
 
 export type BulkAiTermAction = "publish" | "archive" | "restore" | "delete" | "markReviewed" | "unmarkReviewed" | "setTrending" | "unsetTrending";
+
+const AI_TERM_CATEGORIES_CACHE_TAG = "ai-term-categories";
 
 function clampLimit(value: number | undefined) {
   return Math.min(Math.max(value ?? 24, 1), 100);
@@ -223,8 +228,12 @@ function categoryIdFor(locale: AiTermLocale, slug: string) {
   return `ai-term-category:${locale}:${slug}`;
 }
 
-function relationIdFor(termId: string, relatedTermId: string, relationType: AiTermRelationType) {
-  return `ai-term-relation:${termId}:${relatedTermId}:${relationType}`;
+function relationIdFor(termId: string, relatedTermSlug: string, relationType: AiTermRelationType) {
+  return `ai-term-relation:${termId}:${relatedTermSlug}:${relationType}`;
+}
+
+function relationCandidateIdFor(termId: string, candidateSlug: string, relationType: AiTermRelationType) {
+  return `ai-term-relation-candidate:${termId}:${candidateSlug}:${relationType}`;
 }
 
 function stringifyJson(value: unknown) {
@@ -342,7 +351,7 @@ async function taxonomyForTermIds(termIds: string[]) {
 
 async function relationSummariesForTerm(termId: string) {
   const db = await getDb();
-  return db
+  const rows = await db
     .select({
       term: aiTerms.term,
       termZh: aiTerms.termZh,
@@ -355,6 +364,39 @@ async function relationSummariesForTerm(termId: string) {
     .innerJoin(aiTerms, eq(aiTermRelations.relatedTermId, aiTerms.id))
     .where(eq(aiTermRelations.termId, termId))
     .orderBy(asc(aiTermRelations.sortOrder), asc(aiTerms.term));
+
+  return rows.map((row) => ({
+    term: row.term,
+    termZh: row.termZh,
+    slug: row.slug,
+    relationType: row.relationType,
+    description: row.description,
+    sortOrder: row.sortOrder,
+  }));
+}
+
+async function relationCandidatesForTerm(termId: string) {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      candidateTerm: aiTermRelationCandidates.candidateTerm,
+      candidateSlug: aiTermRelationCandidates.candidateSlug,
+      relationType: aiTermRelationCandidates.relationType,
+      description: aiTermRelationCandidates.description,
+      sortOrder: aiTermRelationCandidates.sortOrder,
+    })
+    .from(aiTermRelationCandidates)
+    .where(eq(aiTermRelationCandidates.termId, termId))
+    .orderBy(asc(aiTermRelationCandidates.sortOrder), asc(aiTermRelationCandidates.candidateSlug));
+
+  return rows.map((row) => ({
+    term: row.candidateTerm ?? row.candidateSlug,
+    termZh: null,
+    slug: row.candidateSlug,
+    relationType: row.relationType,
+    description: row.description,
+    sortOrder: row.sortOrder,
+  }));
 }
 
 function detailFromRow(
@@ -494,27 +536,114 @@ async function termIdsForCategory(locale: AiTermLocale, categorySlug: string) {
   return rows.map((row) => row.termId);
 }
 
+async function resolveRelationCandidatesForTerm(termId: string, locale: AiTermLocale, slug: string) {
+  const db = await getDb();
+  const timestamp = new Date();
+  const candidateRows = await db.select().from(aiTermRelationCandidates).where(eq(aiTermRelationCandidates.candidateSlug, slug));
+
+  for (const candidate of candidateRows) {
+    if (candidate.termId === termId) {
+      continue;
+    }
+
+    const sourceRows = await db.select({ locale: aiTerms.locale }).from(aiTerms).where(eq(aiTerms.id, candidate.termId)).limit(1);
+    if (sourceRows[0]?.locale !== locale) {
+      continue;
+    }
+
+    await db
+      .insert(aiTermRelations)
+      .values({
+        id: relationIdFor(candidate.termId, slug, candidate.relationType),
+        termId: candidate.termId,
+        relatedTermId: termId,
+        relationType: candidate.relationType,
+        description: candidate.description ?? null,
+        sortOrder: candidate.sortOrder,
+        createdAt: timestamp,
+      })
+      .onConflictDoNothing();
+
+    await db.update(aiTermRelationCandidates).set({ resolvedAt: timestamp }).where(eq(aiTermRelationCandidates.id, candidate.id));
+  }
+}
+
+async function adminRelationsForTerm(termId: string) {
+  const [relations, candidates] = await Promise.all([relationSummariesForTerm(termId), relationCandidatesForTerm(termId)]);
+  return [...relations, ...candidates].sort((a, b) => a.sortOrder - b.sortOrder || a.slug.localeCompare(b.slug));
+}
+
+async function buildPublicAiTermConditions(locale: AiTermLocale, options: ListPublicAiTermsOptions): Promise<SQL[] | null> {
+  const conditions: SQL[] = [eq(aiTerms.locale, locale), publicVisibilityCondition()];
+  const q = options.q?.trim();
+
+  if (q) {
+    const pattern = `%${q}%`;
+    const searchCondition = or(like(aiTerms.term, pattern), like(aiTerms.termZh, pattern), like(aiTerms.fullName, pattern), like(aiTerms.shortDesc, pattern));
+    if (searchCondition) {
+      conditions.push(searchCondition);
+    }
+  }
+
+  if (options.difficulty) {
+    conditions.push(eq(aiTerms.difficulty, options.difficulty));
+  }
+
+  if (options.categorySlug) {
+    const termIds = await termIdsForCategory(locale, options.categorySlug);
+    if (termIds.length === 0) {
+      return null;
+    }
+    conditions.push(inArray(aiTerms.id, termIds));
+  }
+
+  return conditions;
+}
+
+export async function countPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
+  try {
+    const db = await getDb();
+    const locale = options.locale ?? "zh";
+    const conditions = await buildPublicAiTermConditions(locale, options);
+    if (conditions === null) {
+      return 0;
+    }
+    const rows = await db.select({ value: count() }).from(aiTerms).where(and(...conditions));
+    return Number(rows[0]?.value ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+/** 各分类下的公开词条数（slug → count），用于列表页分类筛选计数。 */
+export async function countPublicAiTermsByCategory(locale: AiTermLocale = "zh"): Promise<Record<string, number>> {
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({ slug: aiTermCategories.slug, value: count(aiTermCategoryRelations.termId) })
+      .from(aiTermCategoryRelations)
+      .innerJoin(aiTerms, eq(aiTermCategoryRelations.termId, aiTerms.id))
+      .innerJoin(aiTermCategories, eq(aiTermCategoryRelations.categoryId, aiTermCategories.id))
+      .where(and(eq(aiTerms.locale, locale), publicVisibilityCondition()))
+      .groupBy(aiTermCategories.slug);
+
+    const counts: Record<string, number> = {};
+    for (const row of rows) {
+      counts[row.slug] = Number(row.value);
+    }
+    return counts;
+  } catch {
+    return {};
+  }
+}
+
 export async function listPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
   try {
     const db = await getDb();
     const locale = options.locale ?? "zh";
-    const conditions: SQL[] = [eq(aiTerms.locale, locale), publicVisibilityCondition()];
-    const q = options.q?.trim();
-
-    if (q) {
-      const pattern = `%${q}%`;
-      const searchCondition = or(like(aiTerms.term, pattern), like(aiTerms.termZh, pattern), like(aiTerms.fullName, pattern), like(aiTerms.shortDesc, pattern));
-      if (searchCondition) {
-        conditions.push(searchCondition);
-      }
-    }
-
-    if (options.categorySlug) {
-      const termIds = await termIdsForCategory(locale, options.categorySlug);
-      if (termIds.length === 0) {
-        return [];
-      }
-      conditions.push(inArray(aiTerms.id, termIds));
+    const conditions = await buildPublicAiTermConditions(locale, options);
+    if (conditions === null) {
+      return [];
     }
 
     const orderBy =
@@ -657,7 +786,7 @@ export async function getAdminAiTerm(locale: AiTermLocale, slug: string) {
   }
 
   const { categoriesByTerm } = await taxonomyForTermIds([row.id]);
-  const relations = await relationSummariesForTerm(row.id);
+  const relations = await adminRelationsForTerm(row.id);
   return detailFromRow(row, categoriesByTerm, relations);
 }
 
@@ -671,11 +800,42 @@ export async function getAdminAiTermById(id: string) {
   }
 
   const { categoriesByTerm } = await taxonomyForTermIds([row.id]);
-  const relations = await relationSummariesForTerm(row.id);
+  const relations = await adminRelationsForTerm(row.id);
   return detailFromRow(row, categoriesByTerm, relations);
 }
 
 export async function listAiTermCategories(locale: AiTermLocale = "zh") {
+  return cachedAiTermCategories(locale);
+}
+
+const cachedAiTermCategories = unstable_cache(
+  async (locale: AiTermLocale = "zh") => {
+    try {
+      const db = await getDb();
+      return await db
+        .select({
+          id: aiTermCategories.id,
+          name: aiTermCategories.name,
+          slug: aiTermCategories.slug,
+          description: aiTermCategories.description,
+          sortOrder: aiTermCategories.sortOrder,
+        })
+        .from(aiTermCategories)
+        .where(eq(aiTermCategories.locale, locale))
+        .orderBy(asc(aiTermCategories.sortOrder), asc(aiTermCategories.name));
+    } catch {
+      return [];
+    }
+  },
+  [AI_TERM_CATEGORIES_CACHE_TAG],
+  { revalidate: 300, tags: [AI_TERM_CATEGORIES_CACHE_TAG] },
+);
+
+function revalidateAiTermCategoriesCache() {
+  revalidateTag(AI_TERM_CATEGORIES_CACHE_TAG, { expire: 0 });
+}
+
+export async function listAiTermCategoriesUncached(locale: AiTermLocale = "zh") {
   try {
     const db = await getDb();
     return await db
@@ -738,6 +898,7 @@ export async function updateAiTermTaxonomy(input: UpdateAiTermTaxonomyInput) {
   if (input.description !== undefined) set.description = input.description;
   if (input.sortOrder !== undefined) set.sortOrder = input.sortOrder;
   const rows = await db.update(aiTermCategories).set(set).where(eq(aiTermCategories.id, input.id)).returning();
+  revalidateAiTermCategoriesCache();
   return rows[0] ?? null;
 }
 
@@ -757,6 +918,7 @@ export async function mergeAiTermTaxonomy(_kind: AiTermTaxonomyKind, sourceId: s
   }
   await db.delete(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, sourceId));
   await db.delete(aiTermCategories).where(eq(aiTermCategories.id, sourceId));
+  revalidateAiTermCategoriesCache();
   return { merged: sourceRows.length, deleted: true };
 }
 
@@ -769,6 +931,7 @@ export async function deleteAiTermTaxonomy(_kind: AiTermTaxonomyKind, id: string
   }
 
   await db.delete(aiTermCategories).where(eq(aiTermCategories.id, id));
+  revalidateAiTermCategoriesCache();
 
   return { deleted: true };
 }
@@ -895,8 +1058,10 @@ export async function saveAiTerm(input: SaveAiTermInput): Promise<SaveAiTermResu
 
     await db.insert(aiTermCategoryRelations).values({ termId, categoryId, sortOrder: index + 1 }).onConflictDoNothing();
   }
+  revalidateAiTermCategoriesCache();
 
   await db.delete(aiTermRelations).where(eq(aiTermRelations.termId, termId));
+  await db.delete(aiTermRelationCandidates).where(eq(aiTermRelationCandidates.termId, termId));
 
   for (const relation of input.relations ?? []) {
     const rows = await db
@@ -906,29 +1071,43 @@ export async function saveAiTerm(input: SaveAiTermInput): Promise<SaveAiTermResu
       .limit(1);
     const relatedTermId = rows[0]?.id;
 
-    if (!relatedTermId) {
-      skippedRelations.push({ slug: relation.slug, reason: "missing" });
-      continue;
-    }
-
     if (relatedTermId === termId) {
       skippedRelations.push({ slug: relation.slug, reason: "self" });
       continue;
     }
 
-    await db
-      .insert(aiTermRelations)
-      .values({
-        id: relationIdFor(termId, relatedTermId, relation.relationType),
-        termId,
-        relatedTermId,
-        relationType: relation.relationType,
-        description: relation.description ?? null,
-        sortOrder: relation.sortOrder ?? 0,
-        createdAt: timestamp,
-      })
-      .onConflictDoNothing();
+    if (relatedTermId) {
+      await db
+        .insert(aiTermRelations)
+        .values({
+          id: relationIdFor(termId, relation.slug, relation.relationType),
+          termId,
+          relatedTermId,
+          relationType: relation.relationType,
+          description: relation.description ?? null,
+          sortOrder: relation.sortOrder ?? 0,
+          createdAt: timestamp,
+        })
+        .onConflictDoNothing();
+    } else {
+      await db
+        .insert(aiTermRelationCandidates)
+        .values({
+          id: relationCandidateIdFor(termId, relation.slug, relation.relationType),
+          termId,
+          candidateSlug: relation.slug,
+          candidateTerm: relation.term ?? relation.slug,
+          relationType: relation.relationType,
+          description: relation.description ?? null,
+          sortOrder: relation.sortOrder ?? 0,
+          createdAt: timestamp,
+          resolvedAt: null,
+        })
+        .onConflictDoNothing();
+    }
   }
+
+  await resolveRelationCandidatesForTerm(termId, input.locale, input.slug);
 
   return { id: termId, slug: input.slug, locale: input.locale, skippedRelations };
 }
@@ -976,6 +1155,10 @@ export async function updateAiTermAdminFields(input: UpdateAiTermAdminInput) {
     locale: aiTerms.locale,
   });
 
+  if (rows[0]) {
+    await resolveRelationCandidatesForTerm(rows[0].id, rows[0].locale, rows[0].slug);
+  }
+
   return rows[0] ?? null;
 }
 
@@ -999,9 +1182,7 @@ export async function updateAiTermFromMarkdown(locale: AiTermLocale, slug: strin
     importWarnings: [
       ...parsed.warnings,
       ...saved.skippedRelations.map((relation) =>
-        relation.reason === "self"
-          ? `关联词条 ${relation.slug} 指向自身，已跳过。`
-          : `关联词条 ${relation.slug} 未匹配到已存在词条，MVP 阶段已跳过。`,
+        `关联词条 ${relation.slug} 指向自身，已跳过。`,
       ),
     ],
   };
@@ -1044,6 +1225,7 @@ export async function deleteAiTerm(locale: AiTermLocale, slug: string) {
   }
 
   await db.delete(aiTermRelations).where(or(eq(aiTermRelations.termId, existing.id), eq(aiTermRelations.relatedTermId, existing.id)));
+  await db.delete(aiTermRelationCandidates).where(eq(aiTermRelationCandidates.termId, existing.id));
   await db.delete(aiTerms).where(eq(aiTerms.id, existing.id));
 
   return existing;

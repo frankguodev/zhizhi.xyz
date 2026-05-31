@@ -54,7 +54,7 @@ export default function EnglishAboutPage() {
       <SiteHeader locale="en" currentPath="/en/about" />
 
       <main className="min-h-screen bg-background">
-        <section className="site-grid border-b border-line">
+        <section className="site-grid">
           <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent">
               <UserRound className="h-4 w-4" />
@@ -85,7 +85,7 @@ export default function EnglishAboutPage() {
           </div>
         </section>
 
-        <section className="border-y border-line bg-surface">
+        <section>
           <div className="mx-auto grid max-w-6xl gap-5 px-6 py-12">
             <article className="about-surface-no-rail index-surface rounded-md border border-line px-6 py-7">
               <p className="text-sm font-semibold text-accent">Why This Site Exists</p>

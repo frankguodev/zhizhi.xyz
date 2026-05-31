@@ -13,6 +13,10 @@
 /docs/question_record.md
 HISTORY.md
 /.agents
+/.baoyu*
+/.claude
+/comic
+/summery
 
 # testing
 /coverage

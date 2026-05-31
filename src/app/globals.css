@@ -274,20 +274,8 @@ html[data-theme="dark"] .site-grid {
   position: relative;
 }
 
-.index-surface::before {
-  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent-2) 64%, var(--accent)));
-  bottom: 1rem;
-  content: "";
-  left: 1rem;
-  opacity: 0.58;
-  position: absolute;
-  top: 1rem;
-  width: 1px;
-}
-
 @media (max-width: 767px) {
-  .article-reading-surface::before,
-  .index-surface::before {
+  .article-reading-surface::before {
     display: none;
   }
 }
@@ -614,6 +602,49 @@ html[data-theme="dark"] .hero-primary-action:hover {
   position: absolute;
   top: -0.24rem;
   width: 2.4rem;
+}
+
+/* AI 词条详情页正文：行高收紧、去掉二级标题分割线/色条，并收小标题字号、拉开 h2/h3 层级（仅限词条页，不影响文章详情页）。 */
+.ai-term-prose .article-prose {
+  line-height: 1.75;
+}
+
+.ai-term-prose .article-prose h2 {
+  border-top: 0;
+  font-size: 1.5rem;
+  margin-top: 1.9em;
+  margin-bottom: 0.5em;
+  padding-left: 0.85rem;
+  padding-top: 0;
+  scroll-margin-top: 6rem;
+}
+
+/* 正文大节标题（它本质上是什么 等）前的细竖条标记（accent 绿）。「一图看懂」为 JSX 标题，用 .ai-term-section-heading 共享同款标记。 */
+.ai-term-prose .article-prose h2::before,
+.ai-term-section-heading::before {
+  background: var(--accent);
+  border-radius: 2px;
+  bottom: 0.2em;
+  content: "";
+  height: auto;
+  left: 0;
+  position: absolute;
+  top: 0.2em;
+  width: 0.22rem;
+}
+
+.ai-term-section-heading {
+  padding-left: 0.85rem;
+  position: relative;
+}
+
+/* 三级标题（误解一… / 使用场景…）不作为标题展示，视觉上等同加粗正文（保留 h3 语义）。 */
+.ai-term-prose .article-prose h3 {
+  font-size: 1.0875rem;
+  font-weight: 600;
+  line-height: 1.6;
+  margin-top: 1.5em;
+  margin-bottom: 0.35em;
 }
 
 .article-prose h3 {
@@ -1124,6 +1155,56 @@ html[data-theme="dark"] .article-back-to-top:focus-visible {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
   outline: none;
+}
+
+.article-image-preview-nav {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 999px;
+  color: var(--foreground);
+  cursor: pointer;
+  display: inline-flex;
+  height: 2.75rem;
+  justify-content: center;
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  width: 2.75rem;
+  z-index: 81;
+}
+
+.article-image-preview-nav-prev {
+  left: max(1rem, env(safe-area-inset-left));
+}
+
+.article-image-preview-nav-next {
+  right: max(1rem, env(safe-area-inset-right));
+}
+
+.article-image-preview-nav:hover,
+.article-image-preview-nav:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  outline: none;
+}
+
+.article-image-preview-counter {
+  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 999px;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  color: var(--foreground);
+  font-size: 0.8rem;
+  font-weight: 600;
+  left: 50%;
+  padding: 0.3rem 0.85rem;
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 81;
 }
 
 .article-prose p:has(> img:only-child) {

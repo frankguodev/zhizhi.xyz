@@ -1,17 +1,21 @@
 "use client";
 
-import { Database, FileText, Loader2, ScanSearch } from "lucide-react";
+import { Database, FileText, Loader2, ScanSearch, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
+import { ArticleReader } from "@/components/content/article-reader";
+import type { ArticleContentBlock } from "@/components/content/types";
 import type { SaveAiTermInput } from "@/lib/ai-terms";
-import type { AiTermFableScan } from "@/lib/markdown";
+import type { AiTermFableBlock, AiTermFableScan } from "@/lib/markdown";
 
 type PreviewResult = {
   aiTerm: SaveAiTermInput;
   fable: AiTermFableScan;
   importWarnings: string[];
   frontmatter: Record<string, unknown>;
+  renderedBlocks: ArticleContentBlock[];
+  renderedFable: AiTermFableBlock | null;
 };
 
 type SaveState = {
@@ -125,7 +129,7 @@ structured_data:
 
 MCP 是一种让 AI 应用连接外部工具和数据源的协议。
 
-## 给小白的理解
+## 快速理解
 
 你可以先把 MCP 理解成一种接口约定。它不是模型本身，而是让 AI 应用更容易和外部工具、文件、数据库、服务对接的一种方式。
 `;
@@ -197,7 +201,10 @@ function upsertDiagramFrontmatter(markdown: string, image: string, imageAlt: str
   if (diagramBlock) {
     const block = diagramBlock[0].replace(/^\n/, "");
     let nextBlock = upsertYamlScalar(block, "image", image);
-    nextBlock = upsertYamlScalar(nextBlock, "image_alt", imageAlt);
+    // 只在用户上传时明确填写了 alt 时才更新，避免覆盖 Frontmatter 中已有的 image_alt
+    if (imageAlt) {
+      nextBlock = upsertYamlScalar(nextBlock, "image_alt", imageAlt);
+    }
     nextFrontmatter = nextFrontmatter.replace(block, nextBlock);
   } else {
     const diagram = `diagram:\n  image: "${image.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"\n  image_alt: "${imageAlt.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
@@ -394,6 +401,40 @@ export function AiTermImportWorkbench() {
       </section>
 
       <aside className="space-y-4">
+        <section className="border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold text-foreground">正文预览（渲染效果）</h2>
+          <p className="mt-1 text-sm text-muted">所见即所得：标题、列表、寓言块等按前台样式排版。</p>
+          {preview ? (
+            <div className="mt-4">
+              {preview.renderedFable ? (
+                <section className="mb-6 rounded-md border border-line bg-[color-mix(in_srgb,var(--accent)_5%,var(--paper))] p-4 shadow-[var(--shadow-quiet)] md:p-5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-accent" />
+                    <p className="text-xs font-semibold uppercase text-accent">寓言故事</p>
+                  </div>
+                  <h3 className="mt-2 break-words text-xl font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">{preview.renderedFable.title}</h3>
+                  <div className="article-prose mt-3" dangerouslySetInnerHTML={{ __html: preview.renderedFable.html }} />
+                </section>
+              ) : null}
+
+              {preview.renderedBlocks.length > 0 ? (
+                <div className="ai-term-prose min-w-0 rounded-md border border-line px-4 py-5 md:px-6 md:py-7">
+                  <ArticleReader
+                    blocks={preview.renderedBlocks}
+                    defaultMode="full"
+                    locale={preview.aiTerm.locale === "en" ? "en" : "zh"}
+                    supportsReadingMode={false}
+                  />
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-muted">正文为空，请检查发布稿是否包含一级标题以下的正文内容。</p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-muted">点击“解析预览”后，这里会按前台样式渲染词条正文。</p>
+          )}
+        </section>
+
         <section className="border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold text-foreground">解析结果</h2>
           {preview ? (

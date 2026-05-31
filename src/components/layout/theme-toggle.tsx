@@ -59,7 +59,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="icon-action inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground"
+      className="icon-action inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-foreground"
       onClick={toggleTheme}
       aria-label={theme === "light" ? "切换到深色主题" : "切换到正常主题"}
       title={theme === "light" ? "切换到深色主题" : "切换到正常主题"}

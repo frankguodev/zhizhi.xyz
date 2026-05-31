@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Copy, ImagePlus, ImageUp, Link2, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, ImagePlus, ImageUp, Link2, Loader2, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 
@@ -95,6 +95,8 @@ export function MediaUploadPanel({
   const [recentMedia, setRecentMedia] = useState<UploadedMediaItem[]>([]);
   const [recentOpen, setRecentOpen] = useState(false);
   const [altText, setAltText] = useState("");
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null);
+  const [deletingMediaKey, setDeletingMediaKey] = useState("");
 
   async function upload(file: File) {
     if (!allowedImageTypes.has(file.type)) {
@@ -190,6 +192,40 @@ export function MediaUploadPanel({
     await navigator.clipboard?.writeText(value).catch(() => null);
     setMessage(successMessage);
     setMessageTone("success");
+  }
+
+  async function deleteRecentItem(item: UploadedMediaItem) {
+    setDeletingMediaKey(item.key);
+    setMessage("");
+    setMessageTone("idle");
+
+    try {
+      const response = await fetch("/api/admin/media", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: item.key }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (handleAdminUnauthorized(response)) {
+        throw new Error("登录已过期，正在跳转后台登录。");
+      }
+
+      if (!response.ok) {
+        throw new Error(adminApiErrorMessage(payload, "图片删除失败。"));
+      }
+
+      setRecentMedia((current) => current.filter((m) => m.key !== item.key));
+      setConfirmDeleteKey(null);
+      setMessage("图片已从 R2 删除。");
+      setMessageTone("success");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "图片删除失败。");
+      setMessageTone("error");
+      setConfirmDeleteKey(null);
+    } finally {
+      setDeletingMediaKey("");
+    }
   }
 
   return (
@@ -302,6 +338,37 @@ export function MediaUploadPanel({
                         <Link2 className="h-3.5 w-3.5" />
                         URL
                       </button>
+                      {confirmDeleteKey === item.key ? (
+                        <>
+                          <button
+                            className="admin-btn admin-btn-secondary inline-flex h-9 items-center justify-center gap-1 px-3 text-xs font-semibold text-red-700 disabled:opacity-60"
+                            type="button"
+                            disabled={deletingMediaKey === item.key}
+                            onClick={() => void deleteRecentItem(item)}
+                          >
+                            {deletingMediaKey === item.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            确认删除
+                          </button>
+                          <button
+                            className="admin-btn admin-btn-secondary inline-flex h-9 items-center justify-center px-3 text-xs font-semibold text-muted disabled:opacity-60"
+                            type="button"
+                            disabled={deletingMediaKey === item.key}
+                            onClick={() => setConfirmDeleteKey(null)}
+                          >
+                            取消
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="admin-btn admin-btn-secondary inline-flex h-9 items-center justify-center gap-1 px-3 text-xs font-semibold text-muted disabled:opacity-60"
+                          type="button"
+                          disabled={Boolean(deletingMediaKey)}
+                          onClick={() => setConfirmDeleteKey(item.key)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          删除
+                        </button>
+                      )}
                     </div>
                   </div>
                 </article>

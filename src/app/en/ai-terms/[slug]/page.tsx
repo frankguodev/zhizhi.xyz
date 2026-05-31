@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AiTermDetailPage } from "@/components/content/ai-term-detail-page";
-import { fallbackAiTerms } from "@/components/content/ai-terms-page";
-import { getPublicAiTerm, type AiTermDetail } from "@/lib/ai-terms";
+import { AiTermDetailPage, aiTermHasBeginnerNotes } from "@/components/content/ai-term-detail-page";
+import { buildFallbackAiTermDetail } from "@/lib/ai-term-fallback";
+import { getPublicAiTerm } from "@/lib/ai-terms";
+import { buildAiTermJsonLd } from "@/lib/ai-term-structured-data";
 import { parseAiTermMarkdown } from "@/lib/markdown";
 import { siteConfig } from "@/lib/site";
 
@@ -14,45 +15,6 @@ type EnglishAiTermDetailRouteProps = {
   }>;
 };
 
-function fallbackDetail(slug: string): AiTermDetail | null {
-  const term = fallbackAiTerms.find((item) => item.slug === slug);
-
-  if (!term) {
-    return null;
-  }
-
-  return {
-    ...term,
-    id: `fallback:en:${term.slug}`,
-    locale: "en",
-    difficulty: term.difficulty as AiTermDetail["difficulty"],
-    type: "concept",
-    qualityScore: 0,
-    tagline: null,
-    shareImage: null,
-    shareImageAlt: null,
-    diagramImage: null,
-    diagramImageAlt: null,
-    publishedAt: term.updatedAt,
-    lastVerifiedAt: term.updatedAt,
-    translationKey: term.slug,
-    beginnerNotes: null,
-    contentMd: [`## What it means`, term.shortDesc, `## Why it matters`, `${term.term} is part of the AI terms map. Start with the plain-language definition, then connect it to tools, protocols, and workflows when the full published entry is available.`, `## Where to go next`, `Return to the terms list and browse related concepts in the same category.`].join("\n\n"),
-    contentVersion: "fallback-ai-term-v1",
-    seoTitle: `${term.term} | AI Terms`,
-    seoDescription: term.shortDesc,
-    seoKeywords: [term.term, term.termZh, term.fullName].filter((value): value is string => Boolean(value)),
-    canonicalUrl: `/en/ai-terms/${term.slug}`,
-    robots: "index, follow",
-    metadata: null,
-    sourceNote: null,
-    aiAssisted: true,
-    humanReviewed: false,
-    viewCount: 0,
-    relations: [],
-  };
-}
-
 function metadataRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
@@ -63,7 +25,7 @@ function metadataString(value: unknown) {
 
 export async function generateMetadata({ params }: EnglishAiTermDetailRouteProps): Promise<Metadata> {
   const { slug } = await params;
-  const term = (await getPublicAiTerm("en", slug)) ?? fallbackDetail(slug);
+  const term = (await getPublicAiTerm("en", slug)) ?? buildFallbackAiTermDetail("en", slug);
 
   if (!term) {
     return {};
@@ -109,13 +71,26 @@ export async function generateMetadata({ params }: EnglishAiTermDetailRouteProps
 
 export default async function EnglishAiTermDetailRoute({ params }: EnglishAiTermDetailRouteProps) {
   const { slug } = await params;
-  const term = (await getPublicAiTerm("en", slug)) ?? fallbackDetail(slug);
+  const realTerm = await getPublicAiTerm("en", slug);
+  const term = realTerm ?? buildFallbackAiTermDetail("en", slug);
 
   if (!term) {
     notFound();
   }
 
-  const { blocks, fable } = await parseAiTermMarkdown(term.contentMd, "en");
+  const { blocks, fable, referencesHtml } = await parseAiTermMarkdown(term.contentMd, "en", {
+    stripLeadingTitle: true,
+    stripSummary: true,
+    stripBeginnerNotes: aiTermHasBeginnerNotes(term.beginnerNotes, "en"),
+    stripRelations: term.relations.length > 0,
+    extractReferences: true,
+  });
+  const jsonLd = JSON.stringify(buildAiTermJsonLd(term, "en")).replace(/</g, "\\u003c");
 
-  return <AiTermDetailPage blocks={blocks} fable={fable} locale="en" term={term} />;
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
+      <AiTermDetailPage blocks={blocks} fable={fable} locale="en" referencesHtml={referencesHtml} term={term} />
+    </>
+  );
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { SiteLogoMark } from "@/components/layout/site-logo-mark";
 import { SiteMobileMenu } from "@/components/layout/site-mobile-menu";
 import { localePath } from "@/lib/i18n";
@@ -17,8 +16,8 @@ export async function SiteHeader({ locale = "zh", currentPath = "/" }: SiteHeade
   const navItems = [
     { href: localePath(locale, "/articles"), label: t(locale, "nav.articles") },
     { href: localePath(locale, "/series"), label: t(locale, "nav.series") },
-    { href: localePath(locale, "/tools"), label: t(locale, "nav.tools") },
     { href: localePath(locale, "/ai-terms"), label: t(locale, "nav.aiTerms") },
+    { href: localePath(locale, "/tools"), label: t(locale, "nav.tools") },
     { href: localePath(locale, "/about"), label: t(locale, "nav.about") },
   ];
   const normalizedPath = normalizePath(currentPath);
@@ -50,7 +49,6 @@ export async function SiteHeader({ locale = "zh", currentPath = "/" }: SiteHeade
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           <ThemeToggle />
-          <LanguageSwitcher locale={locale} currentPath={currentPath} />
           <SiteMobileMenu
             menuLabel={locale === "en" ? "Open navigation menu" : "打开导航菜单"}
             navLabel={locale === "en" ? "Navigation" : "菜单导航"}
