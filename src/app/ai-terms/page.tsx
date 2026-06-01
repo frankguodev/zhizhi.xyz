@@ -7,7 +7,7 @@ import { siteConfig } from "@/lib/site";
 const description = "用普通人能读懂的方式整理 AI 术语、概念、工具和新兴说法。";
 
 export const metadata: Metadata = {
-  title: `AI 词条｜${siteConfig.name}`,
+  title: "AI 词条",
   description,
   alternates: {
     canonical: "/ai-terms",

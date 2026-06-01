@@ -94,15 +94,13 @@ export function findInvalidJsonPunctuationIndex(value: string) {
   return -1;
 }
 
-export function describeInvalidJsonPunctuation(character: string, locale: "en" | "zh") {
+export function describeInvalidJsonPunctuation(character: string) {
   const replacement = invalidJsonPunctuationLabels[character];
   if (!replacement) {
     return "";
   }
 
-  return locale === "en"
-    ? `The character \`${character}\` is Chinese/full-width punctuation. JSON syntax requires \`${replacement}\` here.`
-    : `这里的 \`${character}\` 是中文/全角标点，JSON 语法这里需要使用 \`${replacement}\`。`;
+  return `这里的 \`${character}\` 是中文/全角标点，JSON 语法这里需要使用 \`${replacement}\`。`;
 }
 
 function findInvalidJsonPunctuationRangeEnd(lineText: string, index: number) {

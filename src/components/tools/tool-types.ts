@@ -1,4 +1,3 @@
-// 工具子系统内部沿用中英双语副本（历史遗留），与全站单语 Locale 解耦。
 export type ToolLocale = "zh" | "en";
 
 export type ToolTab = "json" | "encoding" | "time" | "text" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "csv" | "color" | "image" | "wechatQr" | "linkQr";
@@ -38,7 +37,6 @@ export type JsonWorkerResult = {
 export type JsonWorkerPending = {
   id: number;
   input: string;
-  locale: ToolLocale;
   reject: (error: Error) => void;
   resolve: (result: JsonWorkerResult) => void;
   timeout: number;
@@ -84,7 +82,6 @@ export type UtilityWorkerResult = {
 
 export type UtilityWorkerPending = {
   id: number;
-  locale: ToolLocale;
   reject: (error: Error) => void;
   resolve: (result: UtilityWorkerResult) => void;
   timeout: number;

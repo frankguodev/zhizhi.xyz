@@ -1,4 +1,4 @@
-import type { ToolTab, ToolLocale as Locale } from "./tool-types";
+import type { ToolTab } from "./tool-types";
 
 export const sampleJson = `{"site":"zhizhi","tools":["json","encoding","time","text"],"meta":{"localOnly":true,"version":1}}`;
 
@@ -33,20 +33,20 @@ export const sampleCsv = `title,category,reading_minutes
 知之工具,tools,5
 Markdown 预览,content,8`;
 
-export function getSampleInput(tab: ToolTab, locale: Locale) {
+export function getSampleInput(tab: ToolTab) {
   return {
     color: "#d9b861",
     csv: sampleCsv,
     data: sampleStructured,
     encoding: "https://zhizhi.xyz/articles?tag=AI 应用",
-    hash: locale === "en" ? "zhizhi tools" : "知之工具",
+    hash: "知之工具",
     image: "",
     json: sampleJson,
     jwt: "",
     linkQr: "https://zhizhi.xyz",
     markdown: sampleMarkdown,
-    regex: locale === "en" ? "ZhiZhi tools\nzhizhi.xyz" : "知之工具\nzhizhi.xyz",
-    text: locale === "en" ? "Knowledge\nTools\nKnowledge\n\nzhizhi" : "知识\n工具\n知识\n\n知之",
+    regex: "知之工具\nzhizhi.xyz",
+    text: "知识\n工具\n知识\n\n知之",
     time: "",
     uuid: "10",
     wechatQr: "",

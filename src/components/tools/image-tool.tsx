@@ -2,8 +2,6 @@
 
 import { Download, ImageIcon, Loader2, Maximize2, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ToolLocale as Locale } from "./tool-types";
-
 type ImageOutputFormat = "jpeg" | "png" | "webp";
 
 type SourceImage = {
@@ -72,8 +70,7 @@ type ImageToolCopy = {
   workerFallback: string;
 };
 
-const copy: Record<Locale, ImageToolCopy> = {
-  zh: {
+const copy: ImageToolCopy = {
     clear: "清空",
     convert: "开始处理",
     convertAll: "全部处理",
@@ -112,47 +109,6 @@ const copy: Record<Locale, ImageToolCopy> = {
     unsupported: "当前浏览器无法读取这张图片，请换一张 JPG、PNG 或 WebP。",
     wasm: "优先使用 jSquash / Squoosh WASM 编码器。",
     workerFallback: "Worker 不可用，已自动回退到主线程处理。",
-  },
-  en: {
-    clear: "Clear",
-    convert: "Process image",
-    convertAll: "Process all",
-    done: "Done",
-    download: "Download image",
-    downloadAll: "Download ZIP",
-    downloadZipReady: "ZIP created. Download started.",
-    drop: "Drop an image here, or click to choose a file",
-    dropActive: "Release to load this image",
-    fallback: "Falls back to native browser export if a WASM encoder is unavailable.",
-    format: "Output format",
-    input: "Original",
-    limitHint: (limit) => `Supports JPG, PNG, and WebP up to ${limit}.`,
-    localOnly: "Images are processed locally in this browser and are never uploaded.",
-    maxHeight: "Max height",
-    maxWidth: "Max width",
-    noImage: "Choose a JPG, PNG, or WebP image to start.",
-    originalSize: "Original size",
-    output: "Result",
-    outputPlaceholder: "The processed preview, size, dimensions, and encoder will appear here.",
-    processedCount: (count, total) => `Processed ${count} / ${total}`,
-    processing: "Processing image...",
-    processingBatch: (current, total) => `Processing image ${current} / ${total}...`,
-    quality: "Quality",
-    ratio: "Savings",
-    ready: "Image processed.",
-    select: "Choose image",
-    selectedImages: (count) => `${count} image${count === 1 ? "" : "s"} selected`,
-    source: "Original size",
-    stale: "Settings changed. Process again to update this result.",
-    target: "Output size",
-    targetSize: "Estimated size",
-    title: "Image compression / conversion",
-    tooLarge: (limit) => `Images must be ${limit} or smaller. Choose a smaller file first.`,
-    transparentWarning: "JPEG uses a white background for transparency. Choose PNG or WebP to preserve alpha.",
-    unsupported: "This image cannot be read by the current browser. Try a JPG, PNG, or WebP file.",
-    wasm: "Uses jSquash / Squoosh WASM encoders first.",
-    workerFallback: "Worker unavailable. Fell back to main-thread processing.",
-  },
 };
 
 const formatLabels: Record<ImageOutputFormat, string> = {
@@ -195,8 +151,8 @@ type PendingWorkerRequest = {
   resolve: (result: ImageProcessResult) => void;
 };
 
-export function ImageTool({ locale }: { locale: Locale }) {
-  const labels = copy[locale];
+export function ImageTool() {
+  const labels = copy;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imageWorkerRef = useRef<Worker | null>(null);
   const pendingWorkerRequestsRef = useRef(new Map<number, PendingWorkerRequest>());
@@ -681,7 +637,7 @@ export function ImageTool({ locale }: { locale: Locale }) {
             </label>
             <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
               {labels.maxHeight}
-              <input className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70" inputMode="numeric" value={maxHeight} disabled={busy} onChange={(event) => setMaxHeight(cleanDimensionInput(event.target.value))} placeholder={locale === "en" ? "Auto" : "自动"} />
+              <input className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70" inputMode="numeric" value={maxHeight} disabled={busy} onChange={(event) => setMaxHeight(cleanDimensionInput(event.target.value))} placeholder="自动" />
             </label>
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-muted">

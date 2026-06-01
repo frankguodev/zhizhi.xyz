@@ -31,10 +31,7 @@ export async function SiteHeader({ currentPath = "/" }: SiteHeaderProps = {}) {
             href="/"
             className="group flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <SiteLogoMark className="h-8 w-8 shrink-0 shadow-sm transition group-hover:opacity-90 sm:h-9 sm:w-9" />
-            <span className="flex items-baseline leading-none">
-              <span className="text-lg font-semibold text-foreground sm:text-xl">{siteConfig.name}</span>
-            </span>
+            <SiteLogoMark className="h-8 w-8 shrink-0 shadow-sm transition group-hover:opacity-90 sm:h-9 sm:w-9" title={siteConfig.name} />
           </Link>
           <nav className="hidden items-center gap-6 text-base font-semibold text-foreground/88 md:flex">
             {navItems.map((item) => (

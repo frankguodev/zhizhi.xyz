@@ -3,7 +3,6 @@
 import { Check, ChevronDown, Download, Link2, Loader2, QrCode, RefreshCw, X } from "lucide-react";
 import QRCode from "qrcode";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
-import type { ToolLocale as Locale } from "./tool-types";
 
 type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 
@@ -37,8 +36,7 @@ type LinkQrCopy = {
   title: string;
 };
 
-const copy: Record<Locale, LinkQrCopy> = {
-  zh: {
+const copy: LinkQrCopy = {
     background: "背景色",
     clear: "清空",
     copied: "已复制",
@@ -59,29 +57,6 @@ const copy: Record<Locale, LinkQrCopy> = {
     size: "输出尺寸",
     customColor: "自定义颜色",
     title: "链接二维码生成",
-  },
-  en: {
-    background: "Background",
-    clear: "Clear",
-    copied: "Copied",
-    copyLink: "Copy link",
-    dark: "QR color",
-    download: "Download PNG",
-    errorCorrection: "Error correction",
-    generate: "Generate QR",
-    generated: "QR code generated.",
-    inputLabel: "URL",
-    inputPlaceholder: "https://zhizhi.xyz",
-    invalidUrl: "Enter a valid URL. Missing protocols are completed with https://.",
-    localOnly: "The QR code is generated locally in this browser and is never uploaded.",
-    margin: "Margin",
-    output: "Result",
-    outputPlaceholder: "Enter a URL and generate a QR code preview here.",
-    quietZoneHint: "The default margin keeps the QR easier to scan after screenshots or printing.",
-    size: "Output size",
-    customColor: "Custom color",
-    title: "Link QR generator",
-  },
 };
 
 const errorCorrectionOptions: Array<{ label: string; value: ErrorCorrectionLevel }> = [
@@ -93,8 +68,8 @@ const errorCorrectionOptions: Array<{ label: string; value: ErrorCorrectionLevel
 
 const colorSwatches = ["#171920", "#d9b861", "#c59b4a", "#2b2b2a", "#ffffff", "#f7f4ec", "#e6e0d3", "#8f8069"] as const;
 
-export function LinkQrTool({ locale }: { locale: Locale }) {
-  const labels = copy[locale];
+export function LinkQrTool() {
+  const labels = copy;
   const [input, setInput] = useState("https://zhizhi.xyz");
   const [size, setSize] = useState(1024);
   const [margin, setMargin] = useState(4);

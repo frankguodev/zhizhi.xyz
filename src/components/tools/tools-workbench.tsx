@@ -60,7 +60,6 @@ import type {
   TimeDisplayMode,
   TimestampUnit,
   ToolGroup,
-  ToolLocale as Locale,
   ToolTab,
   UtilityAction,
   UtilityWorkerPending,
@@ -70,9 +69,6 @@ import type {
 import { isToolTab } from "./tool-types";
 
 
-type ToolsWorkbenchProps = {
-  locale?: Locale;
-};
 
 type TextHighlight = {
   end: number;
@@ -95,24 +91,14 @@ const jsonWorkerTimeoutMs = 60000;
 const historyDrawerTransitionMs = 240;
 const utilityWorkerTimeoutMs = 60000;
 
-const toolGroups: Record<Locale, readonly { id: ToolGroup; label: string }[]> = {
-  zh: [
-    { id: "all", label: "全部" },
-    { id: "data", label: "数据" },
-    { id: "encode", label: "编码" },
-    { id: "dev", label: "开发" },
-    { id: "media", label: "媒体" },
-    { id: "writing", label: "文本" },
-  ],
-  en: [
-    { id: "all", label: "All" },
-    { id: "data", label: "Data" },
-    { id: "encode", label: "Encoding" },
-    { id: "dev", label: "Dev" },
-    { id: "media", label: "Media" },
-    { id: "writing", label: "Text" },
-  ],
-} as const;
+const toolGroups = [
+  { id: "all", label: "全部" },
+  { id: "data", label: "数据" },
+  { id: "encode", label: "编码" },
+  { id: "dev", label: "开发" },
+  { id: "media", label: "媒体" },
+  { id: "writing", label: "文本" },
+] as const satisfies readonly { id: ToolGroup; label: string }[];
 
 const toolGroupByTab: Record<ToolTab, Exclude<ToolGroup, "all">> = {
   color: "dev",
@@ -133,134 +119,68 @@ const toolGroupByTab: Record<ToolTab, Exclude<ToolGroup, "all">> = {
 };
 
 const copyLabels = {
-  zh: {
-    copy: "复制",
-    copied: "已复制",
-    download: "下载",
-    input: "输入",
-    output: "结果",
-    importJson: "导入文件",
-    resetSample: "恢复示例",
-    swap: "结果转输入",
-    exchange: "交换",
-    clear: "清空",
-    history: "历史",
-    saveHistory: "保存历史",
-    restore: "恢复",
-    delete: "删除",
-    clearCurrentToolHistory: "清空当前工具",
-    clearAllHistory: "清空全部",
-    cancel: "取消",
-    confirmClearAction: "确认清空",
-    confirmClearTitle: "清空历史记录",
-    emptyHistory: "暂无历史记录。",
-    historySearch: "搜索历史",
-    historyCurrentTool: "当前工具",
-    historyAllTools: "全部工具",
-    historySavedMessage: "已保存到本地历史。",
-    historyRestoredMessage: "已恢复历史记录。",
-    historyDeletedMessage: "历史记录已删除。",
-    historyClearedMessage: "历史记录已清空。",
-    emptyHistoryInput: "输入框为空，无法保存历史。",
-    historyWithOutput: "含结果",
-    historyInputOnly: "仅输入",
-    confirmClearCurrentHistory: "确定清空当前工具的历史记录吗？",
-    confirmClearAllHistory: "确定清空全部工具历史记录吗？",
-    spaces: "缩进",
-    copiedMessage: "已复制到剪贴板。",
-    downloadedMessage: "结果已下载。",
-    exchangedMessage: "输入和结果已交换。",
-    importFailed: "文件导入失败，请重新选择。",
-    importedMessage: "文件已导入输入框。",
-    movedMessage: "结果已填入输入框。",
-    sampleRestoredMessage: "示例已恢复。",
-    copyFailed: "复制失败，请手动选择结果。",
-    emptyInput: "输入框没有可复制的内容。",
-    emptyOutput: "结果框没有可复制的内容。",
-  },
-  en: {
-    copy: "Copy",
-    copied: "Copied",
-    download: "Download",
-    input: "Input",
-    output: "Result",
-    importJson: "Import file",
-    resetSample: "Restore sample",
-    swap: "Move result to input",
-    exchange: "Swap",
-    clear: "Clear",
-    history: "History",
-    saveHistory: "Save history",
-    restore: "Restore",
-    delete: "Delete",
-    clearCurrentToolHistory: "Clear current tool",
-    clearAllHistory: "Clear all",
-    cancel: "Cancel",
-    confirmClearAction: "Clear",
-    confirmClearTitle: "Clear history",
-    emptyHistory: "No saved history yet.",
-    historySearch: "Search history",
-    historyCurrentTool: "Current tool",
-    historyAllTools: "All tools",
-    historySavedMessage: "Saved to local history.",
-    historyRestoredMessage: "History restored.",
-    historyDeletedMessage: "History deleted.",
-    historyClearedMessage: "History cleared.",
-    emptyHistoryInput: "Input is empty. Nothing to save.",
-    historyWithOutput: "Has result",
-    historyInputOnly: "Input only",
-    confirmClearCurrentHistory: "Clear saved history for the current tool?",
-    confirmClearAllHistory: "Clear all saved tool history?",
-    spaces: "Indent",
-    copiedMessage: "Copied to clipboard.",
-    downloadedMessage: "Result downloaded.",
-    exchangedMessage: "Input and result swapped.",
-    importFailed: "File import failed. Choose the file again.",
-    importedMessage: "File imported into input.",
-    movedMessage: "Result moved into input.",
-    sampleRestoredMessage: "Sample restored.",
-    copyFailed: "Copy failed. Select the result manually.",
-    emptyInput: "There is no input to copy.",
-    emptyOutput: "There is no result to copy.",
-  },
+  copy: "复制",
+  copied: "已复制",
+  download: "下载",
+  input: "输入",
+  output: "结果",
+  importJson: "导入文件",
+  resetSample: "恢复示例",
+  swap: "结果转输入",
+  exchange: "交换",
+  clear: "清空",
+  history: "历史",
+  saveHistory: "保存历史",
+  restore: "恢复",
+  delete: "删除",
+  clearCurrentToolHistory: "清空当前工具",
+  clearAllHistory: "清空全部",
+  cancel: "取消",
+  confirmClearAction: "确认清空",
+  confirmClearTitle: "清空历史记录",
+  emptyHistory: "暂无历史记录。",
+  historySearch: "搜索历史",
+  historyCurrentTool: "当前工具",
+  historyAllTools: "全部工具",
+  historySavedMessage: "已保存到本地历史。",
+  historyRestoredMessage: "已恢复历史记录。",
+  historyDeletedMessage: "历史记录已删除。",
+  historyClearedMessage: "历史记录已清空。",
+  emptyHistoryInput: "输入框为空，无法保存历史。",
+  historyWithOutput: "含结果",
+  historyInputOnly: "仅输入",
+  confirmClearCurrentHistory: "确定清空当前工具的历史记录吗？",
+  confirmClearAllHistory: "确定清空全部工具历史记录吗？",
+  spaces: "缩进",
+  copiedMessage: "已复制到剪贴板。",
+  downloadedMessage: "结果已下载。",
+  exchangedMessage: "输入和结果已交换。",
+  importFailed: "文件导入失败，请重新选择。",
+  importedMessage: "文件已导入输入框。",
+  movedMessage: "结果已填入输入框。",
+  sampleRestoredMessage: "示例已恢复。",
+  copyFailed: "复制失败，请手动选择结果。",
+  emptyInput: "输入框没有可复制的内容。",
+  emptyOutput: "结果框没有可复制的内容。",
 } as const;
 
-const tabLabels = {
-  zh: [
-    { id: "json", label: "JSON", description: "格式化、压缩、校验、排序、转义和扁平化。", icon: FileJson2 },
-    { id: "encoding", label: "编码", description: "URL、Base64、Unicode 和 HTML 实体转换。", icon: Code2 },
-    { id: "time", label: "时间", description: "时间戳与日期互转，自动识别秒和毫秒。", icon: TimerReset },
-    { id: "text", label: "文本", description: "统计、去空行、去重、排序和大小写转换。", icon: Rows3 },
-    { id: "jwt", label: "JWT", description: "本地解码 JWT Header 和 Payload，不验证签名。", icon: KeyRound },
-    { id: "hash", label: "Hash", description: "计算 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要。", icon: HashIcon },
-    { id: "uuid", label: "UUID", description: "生成单个或批量 UUID v4。", icon: Fingerprint },
-    { id: "regex", label: "正则", description: "测试正则表达式，查看匹配数量、位置和捕获组。", icon: Search },
-    { id: "markdown", label: "MD", description: "Markdown 本地预览，适合快速检查标题、列表、引用和代码块。", icon: FileText },
-    { id: "data", label: "YAML", description: "YAML / TOML 转 JSON，覆盖常见配置和 Front Matter 场景。", icon: Braces },
-    { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
-    { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
-    { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
-    { id: "linkQr", label: "链接二维码", description: "输入网址后一键生成可下载的二维码 PNG。", icon: QrCode },
-    { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
-  ],
-  en: [
-    { id: "json", label: "JSON", description: "Format, minify, validate, sort, escape, and flatten JSON.", icon: FileJson2 },
-    { id: "encoding", label: "Encoding", description: "URL, Base64, Unicode, and HTML entity conversion.", icon: Code2 },
-    { id: "time", label: "Time", description: "Convert timestamps and dates with second/millisecond detection.", icon: TimerReset },
-    { id: "text", label: "Text", description: "Count, clean empty lines, dedupe, sort, and change case.", icon: Rows3 },
-    { id: "jwt", label: "JWT", description: "Decode JWT header and payload locally. Signature is not verified.", icon: KeyRound },
-    { id: "hash", label: "Hash", description: "Calculate SHA-1, SHA-256, SHA-384, and SHA-512 digests.", icon: HashIcon },
-    { id: "uuid", label: "UUID", description: "Generate one or many UUID v4 values.", icon: Fingerprint },
-    { id: "regex", label: "Regex", description: "Test a regular expression and inspect matches, positions, and captures.", icon: Search },
-    { id: "markdown", label: "MD", description: "Preview Markdown locally for headings, lists, quotes, and code blocks.", icon: FileText },
-    { id: "data", label: "YAML", description: "Convert common YAML / TOML config data to JSON.", icon: Braces },
-    { id: "csv", label: "CSV", description: "Convert CSV / TSV tables to JSON for content and data cleanup.", icon: Table2 },
-    { id: "color", label: "Color", description: "Convert between HEX, RGB, and HSL color formats.", icon: Palette },
-    { id: "image", label: "Image", description: "Compress and convert JPG / PNG / WebP locally with WASM encoders first.", icon: FileImage },
-    { id: "linkQr", label: "Link QR", description: "Enter a URL and generate a downloadable QR code PNG.", icon: QrCode },
-    { id: "wechatQr", label: "WeChat QR", description: "Combine a WeChat contact QR code with an avatar locally in the browser.", icon: QrCode },
-  ],
-} as const;
+const tabLabels = [
+  { id: "json", label: "JSON", description: "格式化、压缩、校验、排序、转义和扁平化。", icon: FileJson2 },
+  { id: "encoding", label: "编码", description: "URL、Base64、Unicode 和 HTML 实体转换。", icon: Code2 },
+  { id: "time", label: "时间", description: "时间戳与日期互转，自动识别秒和毫秒。", icon: TimerReset },
+  { id: "text", label: "文本", description: "统计、去空行、去重、排序和大小写转换。", icon: Rows3 },
+  { id: "jwt", label: "JWT", description: "本地解码 JWT Header 和 Payload，不验证签名。", icon: KeyRound },
+  { id: "hash", label: "Hash", description: "计算 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要。", icon: HashIcon },
+  { id: "uuid", label: "UUID", description: "生成单个或批量 UUID v4。", icon: Fingerprint },
+  { id: "regex", label: "正则", description: "测试正则表达式，查看匹配数量、位置和捕获组。", icon: Search },
+  { id: "markdown", label: "MD", description: "Markdown 本地预览，适合快速检查标题、列表、引用和代码块。", icon: FileText },
+  { id: "data", label: "YAML", description: "YAML / TOML 转 JSON，覆盖常见配置和 Front Matter 场景。", icon: Braces },
+  { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
+  { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
+  { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
+  { id: "linkQr", label: "链接二维码", description: "输入网址后一键生成可下载的二维码 PNG。", icon: QrCode },
+  { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
+] as const;
 
 const toolSearchAliases: Record<ToolTab, string> = {
   color: "hex rgb hsl css color palette yanse se sezhi",
@@ -280,8 +200,8 @@ const toolSearchAliases: Record<ToolTab, string> = {
   wechatQr: "wechat weixin qr qrcode contact friend avatar scan saoyisao erweima touxiang",
 };
 
-export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
-  const labels = copyLabels[locale];
+export function ToolsWorkbench() {
+  const labels = copyLabels;
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [activeTab, setActiveTab] = useState<ToolTab>("json");
   const [activeGroup, setActiveGroup] = useState<ToolGroup>("all");
@@ -313,7 +233,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   const [encodingInput, setEncodingInput] = useState("https://zhizhi.xyz/articles?tag=AI 应用");
   const [encodingOutput, setEncodingOutput] = useState("");
   const [hashAlgorithm, setHashAlgorithm] = useState<HashAlgorithm>("SHA-256");
-  const [hashInput, setHashInput] = useState(locale === "en" ? "zhizhi tools" : "知之工具");
+  const [hashInput, setHashInput] = useState("知之工具");
   const [hashOutput, setHashOutput] = useState("");
   const [hashOutputFormat, setHashOutputFormat] = useState<HashOutputFormat>("hex");
   const [jwtInput, setJwtInput] = useState("");
@@ -322,15 +242,15 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   const [markdownInput, setMarkdownInput] = useState(sampleMarkdown);
   const [markdownOutput, setMarkdownOutput] = useState("");
   const [regexFlags, setRegexFlags] = useState("gi");
-  const [regexInput, setRegexInput] = useState(locale === "en" ? "ZhiZhi tools\nzhizhi.xyz" : "知之工具\nzhizhi.xyz");
+  const [regexInput, setRegexInput] = useState("知之工具\nzhizhi.xyz");
   const [regexOutput, setRegexOutput] = useState("");
-  const [regexPattern, setRegexPattern] = useState(locale === "en" ? "zhizhi" : "知之|zhizhi");
+  const [regexPattern, setRegexPattern] = useState("知之|zhizhi");
   const [regexReplacement, setRegexReplacement] = useState("");
   const [timeDisplayMode, setTimeDisplayMode] = useState<TimeDisplayMode>("local");
   const [timeInput, setTimeInput] = useState("");
   const [timeOutput, setTimeOutput] = useState("");
   const [timestampUnit, setTimestampUnit] = useState<TimestampUnit>("auto");
-  const [textInput, setTextInput] = useState(locale === "en" ? "Knowledge\nTools\nKnowledge\n\nzhizhi" : "知识\n工具\n知识\n\n知之");
+  const [textInput, setTextInput] = useState("知识\n工具\n知识\n\n知之");
   const [textOutput, setTextOutput] = useState("");
   const [structuredFormat, setStructuredFormat] = useState<StructuredFormat>("yaml");
   const [structuredInput, setStructuredInput] = useState(sampleStructured);
@@ -384,19 +304,19 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     uuid: uuidInput,
     wechatQr: "",
   });
-  const activeTabInfo = tabLabels[locale].find((tab) => tab.id === activeTab) ?? tabLabels[locale][0];
+  const activeTabInfo = tabLabels.find((tab) => tab.id === activeTab) ?? tabLabels[0];
   const ActiveIcon = activeTabInfo.icon;
-  const defaultStatusMessage = locale === "en" ? "All tools run locally in your browser" : "所有工具均在浏览器本地运行";
+  const defaultStatusMessage = "所有工具均在浏览器本地运行";
   const expandedWorkspace = isExpandedWorkspaceTool(activeTab);
   const panelSize = getPanelSize(activeTab);
   const filteredTabs = useMemo(() => {
     const keyword = toolSearch.trim().toLowerCase();
-    return tabLabels[locale].filter((tab) => {
+    return tabLabels.filter((tab) => {
       const inGroup = activeGroup === "all" || toolGroupByTab[tab.id] === activeGroup;
       const searchable = `${tab.label} ${tab.description} ${tab.id} ${toolSearchAliases[tab.id]}`.toLowerCase();
       return inGroup && (!keyword || searchable.includes(keyword));
     });
-  }, [activeGroup, locale, toolSearch]);
+  }, [activeGroup, toolSearch]);
   const currentInputMetrics = useMemo(() => getTextMetrics(currentInput), [currentInput]);
   const currentOutputMetrics = useMemo(() => getTextMetrics(currentOutput), [currentOutput]);
 
@@ -411,20 +331,20 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     return () => {
       if (jsonPendingRef.current) {
         window.clearTimeout(jsonPendingRef.current.timeout);
-        jsonPendingRef.current.reject(new Error(locale === "en" ? "JSON processing was cancelled." : "JSON 处理已取消。"));
+        jsonPendingRef.current.reject(new Error("JSON 处理已取消。"));
         jsonPendingRef.current = null;
       }
       jsonWorkerRef.current?.terminate();
       jsonWorkerRef.current = null;
       if (utilityPendingRef.current) {
         window.clearTimeout(utilityPendingRef.current.timeout);
-        utilityPendingRef.current.reject(new Error(locale === "en" ? "Tool processing was cancelled." : "工具处理已取消。"));
+        utilityPendingRef.current.reject(new Error("工具处理已取消。"));
         utilityPendingRef.current = null;
       }
       utilityWorkerRef.current?.terminate();
       utilityWorkerRef.current = null;
     };
-  }, [locale]);
+  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -522,7 +442,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   function terminateJsonWorker() {
     if (jsonPendingRef.current) {
       window.clearTimeout(jsonPendingRef.current.timeout);
-      jsonPendingRef.current.reject(new Error(locale === "en" ? "JSON processing was cancelled." : "JSON 处理已取消。"));
+      jsonPendingRef.current.reject(new Error("JSON 处理已取消。"));
       jsonPendingRef.current = null;
     }
     jsonWorkerRef.current?.terminate();
@@ -533,7 +453,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     jsonCancelRequestedRef.current = true;
     terminateJsonWorker();
     setJsonBusy(false);
-    showStatus("idle", locale === "en" ? "JSON processing cancelled." : "JSON 处理已取消。");
+    showStatus("idle", "JSON 处理已取消。");
   }
 
   function getJsonWorker() {
@@ -554,14 +474,14 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
         pending.resolve({ output: event.data.output, message: event.data.message });
         return;
       }
-      pending.reject(new Error(enhanceJsonError(event.data.error || (pending.locale === "en" ? "Invalid JSON." : "JSON 格式无效。"), pending.input, pending.locale)));
+      pending.reject(new Error(enhanceJsonError(event.data.error || ("JSON 格式无效。"), pending.input)));
     };
     worker.onerror = (error) => {
       const pending = jsonPendingRef.current;
       if (pending) {
         window.clearTimeout(pending.timeout);
         jsonPendingRef.current = null;
-        pending.reject(new Error(error.message || (locale === "en" ? "JSON worker failed." : "JSON 后台线程处理失败。")));
+        pending.reject(new Error(error.message || ("JSON 后台线程处理失败。")));
       }
       terminateJsonWorker();
     };
@@ -572,7 +492,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   function terminateUtilityWorker() {
     if (utilityPendingRef.current) {
       window.clearTimeout(utilityPendingRef.current.timeout);
-      utilityPendingRef.current.reject(new Error(locale === "en" ? "Tool processing was cancelled." : "工具处理已取消。"));
+      utilityPendingRef.current.reject(new Error("工具处理已取消。"));
       utilityPendingRef.current = null;
     }
     utilityWorkerRef.current?.terminate();
@@ -634,14 +554,14 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
         pending.resolve({ output: event.data.output, structured: event.data.structured });
         return;
       }
-      pending.reject(new Error(formatToolError(event.data.error, pending.locale === "en" ? "Tool processing failed." : "工具处理失败。", pending.locale)));
+      pending.reject(new Error(formatToolError(event.data.error, "工具处理失败。")));
     };
     worker.onerror = (error) => {
       const pending = utilityPendingRef.current;
       if (pending) {
         window.clearTimeout(pending.timeout);
         utilityPendingRef.current = null;
-        pending.reject(new Error(error.message || (pending.locale === "en" ? "Tool worker failed." : "工具后台线程处理失败。")));
+        pending.reject(new Error(error.message || ("工具后台线程处理失败。")));
       }
       terminateUtilityWorker();
     };
@@ -652,7 +572,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   function runUtilityInWorker(input: string, action: UtilityAction, options: Record<string, string> = {}) {
     return new Promise<UtilityWorkerResult>((resolve, reject) => {
       if (utilityPendingRef.current) {
-        reject(new Error(locale === "en" ? "Another tool task is still running." : "另一个工具任务仍在处理中。"));
+        reject(new Error("另一个工具任务仍在处理中。"));
         return;
       }
 
@@ -664,18 +584,18 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
           utilityPendingRef.current = null;
         }
         terminateUtilityWorker();
-        reject(new Error(locale === "en" ? "Tool processing timed out. Try a smaller input." : "工具处理超时，请尝试更小的输入。"));
+        reject(new Error("工具处理超时，请尝试更小的输入。"));
       }, utilityWorkerTimeoutMs);
 
-      utilityPendingRef.current = { id, locale, reject, resolve, timeout };
-      worker.postMessage({ id, input, action, locale, ...options });
+      utilityPendingRef.current = { id, reject, resolve, timeout };
+      worker.postMessage({ id, input, action, ...options });
     });
   }
 
   function runJsonInWorker(input: string, action: JsonAction, spaces: number) {
     return new Promise<JsonWorkerResult>((resolve, reject) => {
       if (jsonPendingRef.current) {
-        reject(new Error(locale === "en" ? "Another JSON task is still running." : "另一个 JSON 任务仍在处理中。"));
+        reject(new Error("另一个 JSON 任务仍在处理中。"));
         return;
       }
 
@@ -687,11 +607,11 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
           jsonPendingRef.current = null;
         }
         terminateJsonWorker();
-        reject(new Error(locale === "en" ? "JSON processing timed out. Try a smaller file or a lighter action." : "JSON 处理超时，请尝试更小的数据或更轻的操作。"));
+        reject(new Error("JSON 处理超时，请尝试更小的数据或更轻的操作。"));
       }, jsonWorkerTimeoutMs);
 
-      jsonPendingRef.current = { id, input, locale, reject, resolve, timeout };
-      worker.postMessage({ id, input, action, spaces, locale });
+      jsonPendingRef.current = { id, input, reject, resolve, timeout };
+      worker.postMessage({ id, input, action, spaces });
     });
   }
 
@@ -745,7 +665,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       return;
     }
 
-    setOutput(formatToolErrorOutput(message, locale));
+    setOutput(formatToolErrorOutput(message));
   }
 
   function selectTool(tab: ToolTab) {
@@ -761,7 +681,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       return;
     }
 
-    const firstTool = tabLabels[locale].find((tab) => toolGroupByTab[tab.id] === group);
+    const firstTool = tabLabels.find((tab) => toolGroupByTab[tab.id] === group);
     if (firstTool) {
       selectTool(firstTool.id);
     }
@@ -897,7 +817,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   }
 
   function restoreSampleInput() {
-    setInput(getSampleInput(activeTab, locale));
+    setInput(getSampleInput(activeTab));
     setOutput("");
     setStructuredResult(null);
     showStatus("success", labels.sampleRestoredMessage);
@@ -958,9 +878,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     if (file.size > hashFileLimitBytes) {
       showStatus(
         "error",
-        locale === "en"
-          ? `File is ${formatBytes(file.size)}. For browser memory safety, file hashing is limited to ${formatBytes(hashFileLimitBytes)}.`
-          : `文件大小为 ${formatBytes(file.size)}。为了避免浏览器内存压力，文件 Hash 上限为 ${formatBytes(hashFileLimitBytes)}。`,
+        `文件大小为 ${formatBytes(file.size)}。为了避免浏览器内存压力，文件 Hash 上限为 ${formatBytes(hashFileLimitBytes)}。`,
       );
       if (hashFileInputRef.current) {
         hashFileInputRef.current.value = "";
@@ -971,24 +889,22 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     try {
       setHashBusy(true);
       setActiveTab("hash");
-      showStatus("idle", locale === "en" ? "Calculating file hash..." : "正在计算文件 Hash...");
+      showStatus("idle", "正在计算文件 Hash...");
       if (file.size > hashFileWarningBytes) {
         showStatus(
           "idle",
-          locale === "en"
-            ? `Large file (${formatBytes(file.size)}). Reading it locally may take a moment.`
-            : `检测到较大文件（${formatBytes(file.size)}），本地读取可能需要一点时间。`,
+          `检测到较大文件（${formatBytes(file.size)}），本地读取可能需要一点时间。`,
         );
       }
       const digest = await crypto.subtle.digest(hashAlgorithm, await file.arrayBuffer());
-      const result = formatHashResult(digest, hashAlgorithm, hashOutputFormat, file.size, locale, file.name);
-      setHashInput(locale === "en" ? `File: ${file.name}` : `文件：${file.name}`);
+      const result = formatHashResult(digest, hashAlgorithm, hashOutputFormat, file.size, file.name);
+      setHashInput(`文件：${file.name}`);
       setHashOutput(result.raw);
       setStructuredResult({ type: "hash", data: result.structured });
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "File hash calculated locally." : "文件 Hash 已在本地计算完成。");
+      showStatus("success", "文件 Hash 已在本地计算完成。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "File hash calculation failed." : "文件 Hash 计算失败。", locale));
+      showStatus("error", formatToolError(error, "文件 Hash 计算失败。"));
     } finally {
       setHashBusy(false);
       if (hashFileInputRef.current) {
@@ -1008,9 +924,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     jsonCancelRequestedRef.current = false;
     setJsonBusy(true);
     if (inputBytes > jsonLargeInputBytes) {
-      showStatus("idle", locale === "en" ? "Large JSON detected. Running in a worker so the page stays responsive." : "检测到较大的 JSON，正在用后台线程处理，页面会保持可操作。");
+      showStatus("idle", "检测到较大的 JSON，正在用后台线程处理，页面会保持可操作。");
     } else {
-      showStatus("idle", locale === "en" ? "Processing JSON..." : "正在处理 JSON...");
+      showStatus("idle", "正在处理 JSON...");
     }
 
     try {
@@ -1021,11 +937,11 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       showStatus("success", result.message);
     } catch (error) {
       if (jsonCancelRequestedRef.current) {
-        showStatus("idle", locale === "en" ? "JSON processing cancelled." : "JSON 处理已取消。");
+        showStatus("idle", "JSON 处理已取消。");
       } else {
-        const errorMessage = formatToolError(error, locale === "en" ? "Invalid JSON." : "JSON 格式无效。", locale);
+        const errorMessage = formatToolError(error, "JSON 格式无效。");
         setJsonErrorHighlight(getJsonErrorHighlight(errorMessage, jsonInput));
-        setJsonOutput(formatJsonErrorOutput(errorMessage, locale));
+        setJsonOutput(formatJsonErrorOutput(errorMessage));
         setStructuredResult(null);
         setMobilePanel("output");
       }
@@ -1041,11 +957,11 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       const inputMetrics = getTextMetrics(input);
       if (action === "base64Encode" || action === "base64Decode") {
         setEncodingBusy(true);
-        showStatus("idle", locale === "en" ? "Processing Base64 in a worker..." : "正在后台线程处理 Base64...");
+        showStatus("idle", "正在后台线程处理 Base64...");
         const result = await runUtilityInWorker(input, action);
         setEncodingOutput(result.output);
         setMobilePanel("output");
-        showStatus("success", `${locale === "en" ? "Base64 conversion completed." : "Base64 转换完成。"}${largeInputSuffix(inputMetrics.bytes, locale)}`);
+        showStatus("success", `${"Base64 转换完成。"}${largeInputSuffix(inputMetrics.bytes)}`);
         return;
       }
 
@@ -1059,9 +975,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       }[action]();
       setEncodingOutput(result);
       setMobilePanel("output");
-      showStatus("success", `${locale === "en" ? "Encoding conversion completed." : "编码转换完成。"}${largeInputSuffix(inputMetrics.bytes, locale)}`);
+      showStatus("success", `${"编码转换完成。"}${largeInputSuffix(inputMetrics.bytes)}`);
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Conversion failed." : "转换失败。", locale));
+      showStatus("error", formatToolError(error, "转换失败。"));
     } finally {
       setEncodingBusy(false);
     }
@@ -1071,32 +987,32 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     try {
       const now = new Date();
       if (action === "now") {
-        const output = formatDateReport(now, timeDisplayMode, locale);
+        const output = formatDateReport(now, timeDisplayMode);
         setTimeInput(formatCurrentTimestampInput(now, timestampUnit));
         setTimeOutput(output);
         setMobilePanel("output");
-        showStatus("success", locale === "en" ? "Current time generated." : "已生成当前时间。");
+        showStatus("success", "已生成当前时间。");
         return;
       }
 
       if (action === "timestampToDate") {
         const raw = timeInput.trim();
         const timestamp = Number(raw);
-        if (!Number.isFinite(timestamp)) throw new Error(locale === "en" ? "Enter a valid timestamp." : "请输入有效时间戳。");
+        if (!Number.isFinite(timestamp)) throw new Error("请输入有效时间戳。");
         const milliseconds = normalizeTimestampToMilliseconds(timestamp, timestampUnit);
-        setTimeOutput(formatDateReport(new Date(milliseconds), timeDisplayMode, locale));
+        setTimeOutput(formatDateReport(new Date(milliseconds), timeDisplayMode));
         setMobilePanel("output");
-        showStatus("success", locale === "en" ? "Timestamp converted." : "时间戳已转换。");
+        showStatus("success", "时间戳已转换。");
         return;
       }
 
       const parsedDate = new Date(timeInput.trim());
-      if (Number.isNaN(parsedDate.getTime())) throw new Error(locale === "en" ? "Enter a valid date string." : "请输入有效日期字符串。");
-      setTimeOutput(formatDateReport(parsedDate, timeDisplayMode, locale));
+      if (Number.isNaN(parsedDate.getTime())) throw new Error("请输入有效日期字符串。");
+      setTimeOutput(formatDateReport(parsedDate, timeDisplayMode));
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "Date converted." : "日期已转换。");
+      showStatus("success", "日期已转换。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Time conversion failed." : "时间转换失败。", locale));
+      showStatus("error", formatToolError(error, "时间转换失败。"));
     }
   }
 
@@ -1105,11 +1021,11 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     try {
       if (action === "dedupe" || action === "sort") {
         setTextBusy(true);
-        showStatus("idle", locale === "en" ? "Processing text in a worker..." : "正在后台线程处理文本...");
+        showStatus("idle", "正在后台线程处理文本...");
         const result = await runUtilityInWorker(textInput, action === "dedupe" ? "textDedupe" : "textSort");
         setTextOutput(result.output);
         setMobilePanel("output");
-        showStatus("success", `${locale === "en" ? "Text conversion completed." : "文本处理完成。"}${largeInputSuffix(inputMetrics.bytes, locale)}`);
+        showStatus("success", `${"文本处理完成。"}${largeInputSuffix(inputMetrics.bytes)}`);
         return;
       }
 
@@ -1122,9 +1038,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       }[action]();
       setTextOutput(result);
       setMobilePanel("output");
-      showStatus("success", `${locale === "en" ? "Text conversion completed." : "文本处理完成。"}${largeInputSuffix(inputMetrics.bytes, locale)}`);
+      showStatus("success", `${"文本处理完成。"}${largeInputSuffix(inputMetrics.bytes)}`);
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Text conversion failed." : "文本处理失败。", locale));
+      showStatus("error", formatToolError(error, "文本处理失败。"));
     } finally {
       setTextBusy(false);
     }
@@ -1132,31 +1048,31 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
 
   function runJwtDecode() {
     try {
-      const result = decodeJwtInput(jwtInput, locale);
+      const result = decodeJwtInput(jwtInput);
       if (result.normalizedToken !== jwtInput.trim()) {
         setJwtInput(result.normalizedToken);
       }
       setJwtOutput(result.raw);
       setStructuredResult({ type: "jwt", data: result.structured });
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "JWT decoded locally. Signature was not verified." : "JWT 已在本地解码，未验证签名。");
+      showStatus("success", "JWT 已在本地解码，未验证签名。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "JWT decode failed." : "JWT 解码失败。", locale));
+      showStatus("error", formatToolError(error, "JWT 解码失败。"));
     }
   }
 
   async function runHash() {
     try {
       setHashBusy(true);
-      showStatus("idle", locale === "en" ? "Calculating hash..." : "正在计算 Hash...");
+      showStatus("idle", "正在计算 Hash...");
       const digest = await crypto.subtle.digest(hashAlgorithm, new TextEncoder().encode(hashInput));
-      const result = formatHashResult(digest, hashAlgorithm, hashOutputFormat, getTextMetrics(hashInput).bytes, locale);
+      const result = formatHashResult(digest, hashAlgorithm, hashOutputFormat, getTextMetrics(hashInput).bytes);
       setHashOutput(result.raw);
       setStructuredResult({ type: "hash", data: result.structured });
       setMobilePanel("output");
-      showStatus("success", `${hashAlgorithm} ${locale === "en" ? "digest calculated." : "摘要已生成。"}`);
+      showStatus("success", `${hashAlgorithm} ${"摘要已生成。"}`);
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Hash calculation failed." : "Hash 计算失败。", locale));
+      showStatus("error", formatToolError(error, "Hash 计算失败。"));
     } finally {
       setHashBusy(false);
     }
@@ -1168,20 +1084,20 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     setUuidInput(String(count));
     setUuidOutput(formatUuidValues(values, uuidFormat));
     setMobilePanel("output");
-    showStatus("success", locale === "en" ? `${count} UUID v4 value(s) generated.` : `已生成 ${count} 个 UUID v4。`);
+    showStatus("success", `已生成 ${count} 个 UUID v4。`);
   }
 
   async function runRegexTest() {
     try {
       setRegexBusy(true);
-      showStatus("idle", locale === "en" ? "Testing regex in a worker..." : "正在后台线程测试正则...");
+      showStatus("idle", "正在后台线程测试正则...");
       const result = await runUtilityInWorker(regexInput, "regexTest", { flags: normalizeRegexFlags(regexFlags), pattern: regexPattern });
       setRegexOutput(result.output);
       setStructuredResult(result.structured ? { type: "regex", data: result.structured } : null);
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "Regex test completed." : "正则测试完成。");
+      showStatus("success", "正则测试完成。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Regex test failed." : "正则测试失败。", locale));
+      showStatus("error", formatToolError(error, "正则测试失败。"));
     } finally {
       setRegexBusy(false);
     }
@@ -1190,14 +1106,14 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   async function runRegexReplace() {
     try {
       setRegexBusy(true);
-      showStatus("idle", locale === "en" ? "Replacing with regex in a worker..." : "正在后台线程执行正则替换...");
+      showStatus("idle", "正在后台线程执行正则替换...");
       const result = await runUtilityInWorker(regexInput, "regexReplace", { flags: normalizeRegexFlags(regexFlags), pattern: regexPattern, replacement: regexReplacement });
       setRegexOutput(result.output);
       setStructuredResult(null);
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "Regex replacement completed." : "正则替换完成。");
+      showStatus("success", "正则替换完成。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Regex replacement failed." : "正则替换失败。", locale));
+      showStatus("error", formatToolError(error, "正则替换失败。"));
     } finally {
       setRegexBusy(false);
     }
@@ -1207,9 +1123,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
     try {
       setMarkdownOutput(sanitizeMarkdownPreviewHtml(renderMarkdownPreview(markdownInput)));
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "Markdown preview generated locally." : "Markdown 预览已在本地生成。");
+      showStatus("success", "Markdown 预览已在本地生成。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Markdown preview failed." : "Markdown 预览失败。", locale));
+      showStatus("error", formatToolError(error, "Markdown 预览失败。"));
     }
   }
 
@@ -1218,9 +1134,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       const value = structuredFormat === "yaml" ? parseYamlDocument(structuredInput) : parseTomlDocument(structuredInput);
       setStructuredOutput(JSON.stringify(value, null, 2));
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? `${structuredFormat.toUpperCase()} converted to JSON.` : `${structuredFormat.toUpperCase()} 已转换为 JSON。`);
+      showStatus("success", `${structuredFormat.toUpperCase()} 已转换为 JSON。`);
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Conversion failed." : "转换失败。", locale));
+      showStatus("error", formatToolError(error, "转换失败。"));
     }
   }
 
@@ -1229,19 +1145,19 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       const output = convertDelimitedTextToJson(csvInput, csvDelimiter, { emptyAsNull: csvEmptyAsNull, inferTypes: csvInferTypes, outputMode: csvOutputMode });
       setCsvOutput(output);
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "Table data converted to JSON." : "表格数据已转换为 JSON。");
+      showStatus("success", "表格数据已转换为 JSON。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "CSV conversion failed." : "CSV 转换失败。", locale));
+      showStatus("error", formatToolError(error, "CSV 转换失败。"));
     }
   }
 
   function runColorConvert() {
     try {
-      setColorOutput(formatColorReport(parseColorValue(colorInput), locale));
+      setColorOutput(formatColorReport(parseColorValue(colorInput)));
       setMobilePanel("output");
-      showStatus("success", locale === "en" ? "Color converted." : "颜色已转换。");
+      showStatus("success", "颜色已转换。");
     } catch (error) {
-      showStatus("error", formatToolError(error, locale === "en" ? "Color conversion failed." : "颜色转换失败。", locale));
+      showStatus("error", formatToolError(error, "颜色转换失败。"));
     }
   }
 
@@ -1250,8 +1166,8 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
       <section className="mx-auto w-full max-w-7xl rounded-md border border-line bg-paper/72 p-3 shadow-[var(--shadow-quiet)]">
         <div className="grid gap-2.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5" aria-label={locale === "en" ? "Tool groups" : "工具分组"}>
-              {toolGroups[locale].map((group) => {
+            <div className="flex flex-wrap gap-1.5" aria-label="工具分组">
+              {toolGroups.map((group) => {
                 const active = group.id === activeGroup;
                 return (
                   <button
@@ -1274,12 +1190,12 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
                 className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted"
                 value={toolSearch}
                 onChange={(event) => setToolSearch(event.target.value)}
-                aria-label={locale === "en" ? "Search tools" : "搜索工具"}
-                placeholder={locale === "en" ? "Search" : "搜索"}
+                aria-label="搜索工具"
+                placeholder="搜索"
               />
             </label>
           </div>
-          <nav className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6" aria-label={locale === "en" ? "Tools" : "工具"}>
+          <nav className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6" aria-label="工具">
             {filteredTabs.map((tab) => {
               const active = tab.id === activeTab;
               const Icon = tab.icon;
@@ -1306,7 +1222,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
             })}
             {filteredTabs.length === 0 ? (
               <div className="col-span-full rounded-md border border-dashed border-line bg-background/54 px-3 py-4 text-xs font-semibold text-muted">
-                {locale === "en" ? "No tools match this filter." : "没有匹配的工具。"}
+                没有匹配的工具。
               </div>
             ) : null}
           </nav>
@@ -1335,7 +1251,6 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
           <div className="rounded-md bg-paper/54 p-2.5">
             {activeTab === "json" ? (
               <JsonControls
-                locale={locale}
                 spaces={jsonSpaces}
                 setSpaces={setJsonSpaces}
                 runJson={runJson}
@@ -1344,24 +1259,22 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
                 onImportClick={() => jsonFileInputRef.current?.click()}
               />
             ) : null}
-            {activeTab === "encoding" ? <EncodingControls locale={locale} runEncoding={runEncoding} busy={encodingBusy} /> : null}
+            {activeTab === "encoding" ? <EncodingControls runEncoding={runEncoding} busy={encodingBusy} /> : null}
             {activeTab === "time" ? (
               <TimeControls
                 displayMode={timeDisplayMode}
-                locale={locale}
                 runTime={runTime}
                 timestampUnit={timestampUnit}
                 onDisplayModeChange={setTimeDisplayMode}
                 onTimestampUnitChange={setTimestampUnit}
               />
             ) : null}
-            {activeTab === "text" ? <TextControls locale={locale} runText={runText} stats={textStats} busy={textBusy} /> : null}
-            {activeTab === "jwt" ? <JwtControls locale={locale} onDecode={runJwtDecode} /> : null}
+            {activeTab === "text" ? <TextControls runText={runText} stats={textStats} busy={textBusy} /> : null}
+            {activeTab === "jwt" ? <JwtControls onDecode={runJwtDecode} /> : null}
             {activeTab === "hash" ? (
               <HashControls
                 algorithm={hashAlgorithm}
                 busy={hashBusy}
-                locale={locale}
                 outputFormat={hashOutputFormat}
                 onAlgorithmChange={setHashAlgorithm}
                 onImportClick={() => hashFileInputRef.current?.click()}
@@ -1369,12 +1282,11 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
                 onRun={runHash}
               />
             ) : null}
-            {activeTab === "uuid" ? <UuidControls format={uuidFormat} locale={locale} onFormatChange={setUuidFormat} onRun={runUuidGenerate} /> : null}
+            {activeTab === "uuid" ? <UuidControls format={uuidFormat} onFormatChange={setUuidFormat} onRun={runUuidGenerate} /> : null}
             {activeTab === "regex" ? (
               <RegexControls
                 busy={regexBusy}
                 flags={regexFlags}
-                locale={locale}
                 pattern={regexPattern}
                 replacement={regexReplacement}
                 onFlagsChange={setRegexFlags}
@@ -1385,15 +1297,14 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
               />
             ) : null}
             {activeTab === "markdown" ? (
-              <MarkdownControls autoPreview={markdownAutoPreview} locale={locale} onAutoPreviewChange={setMarkdownAutoPreview} onRun={runMarkdownPreview} />
+              <MarkdownControls autoPreview={markdownAutoPreview} onAutoPreviewChange={setMarkdownAutoPreview} onRun={runMarkdownPreview} />
             ) : null}
-            {activeTab === "data" ? <StructuredControls format={structuredFormat} locale={locale} onFormatChange={setStructuredFormat} onRun={runStructuredToJson} /> : null}
+            {activeTab === "data" ? <StructuredControls format={structuredFormat} onFormatChange={setStructuredFormat} onRun={runStructuredToJson} /> : null}
             {activeTab === "csv" ? (
               <CsvControls
                 delimiter={csvDelimiter}
                 emptyAsNull={csvEmptyAsNull}
                 inferTypes={csvInferTypes}
-                locale={locale}
                 outputMode={csvOutputMode}
                 onDelimiterChange={setCsvDelimiter}
                 onEmptyAsNullChange={setCsvEmptyAsNull}
@@ -1402,7 +1313,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
                 onRun={runCsvToJson}
               />
             ) : null}
-            {activeTab === "color" ? <ColorControls locale={locale} onRun={runColorConvert} /> : null}
+            {activeTab === "color" ? <ColorControls onRun={runColorConvert} /> : null}
           </div>
           ) : null}
 
@@ -1412,7 +1323,6 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
               open={historyVisible}
               items={toolHistoryItems}
               labels={labels}
-              locale={locale}
               search={historySearch}
               onClearAll={clearAllToolHistory}
               onClearCurrent={clearCurrentToolHistory}
@@ -1423,9 +1333,9 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
             />
           ) : null}
 
-          {activeTab === "image" ? <ImageTool locale={locale} /> : null}
-          {activeTab === "linkQr" ? <LinkQrTool locale={locale} /> : null}
-          {activeTab === "wechatQr" ? <WechatQrTool locale={locale} /> : null}
+          {activeTab === "image" ? <ImageTool /> : null}
+          {activeTab === "linkQr" ? <LinkQrTool /> : null}
+          {activeTab === "wechatQr" ? <WechatQrTool /> : null}
 
           {!isStandaloneTool(activeTab) ? (
             <>
@@ -1452,11 +1362,10 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
             <div className={mobilePanel === "input" ? "block" : "hidden lg:block"}>
               <EditorPanel
                 label={labels.input}
-                locale={locale}
                 value={currentInput}
                 onChange={setInput}
                 metrics={currentInputMetrics}
-                placeholder={activeTab === "time" ? (locale === "en" ? "Timestamp or date string" : "输入时间戳或日期字符串") : undefined}
+                placeholder={activeTab === "time" ? "输入时间戳或日期字符串" : undefined}
                 size={panelSize}
                 highlight={activeTab === "json" ? jsonErrorHighlight : null}
                 actions={
@@ -1479,7 +1388,6 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
                 <ColorResultPanel
                   input={colorInput}
                   label={labels.output}
-                  locale={locale}
                   metrics={currentOutputMetrics}
                   output={colorOutput}
                   size={panelSize}
@@ -1491,7 +1399,6 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
                 <MarkdownPreviewPanel
                   html={markdownOutput}
                   label={labels.output}
-                  locale={locale}
                   metrics={currentOutputMetrics}
                   size={panelSize}
                   actions={
@@ -1507,7 +1414,6 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
               ) : activeTab === "jwt" || activeTab === "hash" || activeTab === "regex" ? (
                 <StructuredResultPanel
                   label={labels.output}
-                  locale={locale}
                   metrics={currentOutputMetrics}
                   output={currentOutput}
                   result={structuredResult?.type === activeTab ? structuredResult : null}
@@ -1527,7 +1433,6 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
               ) : (
                 <EditorPanel
                   label={labels.output}
-                  locale={locale}
                   value={currentOutput}
                   onChange={setOutput}
                   metrics={currentOutputMetrics}
@@ -1567,7 +1472,7 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
 
           <div className="border-t border-line/80 pt-4">
             <div className="text-xs font-semibold text-muted">
-              {locale === "en" ? "Tool selection is reflected in the URL, so this exact workspace can be shared." : "当前工具会写入 URL，方便下次打开或分享。"}
+              当前工具会写入 URL，方便下次打开或分享。
             </div>
           </div>
         </div>
@@ -1576,13 +1481,12 @@ export function ToolsWorkbench({ locale = "zh" }: ToolsWorkbenchProps) {
   );
 }
 
-type ToolCopyLabels = Record<keyof (typeof copyLabels)["zh"], string>;
+type ToolCopyLabels = typeof copyLabels;
 
 function ToolHistoryPanel({
   activeTab,
   items,
   labels,
-  locale,
   open,
   search,
   onClearAll,
@@ -1595,7 +1499,6 @@ function ToolHistoryPanel({
   activeTab: ToolTab;
   items: ToolHistoryItem[];
   labels: ToolCopyLabels;
-  locale: Locale;
   open: boolean;
   search: string;
   onClearAll: () => void;
@@ -1615,7 +1518,7 @@ function ToolHistoryPanel({
     if (!normalizedSearch) {
       return true;
     }
-    const toolLabel = getToolTabLabel(item.tab, locale).toLowerCase();
+    const toolLabel = getToolTabLabel(item.tab).toLowerCase();
     return `${toolLabel} ${item.title} ${item.input} ${item.output}`.toLowerCase().includes(normalizedSearch);
   });
 
@@ -1687,7 +1590,7 @@ function ToolHistoryPanel({
       <button
         className={`fixed inset-0 z-40 cursor-default bg-foreground/15 backdrop-blur-[1px] transition-opacity duration-[240ms] ease-out md:hidden motion-reduce:transition-none ${open ? "opacity-100" : "opacity-0"}`}
         type="button"
-        aria-label={locale === "en" ? "Close history" : "关闭历史"}
+        aria-label={"关闭历史"}
         onClick={onClose}
       />
       <aside
@@ -1703,20 +1606,20 @@ function ToolHistoryPanel({
             <History className="h-3.5 w-3.5 text-accent" />
             <span>{labels.history}</span>
             <span className="rounded bg-accent/8 px-1.5 py-0.5 text-[0.68rem] text-accent">
-              {locale === "en" ? "Local only" : "仅本地"}
+              {"仅本地"}
             </span>
           </div>
           <button
             className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-accent/6 text-muted transition hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
             type="button"
-            aria-label={locale === "en" ? "Close history" : "关闭历史"}
+            aria-label={"关闭历史"}
             onClick={onClose}
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-md bg-accent/8 p-1" aria-label={locale === "en" ? "History scope" : "历史范围"}>
+        <div className="mt-3 grid grid-cols-2 gap-1 rounded-md bg-accent/8 p-1" aria-label={"历史范围"}>
           <button
             className={`h-8 rounded text-xs font-semibold transition ${
               historyScope === "current" ? "bg-paper text-accent shadow-[var(--shadow-quiet)]" : "text-muted hover:text-accent"
@@ -1763,8 +1666,8 @@ function ToolHistoryPanel({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="rounded bg-accent/8 px-1.5 py-0.5 text-[0.68rem] font-semibold text-accent">{getToolTabLabel(item.tab, locale)}</span>
-                      <span className="text-[0.68rem] font-semibold text-muted">{formatHistoryTime(item.updatedAt, locale)}</span>
+                      <span className="rounded bg-accent/8 px-1.5 py-0.5 text-[0.68rem] font-semibold text-accent">{getToolTabLabel(item.tab)}</span>
+                      <span className="text-[0.68rem] font-semibold text-muted">{formatHistoryTime(item.updatedAt)}</span>
                       <span className={`rounded px-1.5 py-0.5 text-[0.68rem] font-semibold ${item.output ? "bg-accent/8 text-accent" : "bg-background text-muted"}`}>
                         {item.output ? labels.historyWithOutput : labels.historyInputOnly}
                       </span>
@@ -1841,7 +1744,6 @@ function ToolHistoryPanel({
 }
 
 function JsonControls({
-  locale,
   spaces,
   setSpaces,
   runJson,
@@ -1849,7 +1751,6 @@ function JsonControls({
   onCancel,
   onImportClick,
 }: {
-  locale: Locale;
   spaces: string;
   setSpaces: (value: string) => void;
   runJson: (action: JsonAction) => void;
@@ -1862,11 +1763,11 @@ function JsonControls({
   return (
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <IndentSelect label={copyLabels[locale].spaces} value={spaces} onChange={setSpaces} />
-        <ToolButton disabled={busy} onClick={onImportClick}>{copyLabels[locale].importJson}</ToolButton>
-        <ToolButton disabled={busy} variant="primary" onClick={() => runJson("format")}>{locale === "en" ? "Format" : "格式化"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runJson("minify")}>{locale === "en" ? "Minify" : "压缩"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runJson("validate")}>{locale === "en" ? "Validate" : "校验"}</ToolButton>
+        <IndentSelect label={copyLabels.spaces} value={spaces} onChange={setSpaces} />
+        <ToolButton disabled={busy} onClick={onImportClick}>{copyLabels.importJson}</ToolButton>
+        <ToolButton disabled={busy} variant="primary" onClick={() => runJson("format")}>{"格式化"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runJson("minify")}>{"压缩"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runJson("validate")}>{"校验"}</ToolButton>
         <button
           className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-accent/10 px-2.5 text-xs font-semibold text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted))] transition hover:bg-accent/15 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55"
           type="button"
@@ -1874,23 +1775,23 @@ function JsonControls({
           aria-expanded={moreOpen}
           onClick={() => setMoreOpen((current) => !current)}
         >
-          {locale === "en" ? "More" : "更多"}
+          {"更多"}
           <ChevronDown className={`h-3.5 w-3.5 transition ${moreOpen ? "rotate-180" : ""}`} />
         </button>
         {busy ? (
           <>
-            <ControlHint>{locale === "en" ? "Working..." : "处理中..."}</ControlHint>
-            <ToolButton onClick={onCancel}>{locale === "en" ? "Cancel" : "取消"}</ToolButton>
+            <ControlHint>{"处理中..."}</ControlHint>
+            <ToolButton onClick={onCancel}>{"取消"}</ToolButton>
           </>
         ) : null}
       </div>
       {moreOpen ? (
         <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-line/70 bg-background/45 p-2">
-          <ToolButton disabled={busy} onClick={() => runJson("sort")}>{locale === "en" ? "Sort keys" : "Key 排序"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("escape")}>{locale === "en" ? "Escape string" : "字符串转义"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("unescape")}>{locale === "en" ? "Unescape string" : "字符串反转义"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("flatten")}>{locale === "en" ? "Flatten" : "扁平化"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("unflatten")}>{locale === "en" ? "Unflatten" : "还原扁平 JSON"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("sort")}>{"Key 排序"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("escape")}>{"字符串转义"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("unescape")}>{"字符串反转义"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("flatten")}>{"扁平化"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("unflatten")}>{"还原扁平 JSON"}</ToolButton>
         </div>
       ) : null}
     </div>
@@ -1948,44 +1849,42 @@ function IndentSelect({ label, value, onChange }: { label: string; value: string
   );
 }
 
-function EncodingControls({ busy, locale, runEncoding }: { busy: boolean; locale: Locale; runEncoding: (action: EncodingAction) => void }) {
+function EncodingControls({ busy, runEncoding }: { busy: boolean; runEncoding: (action: EncodingAction) => void }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <ToolButton disabled={busy} onClick={() => runEncoding("urlEncode")}>URL Encode</ToolButton>
       <ToolButton disabled={busy} onClick={() => runEncoding("urlDecode")}>URL Decode</ToolButton>
       <ToolButton disabled={busy} onClick={() => runEncoding("base64Encode")}>Base64 Encode</ToolButton>
       <ToolButton disabled={busy} onClick={() => runEncoding("base64Decode")}>Base64 Decode</ToolButton>
-      <ToolButton disabled={busy} onClick={() => runEncoding("unicodeEscape")}>{locale === "en" ? "Unicode escape" : "Unicode 转义"}</ToolButton>
-      <ToolButton disabled={busy} onClick={() => runEncoding("unicodeUnescape")}>{locale === "en" ? "Unicode unescape" : "Unicode 反转义"}</ToolButton>
+      <ToolButton disabled={busy} onClick={() => runEncoding("unicodeEscape")}>{"Unicode 转义"}</ToolButton>
+      <ToolButton disabled={busy} onClick={() => runEncoding("unicodeUnescape")}>{"Unicode 反转义"}</ToolButton>
       <ToolButton disabled={busy} onClick={() => runEncoding("htmlEscape")}>HTML Escape</ToolButton>
       <ToolButton disabled={busy} onClick={() => runEncoding("htmlUnescape")}>HTML Unescape</ToolButton>
-      {busy ? <ControlHint>{locale === "en" ? "Working..." : "处理中..."}</ControlHint> : null}
+      {busy ? <ControlHint>{"处理中..."}</ControlHint> : null}
     </div>
   );
 }
 
 function TimeControls({
   displayMode,
-  locale,
   onDisplayModeChange,
   onTimestampUnitChange,
   runTime,
   timestampUnit,
 }: {
   displayMode: TimeDisplayMode;
-  locale: Locale;
   onDisplayModeChange: (value: TimeDisplayMode) => void;
   onTimestampUnitChange: (value: TimestampUnit) => void;
   runTime: (action: "now" | "timestampToDate" | "dateToTimestamp") => void;
   timestampUnit: TimestampUnit;
 }) {
   const timestampUnits: { label: string; value: TimestampUnit }[] = [
-    { label: locale === "en" ? "Auto unit" : "自动单位", value: "auto" },
-    { label: locale === "en" ? "Seconds" : "秒", value: "seconds" },
-    { label: locale === "en" ? "Milliseconds" : "毫秒", value: "milliseconds" },
+    { label: "自动单位", value: "auto" },
+    { label: "秒", value: "seconds" },
+    { label: "毫秒", value: "milliseconds" },
   ];
   const displayModes: { label: string; value: TimeDisplayMode }[] = [
-    { label: locale === "en" ? "Local" : "本地", value: "local" },
+    { label: "本地", value: "local" },
     { label: "UTC", value: "utc" },
   ];
 
@@ -1993,10 +1892,10 @@ function TimeControls({
     <div className="grid gap-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <ToolButton onClick={() => runTime("now")} icon={TimerReset} variant="primary">
-          {locale === "en" ? "Now" : "当前时间"}
+          {"当前时间"}
         </ToolButton>
-        <ToolButton onClick={() => runTime("timestampToDate")}>{locale === "en" ? "Timestamp to date" : "时间戳转日期"}</ToolButton>
-        <ToolButton onClick={() => runTime("dateToTimestamp")}>{locale === "en" ? "Date to timestamp" : "日期转时间戳"}</ToolButton>
+        <ToolButton onClick={() => runTime("timestampToDate")}>{"时间戳转日期"}</ToolButton>
+        <ToolButton onClick={() => runTime("dateToTimestamp")}>{"日期转时间戳"}</ToolButton>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {timestampUnits.map((item) => (
@@ -2009,17 +1908,17 @@ function TimeControls({
             {item.value === displayMode ? `${item.label} ✓` : item.label}
           </ToolButton>
         ))}
-        <ControlHint>{locale === "en" ? "Unit selection affects timestamp conversion and Now input." : "单位选项会影响时间戳转换和当前时间输入。"}</ControlHint>
+        <ControlHint>{"单位选项会影响时间戳转换和当前时间输入。"}</ControlHint>
       </div>
     </div>
   );
 }
 
-function JwtControls({ locale, onDecode }: { locale: Locale; onDecode: () => void }) {
+function JwtControls({ onDecode }: { onDecode: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <ToolButton onClick={onDecode} variant="primary">{locale === "en" ? "Decode JWT" : "解码 JWT"}</ToolButton>
-      <ControlHint>{locale === "en" ? "Local decode only; signature is not verified." : "仅本地解码，不验证签名。"}</ControlHint>
+      <ToolButton onClick={onDecode} variant="primary">{"解码 JWT"}</ToolButton>
+      <ControlHint>{"仅本地解码，不验证签名。"}</ControlHint>
     </div>
   );
 }
@@ -2027,7 +1926,6 @@ function JwtControls({ locale, onDecode }: { locale: Locale; onDecode: () => voi
 function HashControls({
   algorithm,
   busy,
-  locale,
   outputFormat,
   onAlgorithmChange,
   onImportClick,
@@ -2036,7 +1934,6 @@ function HashControls({
 }: {
   algorithm: HashAlgorithm;
   busy: boolean;
-  locale: Locale;
   outputFormat: HashOutputFormat;
   onAlgorithmChange: (value: HashAlgorithm) => void;
   onImportClick: () => void;
@@ -2058,28 +1955,26 @@ function HashControls({
           {item === outputFormat ? `${item} ✓` : item}
         </ToolButton>
       ))}
-      <ToolButton disabled={busy} onClick={onImportClick}>{locale === "en" ? "Hash file" : "文件 Hash"}</ToolButton>
-      <ToolButton disabled={busy} variant="primary" onClick={onRun}>{locale === "en" ? "Calculate" : "计算"}</ToolButton>
-      {busy ? <ControlHint>{locale === "en" ? "Working..." : "处理中..."}</ControlHint> : null}
+      <ToolButton disabled={busy} onClick={onImportClick}>{"文件 Hash"}</ToolButton>
+      <ToolButton disabled={busy} variant="primary" onClick={onRun}>{"计算"}</ToolButton>
+      {busy ? <ControlHint>{"处理中..."}</ControlHint> : null}
     </div>
   );
 }
 
 function UuidControls({
   format,
-  locale,
   onFormatChange,
   onRun,
 }: {
   format: UuidFormat;
-  locale: Locale;
   onFormatChange: (value: UuidFormat) => void;
   onRun: () => void;
 }) {
   const formats: { label: string; value: UuidFormat }[] = [
-    { label: locale === "en" ? "Standard" : "标准", value: "standard" },
-    { label: locale === "en" ? "Upper" : "大写", value: "uppercase" },
-    { label: locale === "en" ? "Compact" : "无连字符", value: "compact" },
+    { label: "标准", value: "standard" },
+    { label: "大写", value: "uppercase" },
+    { label: "无连字符", value: "compact" },
     { label: "JSON", value: "json" },
   ];
 
@@ -2090,8 +1985,8 @@ function UuidControls({
           {item.value === format ? `${item.label} ✓` : item.label}
         </ToolButton>
       ))}
-      <ToolButton onClick={onRun} variant="primary">{locale === "en" ? "Generate UUID v4" : "生成 UUID v4"}</ToolButton>
-      <ControlHint>{locale === "en" ? "Put the count in the input box. Max 1000." : "在输入框填写数量，最多 1000 个。"}</ControlHint>
+      <ToolButton onClick={onRun} variant="primary">{"生成 UUID v4"}</ToolButton>
+      <ControlHint>{"在输入框填写数量，最多 1000 个。"}</ControlHint>
     </div>
   );
 }
@@ -2099,7 +1994,6 @@ function UuidControls({
 function RegexControls({
   busy,
   flags,
-  locale,
   onFlagsChange,
   onPatternChange,
   onReplace,
@@ -2110,7 +2004,6 @@ function RegexControls({
 }: {
   busy: boolean;
   flags: string;
-  locale: Locale;
   onFlagsChange: (value: string) => void;
   onPatternChange: (value: string) => void;
   onReplace: () => void;
@@ -2125,16 +2018,16 @@ function RegexControls({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <label className="flex h-8 min-w-56 items-center gap-1.5 rounded-md bg-accent/10 px-2.5 text-xs font-semibold text-muted">
-        <span>{locale === "en" ? "Pattern" : "表达式"}</span>
+        <span>{"表达式"}</span>
         <input
           className="min-w-0 flex-1 bg-transparent text-foreground outline-none"
           value={pattern}
           onChange={(event) => onPatternChange(event.target.value)}
-          placeholder={locale === "en" ? "pattern" : "正则"}
+          placeholder={"正则"}
         />
       </label>
       <label className="flex h-8 min-w-44 items-center gap-1.5 rounded-md bg-accent/10 px-2.5 text-xs font-semibold text-muted">
-        <span>{locale === "en" ? "Replace" : "替换为"}</span>
+        <span>{"替换为"}</span>
         <input className="min-w-0 flex-1 bg-transparent text-foreground outline-none" value={replacement} onChange={(event) => onReplacementChange(event.target.value)} />
       </label>
       <div className="flex h-8 items-center gap-1 rounded-md bg-accent/10 px-1.5">
@@ -2155,41 +2048,37 @@ function RegexControls({
           );
         })}
       </div>
-      <ToolButton disabled={busy} variant="primary" onClick={onRun}>{locale === "en" ? "Test" : "测试"}</ToolButton>
-      <ToolButton disabled={busy} onClick={onReplace}>{locale === "en" ? "Replace" : "替换"}</ToolButton>
-      {busy ? <ControlHint>{locale === "en" ? "Working..." : "处理中..."}</ControlHint> : null}
+      <ToolButton disabled={busy} variant="primary" onClick={onRun}>{"测试"}</ToolButton>
+      <ToolButton disabled={busy} onClick={onReplace}>{"替换"}</ToolButton>
+      {busy ? <ControlHint>{"处理中..."}</ControlHint> : null}
     </div>
   );
 }
 
 function MarkdownControls({
   autoPreview,
-  locale,
   onAutoPreviewChange,
   onRun,
 }: {
   autoPreview: boolean;
-  locale: Locale;
   onAutoPreviewChange: (value: boolean) => void;
   onRun: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <ToolButton onClick={onRun} variant="primary">{locale === "en" ? "Preview" : "生成预览"}</ToolButton>
-      <ToolButton ariaPressed={autoPreview} onClick={() => onAutoPreviewChange(!autoPreview)}>{autoPreview ? (locale === "en" ? "Auto preview ✓" : "自动预览 ✓") : locale === "en" ? "Auto preview" : "自动预览"}</ToolButton>
-      <ControlHint>{locale === "en" ? "Supports common GFM syntax; raw HTML is escaped." : "支持常见 GFM 语法，原始 HTML 会被转义。"}</ControlHint>
+      <ToolButton onClick={onRun} variant="primary">{"生成预览"}</ToolButton>
+      <ToolButton ariaPressed={autoPreview} onClick={() => onAutoPreviewChange(!autoPreview)}>{autoPreview ? ("自动预览 ✓") : "自动预览"}</ToolButton>
+      <ControlHint>{"支持常见 GFM 语法，原始 HTML 会被转义。"}</ControlHint>
     </div>
   );
 }
 
 function StructuredControls({
   format,
-  locale,
   onFormatChange,
   onRun,
 }: {
   format: StructuredFormat;
-  locale: Locale;
   onFormatChange: (value: StructuredFormat) => void;
   onRun: () => void;
 }) {
@@ -2202,8 +2091,8 @@ function StructuredControls({
           {item === format ? `${item.toUpperCase()} ✓` : item.toUpperCase()}
         </ToolButton>
       ))}
-      <ToolButton onClick={onRun} variant="primary">{locale === "en" ? "To JSON" : "转 JSON"}</ToolButton>
-      <ControlHint>{locale === "en" ? "Common YAML/TOML subset; errors include line numbers." : "支持常见 YAML/TOML 子集，错误会提示行号。"}</ControlHint>
+      <ToolButton onClick={onRun} variant="primary">{"转 JSON"}</ToolButton>
+      <ControlHint>{"支持常见 YAML/TOML 子集，错误会提示行号。"}</ControlHint>
     </div>
   );
 }
@@ -2212,7 +2101,6 @@ function CsvControls({
   delimiter,
   emptyAsNull,
   inferTypes,
-  locale,
   outputMode,
   onDelimiterChange,
   onEmptyAsNullChange,
@@ -2223,7 +2111,6 @@ function CsvControls({
   delimiter: CsvDelimiter;
   emptyAsNull: boolean;
   inferTypes: boolean;
-  locale: Locale;
   outputMode: CsvOutputMode;
   onDelimiterChange: (value: CsvDelimiter) => void;
   onEmptyAsNullChange: (value: boolean) => void;
@@ -2232,13 +2119,13 @@ function CsvControls({
   onRun: () => void;
 }) {
   const options: { label: string; value: CsvDelimiter }[] = [
-    { label: locale === "en" ? "Auto" : "自动", value: "auto" },
+    { label: "自动", value: "auto" },
     { label: "CSV", value: "comma" },
     { label: "TSV", value: "tab" },
   ];
   const outputModes: { label: string; value: CsvOutputMode }[] = [
-    { label: locale === "en" ? "Objects" : "对象数组", value: "objects" },
-    { label: locale === "en" ? "Rows" : "二维数组", value: "rows" },
+    { label: "对象数组", value: "objects" },
+    { label: "二维数组", value: "rows" },
   ];
 
   return (
@@ -2253,18 +2140,18 @@ function CsvControls({
           {item.value === outputMode ? `${item.label} ✓` : item.label}
         </ToolButton>
       ))}
-      <ToolButton ariaPressed={inferTypes} onClick={() => onInferTypesChange(!inferTypes)}>{inferTypes ? (locale === "en" ? "Infer types ✓" : "类型推断 ✓") : locale === "en" ? "Infer types" : "类型推断"}</ToolButton>
-      <ToolButton ariaPressed={emptyAsNull} onClick={() => onEmptyAsNullChange(!emptyAsNull)}>{emptyAsNull ? (locale === "en" ? "Empty=null ✓" : "空值=null ✓") : locale === "en" ? "Empty=null" : "空值=null"}</ToolButton>
-      <ToolButton onClick={onRun} variant="primary">{locale === "en" ? "To JSON" : "转 JSON"}</ToolButton>
-      <ControlHint>{locale === "en" ? "First row is used as field names." : "默认第一行作为字段名。"}</ControlHint>
+      <ToolButton ariaPressed={inferTypes} onClick={() => onInferTypesChange(!inferTypes)}>{inferTypes ? ("类型推断 ✓") : "类型推断"}</ToolButton>
+      <ToolButton ariaPressed={emptyAsNull} onClick={() => onEmptyAsNullChange(!emptyAsNull)}>{emptyAsNull ? ("空值=null ✓") : "空值=null"}</ToolButton>
+      <ToolButton onClick={onRun} variant="primary">{"转 JSON"}</ToolButton>
+      <ControlHint>{"默认第一行作为字段名。"}</ControlHint>
     </div>
   );
 }
 
-function ColorControls({ locale, onRun }: { locale: Locale; onRun: () => void }) {
+function ColorControls({ onRun }: { onRun: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <ToolButton onClick={onRun} variant="primary">{locale === "en" ? "Convert color" : "转换颜色"}</ToolButton>
+      <ToolButton onClick={onRun} variant="primary">{"转换颜色"}</ToolButton>
       <ControlHint>HEX / RGB / HSL</ControlHint>
     </div>
   );
@@ -2272,30 +2159,28 @@ function ColorControls({ locale, onRun }: { locale: Locale; onRun: () => void })
 
 function TextControls({
   busy,
-  locale,
   runText,
   stats,
 }: {
   busy: boolean;
-  locale: Locale;
   runText: (action: TextAction) => void;
   stats: { characters: number; lines: number; words: number };
 }) {
   return (
     <div className="grid gap-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <ToolButton disabled={busy} onClick={() => runText("trimLines")}>{locale === "en" ? "Trim lines" : "清理行首尾"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("removeEmpty")}>{locale === "en" ? "Remove empty lines" : "清理空行"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("dedupe")}>{locale === "en" ? "Dedupe lines" : "行去重"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("sort")}>{locale === "en" ? "Sort lines" : "行排序"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("lower")}>{locale === "en" ? "Lowercase" : "转小写"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("upper")}>{locale === "en" ? "Uppercase" : "转大写"}</ToolButton>
-        {busy ? <ControlHint>{locale === "en" ? "Working..." : "处理中..."}</ControlHint> : null}
+        <ToolButton disabled={busy} onClick={() => runText("trimLines")}>{"清理行首尾"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runText("removeEmpty")}>{"清理空行"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runText("dedupe")}>{"行去重"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runText("sort")}>{"行排序"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runText("lower")}>{"转小写"}</ToolButton>
+        <ToolButton disabled={busy} onClick={() => runText("upper")}>{"转大写"}</ToolButton>
+        {busy ? <ControlHint>{"处理中..."}</ControlHint> : null}
       </div>
       <div className="flex flex-wrap gap-1.5 text-[0.7rem] font-semibold text-muted">
-        <span className="rounded-md bg-accent/8 px-2 py-0.5">{locale === "en" ? "Chars" : "字符"} {stats.characters}</span>
-        <span className="rounded-md bg-accent/8 px-2 py-0.5">{locale === "en" ? "Lines" : "行数"} {stats.lines}</span>
-        <span className="rounded-md bg-accent/8 px-2 py-0.5">{locale === "en" ? "Words" : "词数"} {stats.words}</span>
+        <span className="rounded-md bg-accent/8 px-2 py-0.5">{"字符"} {stats.characters}</span>
+        <span className="rounded-md bg-accent/8 px-2 py-0.5">{"行数"} {stats.lines}</span>
+        <span className="rounded-md bg-accent/8 px-2 py-0.5">{"词数"} {stats.words}</span>
       </div>
     </div>
   );
@@ -2303,7 +2188,6 @@ function TextControls({
 
 function EditorPanel({
   label,
-  locale,
   value,
   onChange,
   metrics,
@@ -2314,7 +2198,6 @@ function EditorPanel({
   actions,
 }: {
   label: string;
-  locale: Locale;
   value: string;
   onChange: (value: string) => void;
   metrics: TextMetrics;
@@ -2353,7 +2236,7 @@ function EditorPanel({
           <Link2 className="h-3 w-3 text-accent" />
           {label}
           <span className="font-medium text-muted/80">
-            {metrics.displaySize} · {metrics.lines} {locale === "en" ? "lines" : "行"} · {metrics.characters} {locale === "en" ? "chars" : "字符"}
+            {metrics.displaySize} · {metrics.lines} {"行"} · {metrics.characters} {"字符"}
           </span>
         </span>
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
@@ -2400,14 +2283,12 @@ function MarkdownPreviewPanel({
   actions,
   html,
   label,
-  locale,
   metrics,
   size = "large",
 }: {
   actions?: ReactNode;
   html: string;
   label: string;
-  locale: Locale;
   metrics: TextMetrics;
   size?: EditorPanelSize;
 }) {
@@ -2421,7 +2302,7 @@ function MarkdownPreviewPanel({
           <Link2 className="h-3 w-3 text-accent" />
           {label}
           <span className="font-medium text-muted/80">
-            {metrics.displaySize} · {metrics.lines} {locale === "en" ? "lines" : "行"} · {metrics.characters} {locale === "en" ? "chars" : "字符"}
+            {metrics.displaySize} · {metrics.lines} {"行"} · {metrics.characters} {"字符"}
           </span>
         </span>
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
@@ -2433,7 +2314,7 @@ function MarkdownPreviewPanel({
       ) : (
         <div
           className={`tools-markdown-preview ${heightClass} overflow-auto rounded-md border border-line bg-paper/88 p-4 text-sm leading-7 text-foreground shadow-inner`}
-          dangerouslySetInnerHTML={{ __html: html || `<p class="tools-markdown-empty">${locale === "en" ? "Generate a preview to see Markdown here." : "点击生成预览后，这里会显示 Markdown 效果。"}</p>` }}
+          dangerouslySetInnerHTML={{ __html: html || `<p class="tools-markdown-empty">${"点击生成预览后，这里会显示 Markdown 效果。"}</p>` }}
         />
       )}
     </div>
@@ -2443,7 +2324,6 @@ function MarkdownPreviewPanel({
 function StructuredResultPanel({
   actions,
   label,
-  locale,
   metrics,
   output,
   result,
@@ -2451,7 +2331,6 @@ function StructuredResultPanel({
 }: {
   actions?: ReactNode;
   label: string;
-  locale: Locale;
   metrics: TextMetrics;
   output: string;
   result: StructuredToolResult | null;
@@ -2467,7 +2346,7 @@ function StructuredResultPanel({
           <Link2 className="h-3 w-3 text-accent" />
           {label}
           <span className="font-medium text-muted/80">
-            {metrics.displaySize} · {metrics.lines} {locale === "en" ? "lines" : "行"} · {metrics.characters} {locale === "en" ? "chars" : "字符"}
+            {metrics.displaySize} · {metrics.lines} {"行"} · {metrics.characters} {"字符"}
           </span>
         </span>
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
@@ -2482,24 +2361,24 @@ function StructuredResultPanel({
         {hasError ? (
           <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-[var(--accent-2)]">{output}</pre>
         ) : output && result ? (
-          renderStructuredResult(result, locale)
+          renderStructuredResult(result)
         ) : output ? (
           <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground">{output}</pre>
         ) : (
-          <p className="text-xs font-semibold text-muted">{locale === "en" ? "Run the tool to see structured results here." : "运行工具后，这里会显示结构化结果。"}</p>
+          <p className="text-xs font-semibold text-muted">{"运行工具后，这里会显示结构化结果。"}</p>
         )}
       </div>
     </div>
   );
 }
 
-function renderStructuredResult(result: StructuredToolResult, locale: Locale) {
-  if (result.type === "hash") return <HashStructuredResult result={result.data} locale={locale} />;
-  if (result.type === "jwt") return <JwtStructuredResult result={result.data} locale={locale} />;
-  return <RegexStructuredResult result={result.data} locale={locale} />;
+function renderStructuredResult(result: StructuredToolResult) {
+  if (result.type === "hash") return <HashStructuredResult result={result.data} />;
+  if (result.type === "jwt") return <JwtStructuredResult result={result.data} />;
+  return <RegexStructuredResult result={result.data} />;
 }
 
-function HashStructuredResult({ locale, result }: { locale: Locale; result: HashStructuredResultData }) {
+function HashStructuredResult({ result }: { result: HashStructuredResultData }) {
   return (
     <div className="grid gap-3">
       <div className="grid gap-2 sm:grid-cols-3">
@@ -2511,23 +2390,23 @@ function HashStructuredResult({ locale, result }: { locale: Locale; result: Hash
         ))}
       </div>
       <div className="rounded-md border border-line bg-background/54 p-3">
-        <div className="mb-2 text-[0.68rem] font-semibold uppercase text-muted">{locale === "en" ? "Digest" : "摘要"}</div>
+        <div className="mb-2 text-[0.68rem] font-semibold uppercase text-muted">{"摘要"}</div>
         <code className="block whitespace-pre-wrap break-all font-mono text-xs leading-6 text-foreground">{result.digest}</code>
       </div>
     </div>
   );
 }
 
-function JwtStructuredResult({ locale, result }: { locale: Locale; result: JwtStructuredResultData }) {
+function JwtStructuredResult({ result }: { result: JwtStructuredResultData }) {
   return (
     <div className="grid gap-3">
       <div className="rounded-md border border-[color-mix(in_srgb,var(--accent-2)_30%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,transparent)] p-3">
-        <div className="text-xs font-semibold text-[var(--accent-2)]">{locale === "en" ? "Signature is not verified" : "未验证签名"}</div>
+        <div className="text-xs font-semibold text-[var(--accent-2)]">{"未验证签名"}</div>
         <div className="mt-1 whitespace-pre-wrap text-xs leading-5 text-muted">{result.signatureBody}</div>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        <InfoBlock title={locale === "en" ? "Expiration" : "过期状态"} body={result.expirationBody} />
-        <InfoBlock title={locale === "en" ? "Time claims" : "时间字段"} body={result.timeClaimsBody} />
+        <InfoBlock title={"过期状态"} body={result.expirationBody} />
+        <InfoBlock title={"时间字段"} body={result.timeClaimsBody} />
       </div>
       <div className="grid gap-3 xl:grid-cols-2">
         <CodeBlock title="Header" body={result.headerJson} />
@@ -2537,7 +2416,7 @@ function JwtStructuredResult({ locale, result }: { locale: Locale; result: JwtSt
   );
 }
 
-function RegexStructuredResult({ locale, result }: { locale: Locale; result: RegexStructuredResultData }) {
+function RegexStructuredResult({ result }: { result: RegexStructuredResultData }) {
   return (
     <div className="grid gap-3">
       <div className="grid gap-2 sm:grid-cols-4">
@@ -2559,13 +2438,13 @@ function RegexStructuredResult({ locale, result }: { locale: Locale; result: Reg
                 <span className="rounded bg-accent/8 px-2 py-0.5">column {match.column}</span>
               </div>
               <code className="block whitespace-pre-wrap break-all font-mono text-xs leading-6 text-foreground">{match.match}</code>
-              {match.captures.length > 0 ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${locale === "en" ? "captures" : "捕获组"}: ${JSON.stringify(match.captures)}`}</div> : null}
-              {match.groups ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${locale === "en" ? "named groups" : "命名组"}: ${JSON.stringify(match.groups)}`}</div> : null}
+              {match.captures.length > 0 ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${"捕获组"}: ${JSON.stringify(match.captures)}`}</div> : null}
+              {match.groups ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${"命名组"}: ${JSON.stringify(match.groups)}`}</div> : null}
             </div>
           ))}
         </div>
       ) : (
-        <div className="rounded-md border border-dashed border-line bg-background/54 p-4 text-xs font-semibold text-muted">{locale === "en" ? "No matches to display." : "没有可显示的匹配结果。"}</div>
+        <div className="rounded-md border border-dashed border-line bg-background/54 p-4 text-xs font-semibold text-muted">{"没有可显示的匹配结果。"}</div>
       )}
     </div>
   );
@@ -2592,7 +2471,6 @@ function CodeBlock({ body, title }: { body: string; title: string }) {
 function ColorResultPanel({
   input,
   label,
-  locale,
   metrics,
   onClear,
   onCopy,
@@ -2602,7 +2480,6 @@ function ColorResultPanel({
 }: {
   input: string;
   label: string;
-  locale: Locale;
   metrics: TextMetrics;
   onClear: () => void;
   onCopy: (value: string) => void;
@@ -2618,10 +2495,10 @@ function ColorResultPanel({
         { label: "HEX", value: color.hex },
         { label: "RGB", value: color.rgb },
         { label: "HSL", value: color.hsl },
-        { label: locale === "en" ? "CSS variable" : "CSS 变量", value: color.cssVariable },
+        { label: "CSS 变量", value: color.cssVariable },
       ]
     : [];
-  const copyAllValue = output || (color ? [locale === "en" ? "[Color]" : "[颜色]", `HEX: ${color.hex}`, `RGB: ${color.rgb}`, `HSL: ${color.hsl}`, "", `${locale === "en" ? "CSS variables" : "CSS 变量"}:`, color.cssVariable].join("\n") : "");
+  const copyAllValue = output || (color ? ["[颜色]", `HEX: ${color.hex}`, `RGB: ${color.rgb}`, `HSL: ${color.hsl}`, "", `${"CSS 变量"}:`, color.cssVariable].join("\n") : "");
 
   return (
     <div className="block">
@@ -2630,13 +2507,13 @@ function ColorResultPanel({
           <Link2 className="h-3 w-3 text-accent" />
           {label}
           <span className="font-medium text-muted/80">
-            {metrics.displaySize} · {metrics.lines} {locale === "en" ? "lines" : "行"} · {metrics.characters} {locale === "en" ? "chars" : "字符"}
+            {metrics.displaySize} · {metrics.lines} {"行"} · {metrics.characters} {"字符"}
           </span>
         </span>
         <div className="flex flex-wrap items-center gap-1.5">
-          <PanelActionButton icon={Clipboard} label={locale === "en" ? "Copy all" : "复制全部"} onClick={() => onCopy(copyAllValue)}>{locale === "en" ? "Copy all" : "复制全部"}</PanelActionButton>
-          <PanelActionButton icon={Download} label={locale === "en" ? "Download" : "下载"} onClick={onDownload}>{locale === "en" ? "Download" : "下载"}</PanelActionButton>
-          <PanelActionButton icon={Trash2} label={locale === "en" ? "Clear" : "清空"} onClick={onClear}>{locale === "en" ? "Clear" : "清空"}</PanelActionButton>
+          <PanelActionButton icon={Clipboard} label={"复制全部"} onClick={() => onCopy(copyAllValue)}>{"复制全部"}</PanelActionButton>
+          <PanelActionButton icon={Download} label={"下载"} onClick={onDownload}>{"下载"}</PanelActionButton>
+          <PanelActionButton icon={Trash2} label={"清空"} onClick={onClear}>{"清空"}</PanelActionButton>
         </div>
       </div>
       <div
@@ -2656,13 +2533,13 @@ function ColorResultPanel({
                 <div key={item.label} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-accent/6 px-3 py-2 text-xs">
                   <span className="font-semibold text-muted">{item.label}</span>
                   <code className="font-mono text-foreground">{item.value}</code>
-                  <PanelActionButton icon={Clipboard} label={locale === "en" ? "Copy" : "复制"} onClick={() => onCopy(item.value)}>{locale === "en" ? "Copy" : "复制"}</PanelActionButton>
+                  <PanelActionButton icon={Clipboard} label={"复制"} onClick={() => onCopy(item.value)}>{"复制"}</PanelActionButton>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="text-xs font-semibold text-muted">{locale === "en" ? "Enter a valid HEX, RGB, or HSL value." : "输入有效的 HEX、RGB 或 HSL 颜色值。"}</p>
+          <p className="text-xs font-semibold text-muted">{"输入有效的 HEX、RGB 或 HSL 颜色值。"}</p>
         )}
       </div>
     </div>
@@ -2738,12 +2615,12 @@ function getToolValue(tab: ToolTab, values: Record<ToolTab, string>) {
   return values[tab];
 }
 
-function getToolTabLabel(tab: ToolTab, locale: Locale) {
-  return tabLabels[locale].find((item) => item.id === tab)?.label ?? tab;
+function getToolTabLabel(tab: ToolTab) {
+  return tabLabels.find((item) => item.id === tab)?.label ?? tab;
 }
 
-function formatHistoryTime(timestamp: number, locale: Locale) {
-  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "zh-CN", {
+function formatHistoryTime(timestamp: number) {
+  return new Intl.DateTimeFormat("zh-CN", {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
@@ -2814,33 +2691,31 @@ function splitTextByHighlight(value: string, highlight: TextHighlight) {
   };
 }
 
-function largeInputSuffix(bytes: number, locale: Locale) {
+function largeInputSuffix(bytes: number) {
   if (bytes <= generalLargeInputBytes) {
     return "";
   }
 
-  return locale === "en"
-    ? " Large input detected; this operation may take longer."
-    : " 检测到较大输入，本次操作可能需要更久。";
+  return " 检测到较大输入，本次操作可能需要更久。";
 }
 
-function formatJsonErrorOutput(message: string, locale: Locale) {
-  return formatToolErrorOutput(message, locale, locale === "en" ? "[JSON error]" : "[JSON 错误]");
+function formatJsonErrorOutput(message: string) {
+  return formatToolErrorOutput(message, "[JSON 错误]");
 }
 
-function formatToolErrorOutput(message: string, locale: Locale, title = locale === "en" ? "[Error]" : "[错误]") {
+function formatToolErrorOutput(message: string, title = "[错误]") {
   const detail = normalizeErrorDetail(message);
-  const location = extractErrorLocation(message, locale);
-  const context = extractErrorContext(message, locale);
+  const location = extractErrorLocation(message);
+  const context = extractErrorContext(message);
   const lines = [
     title,
-    `${locale === "en" ? "Detail" : "详细信息"}：${detail}`,
+    `${"详细信息"}：${detail}`,
   ];
   if (location) {
-    lines.push(`${locale === "en" ? "Position" : "位置"}：${location}`);
+    lines.push(`${"位置"}：${location}`);
   }
   if (context) {
-    lines.push(`${locale === "en" ? "Nearby" : "附近"}：${context}`);
+    lines.push(`${"附近"}：${context}`);
   }
   return lines.join("\n");
 }
@@ -2856,14 +2731,14 @@ function normalizeErrorDetail(message: string) {
     .trim();
 }
 
-function extractErrorLocation(message: string, locale: Locale) {
+function extractErrorLocation(message: string) {
   const zhLocation = message.match(/第\s*(\d+)\s*行，第\s*(\d+)\s*列/);
   if (zhLocation) {
-    return locale === "en" ? `line ${zhLocation[1]}, column ${zhLocation[2]}` : `第 ${zhLocation[1]} 行，第 ${zhLocation[2]} 列`;
+    return `第 ${zhLocation[1]} 行，第 ${zhLocation[2]} 列`;
   }
   const enLocation = message.match(/line\s*(\d+),\s*column\s*(\d+)/i);
   if (enLocation) {
-    return locale === "en" ? `line ${enLocation[1]}, column ${enLocation[2]}` : `第 ${enLocation[1]} 行，第 ${enLocation[2]} 列`;
+    return `第 ${enLocation[1]} 行，第 ${enLocation[2]} 列`;
   }
   return "";
 }
@@ -3299,19 +3174,16 @@ function clampNumber(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function extractErrorContext(message: string, locale: Locale) {
+function extractErrorContext(message: string) {
   const context = message.match(/(?:附近：|Near:\s*)(.+)$/i)?.[1]?.trim();
   if (!context) {
     return "";
   }
-  return locale === "en" ? context.replace(/^`空行`$/, "empty line") : context;
+  return context;
 }
 
-function formatToolError(error: unknown, fallback: string, locale: Locale) {
+function formatToolError(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
-  if (locale === "en") {
-    return message || fallback;
-  }
   if (!message) {
     return fallback;
   }
@@ -3370,27 +3242,25 @@ function translateEnglishToolError(message: string, fallback: string) {
   return fallback;
 }
 
-function enhanceJsonError(message: string, input: string, locale: Locale) {
+function enhanceJsonError(message: string, input: string) {
   const location = findJsonErrorLocation(message, input);
   const invalidPunctuationHint = location
-    ? describeInvalidJsonPunctuation(input[lineColumnToIndex(input, location.line, location.column)], locale)
+    ? describeInvalidJsonPunctuation(input[lineColumnToIndex(input, location.line, location.column)])
     : "";
   const displayMessage = invalidPunctuationHint
-    ? (locale === "en" ? `${message} ${invalidPunctuationHint}` : `JSON 格式无效：${invalidPunctuationHint}`)
-    : (locale === "en" ? message : `JSON 格式无效：${translateJsonErrorReason(message)}`);
+    ? `JSON 格式无效：${invalidPunctuationHint}`
+    : `JSON 格式无效：${translateJsonErrorReason(message)}`;
   if (!location) {
     return displayMessage;
   }
 
   const context = getJsonErrorContext(input, location.line, location.column);
-  const locationText = locale === "en" ? `(line ${location.line}, column ${location.column})` : `（第 ${location.line} 行，第 ${location.column} 列）`;
+  const locationText = `（第 ${location.line} 行，第 ${location.column} 列）`;
   if (!context) {
     return `${displayMessage}${locationText}`;
   }
 
-  return locale === "en"
-    ? `${displayMessage} ${locationText}. Near: ${context}`
-    : `${displayMessage}${locationText}。附近：${context}`;
+  return `${displayMessage}${locationText}。附近：${context}`;
 }
 
 function translateJsonErrorReason(message: string) {
@@ -3706,15 +3576,15 @@ function getColorFormats(color: { b: number; g: number; r: number }) {
   };
 }
 
-function formatColorReport(color: { b: number; g: number; r: number }, locale: Locale) {
+function formatColorReport(color: { b: number; g: number; r: number }) {
   const formats = getColorFormats(color);
   return [
-    locale === "en" ? "[Color]" : "[颜色]",
+    "[颜色]",
     `HEX: ${formats.hex}`,
     `RGB: ${formats.rgb}`,
     `HSL: ${formats.hsl}`,
     "",
-    `${locale === "en" ? "CSS variables" : "CSS 变量"}:`,
+    `${"CSS 变量"}:`,
     formats.cssVariable,
   ].join("\n");
 }
@@ -3820,13 +3690,13 @@ function normalizeTimestampToMilliseconds(timestamp: number, unit: TimestampUnit
   return Math.abs(timestamp) < 100000000000 ? timestamp * 1000 : timestamp;
 }
 
-function formatDateReport(date: Date, displayMode: TimeDisplayMode, locale: Locale) {
+function formatDateReport(date: Date, displayMode: TimeDisplayMode) {
   const milliseconds = date.getTime();
   if (Number.isNaN(milliseconds)) {
     throw new Error("Invalid date.");
   }
 
-  const displayLabel = displayMode === "utc" ? "UTC" : locale === "en" ? "Local" : "Local";
+  const displayLabel = displayMode === "utc" ? "UTC" : "Local";
   const displayValue = displayMode === "utc" ? date.toUTCString() : date.toLocaleString();
   return [`ISO: ${date.toISOString()}`, `${displayLabel}: ${displayValue}`, `Unix seconds: ${Math.floor(milliseconds / 1000)}`, `Unix milliseconds: ${milliseconds}`].join("\n");
 }

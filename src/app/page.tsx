@@ -6,7 +6,7 @@ import { siteConfig } from "@/lib/site";
 const description = "分享普通人也能复制的实战经验和真实成长路径。";
 
 export const metadata: Metadata = {
-  title: siteConfig.name,
+  title: { absolute: siteConfig.name },
   description,
   alternates: {
     canonical: "/",

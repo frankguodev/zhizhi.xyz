@@ -2,7 +2,6 @@
 
 import { Download, ImageIcon, Loader2, QrCode, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ToolLocale as Locale } from "./tool-types";
 
 type UploadedImage = {
   file: File;
@@ -49,8 +48,7 @@ type WechatQrCopy = {
   unsupported: string;
 };
 
-const copy: Record<Locale, WechatQrCopy> = {
-  zh: {
+const copy: WechatQrCopy = {
     avatar: "个人头像",
     avatarHint: "默认头像约占二维码宽度 20%，更稳妥；如果扫不出来，先调小头像。",
     avatarSize: "头像大小",
@@ -76,40 +74,12 @@ const copy: Record<Locale, WechatQrCopy> = {
     shape: "头像形状",
     tooLarge: (limit) => `图片不能超过 ${limit}，请换一张更小的图片。`,
     unsupported: "当前浏览器无法读取这张图片，请换一张 JPG、PNG 或 WebP。",
-  },
-  en: {
-    avatar: "Avatar",
-    avatarHint: "The default avatar is about 20% of the QR width. Reduce it first if scanning fails.",
-    avatarSize: "Avatar size",
-    borderSize: "White border",
-    clear: "Clear",
-    download: "Download PNG",
-    dropAvatar: "Drop an avatar here, or click to choose",
-    dropQr: "Drop a WeChat contact QR code here, or click to choose",
-    generate: "Generate QR",
-    generated: "Generated. Test it once with WeChat scan.",
-    inputHint: "Supports JPG, PNG, and WebP up to 20 MB each.",
-    localOnly: "Images are combined locally in this browser and are never uploaded.",
-    output: "Result",
-    outputPlaceholder: "Upload a WeChat QR code and an avatar to generate a scan-ready image.",
-    outputSize: "Output size",
-    padding: "QR padding",
-    qr: "WeChat QR",
-    readyHint: "QR code and avatar are ready.",
-    rounded: "Rounded",
-    scanTip: "Recognition depends on the original QR correction margin. Large avatars can reduce scan success.",
-    selectAvatar: "Choose avatar",
-    selectQr: "Choose QR",
-    shape: "Avatar shape",
-    tooLarge: (limit) => `Images must be ${limit} or smaller. Choose a smaller file.`,
-    unsupported: "This image cannot be read by the current browser. Try a JPG, PNG, or WebP file.",
-  },
 };
 
 const maxImageFileBytes = 20 * 1024 * 1024;
 
-export function WechatQrTool({ locale }: { locale: Locale }) {
-  const labels = copy[locale];
+export function WechatQrTool() {
+  const labels = copy;
   const qrInputRef = useRef<HTMLInputElement | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const sourceUrlsRef = useRef(new Set<string>());
@@ -282,7 +252,7 @@ export function WechatQrTool({ locale }: { locale: Locale }) {
 
         <section className="rounded-md border border-line bg-paper/72 p-4 shadow-[var(--shadow-quiet)]">
           <div className="grid gap-4">
-            <SegmentedShapeControl locale={locale} value={avatarShape} onChange={setAvatarShape} />
+            <SegmentedShapeControl value={avatarShape} onChange={setAvatarShape} />
             <RangeControl label={labels.avatarSize} value={avatarSize} min={12} max={28} suffix="%" onChange={setAvatarSize} />
             <RangeControl label={labels.borderSize} value={borderSize} min={1} max={8} suffix="%" onChange={setBorderSize} />
             <RangeControl label={labels.padding} value={padding} min={0} max={10} suffix="%" onChange={setPadding} />
@@ -392,15 +362,15 @@ function ImageDropPanel({
   );
 }
 
-function SegmentedShapeControl({ locale, onChange, value }: { locale: Locale; onChange: (value: AvatarShape) => void; value: AvatarShape }) {
+function SegmentedShapeControl({ onChange, value }: { onChange: (value: AvatarShape) => void; value: AvatarShape }) {
   const options: Array<{ label: string; value: AvatarShape }> = [
-    { label: locale === "en" ? "Circle" : "圆形", value: "circle" },
-    { label: locale === "en" ? "Rounded" : "圆角", value: "rounded" },
+    { label: "圆形", value: "circle" },
+    { label: "圆角", value: "rounded" },
   ];
 
   return (
     <div className="grid gap-1.5 text-xs font-semibold text-muted">
-      <span>{copy[locale].shape}</span>
+      <span>{copy.shape}</span>
       <div className="grid grid-cols-2 rounded-md bg-accent/8 p-1">
         {options.map((option) => (
           <button

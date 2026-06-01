@@ -6,8 +6,8 @@ import { listExternalLinks } from "@/lib/external-links";
 import { siteConfig } from "@/lib/site";
 
 const primaryLinks = [
-  { href: "/", label: "首页" },
   { href: "/articles", label: "文章" },
+  { href: "/ai-terms", label: "词条" },
   { href: "/series", label: "专题" },
   { href: "/tools", label: "工具" },
   { href: "/about", label: "关于" },

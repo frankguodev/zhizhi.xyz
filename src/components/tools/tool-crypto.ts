@@ -1,19 +1,19 @@
-import type { HashAlgorithm, HashOutputFormat, HashStructuredResultData, JwtStructuredResultData, ToolLocale as Locale } from "./tool-types";
+import type { HashAlgorithm, HashOutputFormat, HashStructuredResultData, JwtStructuredResultData } from "./tool-types";
 
-export function decodeJwtInput(input: string, locale: Locale) {
+export function decodeJwtInput(input: string) {
   const token = normalizeJwtInput(input);
   const parts = token.split(".");
   if (parts.length < 2) {
-    throw new Error(locale === "en" ? "Enter a valid JWT with header and payload." : "请输入包含 Header 和 Payload 的有效 JWT。");
+    throw new Error("请输入包含 Header 和 Payload 的有效 JWT。");
   }
 
   const header = JSON.parse(base64UrlDecode(parts[0])) as unknown;
   const payload = JSON.parse(base64UrlDecode(parts[1])) as unknown;
   if (!isPlainRecord(payload)) {
-    throw new Error(locale === "en" ? "JWT payload must be a JSON object." : "JWT Payload 必须是 JSON 对象。");
+    throw new Error("JWT Payload 必须是 JSON 对象。");
   }
 
-  const result = formatJwtResult(header, payload, Boolean(parts[2]), locale);
+  const result = formatJwtResult(header, payload, Boolean(parts[2]));
   return { normalizedToken: token, ...result };
 }
 
@@ -29,7 +29,7 @@ export function base64UrlDecode(value: string) {
   return new TextDecoder().decode(bytes);
 }
 
-export function formatHashResult(buffer: ArrayBuffer, algorithm: HashAlgorithm, outputFormat: HashOutputFormat, bytes: number, locale: Locale, fileName?: string) {
+export function formatHashResult(buffer: ArrayBuffer, algorithm: HashAlgorithm, outputFormat: HashOutputFormat, bytes: number, fileName?: string) {
   const base64 = bufferToBase64(buffer);
   const digest = {
     base64,
@@ -38,44 +38,33 @@ export function formatHashResult(buffer: ArrayBuffer, algorithm: HashAlgorithm, 
   }[outputFormat];
 
   const fields = [
-    { label: locale === "en" ? "Algorithm" : "算法", value: algorithm },
-    { label: locale === "en" ? "Format" : "格式", value: outputFormat },
-    { label: locale === "en" ? "Input size" : "输入大小", value: formatBytes(bytes) },
+    { label: "算法", value: algorithm },
+    { label: "格式", value: outputFormat },
+    { label: "输入大小", value: formatBytes(bytes) },
   ];
   if (fileName) {
-    fields.push({ label: locale === "en" ? "File" : "文件", value: fileName });
+    fields.push({ label: "文件", value: fileName });
   }
 
   return {
-    raw: [locale === "en" ? "[Hash]" : "[Hash 摘要]", ...fields.map((field) => `${field.label}: ${field.value}`), "", digest].join("\n"),
+    raw: ["[Hash 摘要]", ...fields.map((field) => `${field.label}: ${field.value}`), "", digest].join("\n"),
     structured: { digest, fields } satisfies HashStructuredResultData,
   };
 }
 
-function formatJwtResult(header: unknown, payload: Record<string, unknown>, signaturePresent: boolean, locale: Locale) {
+function formatJwtResult(header: unknown, payload: Record<string, unknown>, signaturePresent: boolean) {
   const labels = {
-    zh: {
-      signatureTitle: "[签名状态]",
-      signatureWarning: "未验证签名：此工具只做本地解码，不判断 Token 是否可信。",
-      signatureField: `签名字段：${signaturePresent ? "存在" : "缺失"}`,
-      expirationTitle: "[过期状态]",
-      timeTitle: "[时间字段]",
-      headerTitle: "[Header]",
-      payloadTitle: "[Payload]",
-    },
-    en: {
-      signatureTitle: "[Signature status]",
-      signatureWarning: "Signature not verified: this tool only decodes locally and does not prove the token is trusted.",
-      signatureField: `Signature segment: ${signaturePresent ? "present" : "missing"}`,
-      expirationTitle: "[Expiration]",
-      timeTitle: "[Time claims]",
-      headerTitle: "[Header]",
-      payloadTitle: "[Payload]",
-    },
-  }[locale];
+    signatureTitle: "[签名状态]",
+    signatureWarning: "未验证签名：此工具只做本地解码，不判断 Token 是否可信。",
+    signatureField: `签名字段：${signaturePresent ? "存在" : "缺失"}`,
+    expirationTitle: "[过期状态]",
+    timeTitle: "[时间字段]",
+    headerTitle: "[Header]",
+    payloadTitle: "[Payload]",
+  };
 
-  const expirationBody = formatJwtExpiration(payload.exp, locale);
-  const timeClaimsBody = formatJwtTimeClaims(payload, locale);
+  const expirationBody = formatJwtExpiration(payload.exp);
+  const timeClaimsBody = formatJwtTimeClaims(payload);
   const headerJson = JSON.stringify(header, null, 2);
   const payloadJson = JSON.stringify(payload, null, 2);
 
@@ -107,29 +96,29 @@ function formatJwtResult(header: unknown, payload: Record<string, unknown>, sign
   };
 }
 
-function formatJwtExpiration(value: unknown, locale: Locale) {
+function formatJwtExpiration(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return locale === "en" ? "exp: missing or not numeric." : "exp：缺失或不是数字。";
+    return "exp：缺失或不是数字。";
   }
 
   const nowSeconds = Date.now() / 1000;
   const deltaSeconds = value - nowSeconds;
   const timeLine = `exp: ${formatJwtTimestamp(value)}`;
   if (deltaSeconds <= 0) {
-    const duration = formatDuration(Math.abs(deltaSeconds), locale);
-    return locale === "en" ? `${timeLine}\nStatus: expired ${duration} ago.` : `${timeLine}\n状态：已过期，过期 ${duration}。`;
+    const duration = formatDuration(Math.abs(deltaSeconds));
+    return `${timeLine}\n状态：已过期，过期 ${duration}。`;
   }
 
-  const duration = formatDuration(deltaSeconds, locale);
-  return locale === "en" ? `${timeLine}\nStatus: not expired, ${duration} remaining.` : `${timeLine}\n状态：未过期，剩余 ${duration}。`;
+  const duration = formatDuration(deltaSeconds);
+  return `${timeLine}\n状态：未过期，剩余 ${duration}。`;
 }
 
-function formatJwtTimeClaims(payload: Record<string, unknown>, locale: Locale) {
+function formatJwtTimeClaims(payload: Record<string, unknown>) {
   const keys = ["iat", "nbf", "exp"] as const;
   const lines = keys.map((key) => {
     const value = payload[key];
     if (typeof value !== "number" || !Number.isFinite(value)) {
-      return `${key}: ${locale === "en" ? "missing or not numeric" : "缺失或不是数字"}`;
+      return `${key}: 缺失或不是数字`;
     }
 
     return `${key}: ${formatJwtTimestamp(value)}`;
@@ -147,31 +136,24 @@ function formatJwtTimestamp(value: number) {
   return `${date.toISOString()} (Unix ${value})`;
 }
 
-function formatDuration(seconds: number, locale: Locale) {
+function formatDuration(seconds: number) {
   const totalSeconds = Math.max(0, Math.floor(seconds));
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const remainingSeconds = totalSeconds % 60;
-  const units = locale === "en"
-    ? [
-        { label: "d", value: days },
-        { label: "h", value: hours },
-        { label: "m", value: minutes },
-        { label: "s", value: remainingSeconds },
-      ]
-    : [
-        { label: "天", value: days },
-        { label: "小时", value: hours },
-        { label: "分钟", value: minutes },
-        { label: "秒", value: remainingSeconds },
-      ];
+  const units = [
+    { label: "天", value: days },
+    { label: "小时", value: hours },
+    { label: "分钟", value: minutes },
+    { label: "秒", value: remainingSeconds },
+  ];
   const visibleUnits = units.filter((unit) => unit.value > 0).slice(0, 3);
   if (visibleUnits.length === 0) {
-    return locale === "en" ? "0s" : "0 秒";
+    return "0 秒";
   }
 
-  return visibleUnits.map((unit) => (locale === "en" ? `${unit.value}${unit.label}` : `${unit.value} ${unit.label}`)).join(" ");
+  return visibleUnits.map((unit) => `${unit.value} ${unit.label}`).join(" ");
 }
 
 function bufferToHex(buffer: ArrayBuffer) {
