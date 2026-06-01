@@ -6,7 +6,7 @@ import { useState } from "react";
 
 type FavoriteButtonProps = {
   slug: string;
-  locale?: "zh" | "en";
+  locale?: "zh";
   initialFavorited: boolean;
 };
 

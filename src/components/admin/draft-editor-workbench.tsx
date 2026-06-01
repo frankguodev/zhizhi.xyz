@@ -184,7 +184,7 @@ function hasExtendedFrontmatter(markdown: string) {
 }
 
 function publicArticleUrl(article: ArticleRecord) {
-  return article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
+  return `/articles/${article.slug}`;
 }
 
 function formatSavedTime(date: Date) {

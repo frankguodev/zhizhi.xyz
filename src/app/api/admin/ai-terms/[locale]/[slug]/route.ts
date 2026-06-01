@@ -14,7 +14,7 @@ import { requireAdminApi } from "@/lib/admin-auth";
 import { scanAiTermFable } from "@/lib/markdown";
 
 const paramsSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   slug: z.string().min(1),
 });
 
@@ -90,7 +90,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ loc
 
     const logs = await listAiTermOperationLogs(aiTerm.id, 12);
     const markdown = aiTermToMarkdown(aiTerm);
-    const fable = scanAiTermFable(aiTerm.contentMd, aiTerm.locale);
+    const fable = scanAiTermFable(aiTerm.contentMd);
 
     return json({ aiTerm, fable, markdown, quality, logs });
   } catch (error) {
@@ -158,7 +158,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ loca
     });
 
     const logs = await listAiTermOperationLogs(result.aiTerm.id, 12);
-    const fable = scanAiTermFable(result.aiTerm.contentMd, result.aiTerm.locale);
+    const fable = scanAiTermFable(result.aiTerm.contentMd);
 
     return json({ ...result, fable, quality, logs });
   } catch (error) {

@@ -11,7 +11,7 @@ import type { AdminAiTermItem, AiTermStatus, AiTermVisibility } from "@/lib/ai-t
 
 type FilterState = {
   q: string;
-  locale: "all" | "zh" | "en";
+  locale: "all" | "zh";
   status: "all" | AiTermStatus;
   visibility: "all" | AiTermVisibility;
 };
@@ -49,7 +49,6 @@ const visibilityLabels: Record<AiTermVisibility, string> = {
 const localeOptions = [
   { value: "all", label: "全部语言" },
   { value: "zh", label: "中文" },
-  { value: "en", label: "English" },
 ];
 
 const statusOptions = [
@@ -88,8 +87,8 @@ function dateText(value: Date | string | number | null | undefined) {
   return Number.isNaN(date.getTime()) ? "未知时间" : date.toLocaleString("zh-CN");
 }
 
-function publicPath(term: Pick<AdminAiTermItem, "locale" | "slug">) {
-  return term.locale === "en" ? `/en/ai-terms/${term.slug}` : `/ai-terms/${term.slug}`;
+function publicPath(term: Pick<AdminAiTermItem, "slug">) {
+  return `/ai-terms/${term.slug}`;
 }
 
 function editPath(term: Pick<AdminAiTermItem, "locale" | "slug">) {

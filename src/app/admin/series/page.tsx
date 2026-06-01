@@ -16,12 +16,10 @@ export const metadata = {
 
 async function getSeriesPayload() {
   try {
-    const [seriesList, zhArticleChoices, enArticleChoices] = await Promise.all([
+    const [seriesList, articleChoices] = await Promise.all([
       listAdminSeries(),
       listSeriesArticleChoices("zh"),
-      listSeriesArticleChoices("en"),
     ]);
-    const articleChoices = [...zhArticleChoices, ...enArticleChoices];
     return { seriesList, articleChoices, error: "", hint: "" };
   } catch (error) {
     return {

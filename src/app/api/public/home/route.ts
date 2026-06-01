@@ -4,8 +4,8 @@ import { getPublicHomePayload } from "@/lib/public-home";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const locale = parsePublicLocale(request);
+export async function GET() {
+  const locale = parsePublicLocale();
 
   if (!locale) {
     return publicJsonError("Invalid locale. Use zh or en.");

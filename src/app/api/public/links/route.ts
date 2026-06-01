@@ -8,7 +8,7 @@ type ParseResult = { ok: true; input: PublicLinkListInput } | { ok: false; error
 
 function parseRequest(request: Request): ParseResult {
   const { searchParams } = new URL(request.url);
-  const locale = parsePublicLocale(request);
+  const locale = parsePublicLocale();
 
   if (!locale) {
     return { ok: false, error: "Invalid locale. Use zh or en." };

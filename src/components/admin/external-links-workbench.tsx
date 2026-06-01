@@ -41,10 +41,7 @@ const positionLabels: Record<ExternalLinkPosition, string> = {
   site_footer: "站点底部",
 };
 const allValue = "all";
-const localeOptions = [
-  { value: "zh", label: "中文" },
-  { value: "en", label: "English" },
-] as const;
+const localeOptions = [{ value: "zh", label: "中文" }] as const;
 const statusFilterOptions = [
   { value: allValue, label: "全部状态" },
   { value: "active", label: "已启用" },

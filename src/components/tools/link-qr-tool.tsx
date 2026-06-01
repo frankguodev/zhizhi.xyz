@@ -3,7 +3,7 @@
 import { Check, ChevronDown, Download, Link2, Loader2, QrCode, RefreshCw, X } from "lucide-react";
 import QRCode from "qrcode";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
-import type { Locale } from "@/lib/site";
+import type { ToolLocale as Locale } from "./tool-types";
 
 type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 

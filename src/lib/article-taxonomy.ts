@@ -88,7 +88,6 @@ export const standardArticleCategories = [
 export const standardArticleCategoryNames = standardArticleCategories.map((category) => category.name);
 export const standardArticleCategoryLabels: Record<Locale, string[]> = {
   zh: standardArticleCategories.map((category) => category.labels.zh),
-  en: standardArticleCategories.map((category) => category.labels.en),
 };
 
 const categoryAliasMap = new Map<string, (typeof standardArticleCategories)[number]>(
@@ -109,7 +108,7 @@ export function normalizeArticleCategory(category: string | null | undefined, lo
   const normalized = category?.trim();
 
   if (!normalized) {
-    return locale === "en" ? "Notes" : "随手笔记";
+    return "随手笔记";
   }
 
   return categoryAliasMap.get(normalizeCategoryKey(normalized))?.labels[locale] ?? normalized;
@@ -141,7 +140,7 @@ export function getArticleCategories(articles: ArticleRecord[], locale: Locale =
         .map((article) => normalizeArticleCategory(article.category, locale))
         .filter((category) => !standardNames.includes(category)),
     ),
-  ).sort((a, b) => a.localeCompare(b, locale === "en" ? "en-US" : "zh-Hans-CN"));
+  ).sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 
   return [...standardNames, ...extraCategories];
 }
@@ -150,22 +149,14 @@ export function getArticleTags(articles: ArticleRecord[]) {
   return Array.from(new Set(articles.flatMap((article) => article.tags))).sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 }
 
-export function getArticleHref(article: Pick<ArticleRecord, "locale" | "slug">) {
-  return article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
+export function getArticleHref(article: Pick<ArticleRecord, "slug">) {
+  return `/articles/${article.slug}`;
 }
 
-export function getCategoryHref(category: string, locale: ArticleRecord["locale"] = "zh") {
-  if (locale === "en") {
-    return `/en/articles/category/${encodeTaxonomySegment(category)}`;
-  }
-
+export function getCategoryHref(category: string) {
   return `/articles/category/${encodeTaxonomySegment(category)}`;
 }
 
-export function getTagHref(tag: string, locale: ArticleRecord["locale"] = "zh") {
-  if (locale === "en") {
-    return `/en/articles/tag/${encodeTaxonomySegment(tag)}`;
-  }
-
+export function getTagHref(tag: string) {
   return `/articles/tag/${encodeTaxonomySegment(tag)}`;
 }

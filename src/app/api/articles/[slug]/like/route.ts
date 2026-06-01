@@ -82,8 +82,8 @@ function isSameOriginMutation(request: Request) {
   }
 }
 
-async function parseArticleRequest(request: Request, rawSlug: string) {
-  const locale = parsePublicLocale(request);
+async function parseArticleRequest(rawSlug: string) {
+  const locale = parsePublicLocale();
 
   if (!locale) {
     return { ok: false as const, response: publicJsonError("Invalid locale. Use zh or en.") };
@@ -116,7 +116,7 @@ function databaseError() {
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug: rawSlug } = await params;
-  const parsed = await parseArticleRequest(request, rawSlug);
+  const parsed = await parseArticleRequest(rawSlug);
 
   if (!parsed.ok) {
     return parsed.response;
@@ -138,7 +138,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   }
 
   const { slug: rawSlug } = await params;
-  const parsed = await parseArticleRequest(request, rawSlug);
+  const parsed = await parseArticleRequest(rawSlug);
 
   if (!parsed.ok) {
     return parsed.response;

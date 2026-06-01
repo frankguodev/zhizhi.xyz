@@ -107,8 +107,8 @@ function countLines(value: string) {
   return value ? value.split(/\r?\n/).length : 0;
 }
 
-function publicPath(term: Pick<AdminAiTermDetail, "locale" | "slug">) {
-  return term.locale === "en" ? `/en/ai-terms/${term.slug}` : `/ai-terms/${term.slug}`;
+function publicPath(term: Pick<AdminAiTermDetail, "slug">) {
+  return `/ai-terms/${term.slug}`;
 }
 
 function statusText(status: AdminAiTermDetail["status"]) {

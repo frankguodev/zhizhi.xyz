@@ -1,5 +1,4 @@
-import type { Locale } from "@/lib/site";
-import type { ToolTab } from "./tool-types";
+import type { ToolTab, ToolLocale as Locale } from "./tool-types";
 
 export const sampleJson = `{"site":"zhizhi","tools":["json","encoding","time","text"],"meta":{"localOnly":true,"version":1}}`;
 

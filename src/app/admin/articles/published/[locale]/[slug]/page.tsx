@@ -21,8 +21,7 @@ export default async function PublishedArticleEditorPage({ params }: { params: P
   const { locale, slug } = await params;
   await requireAdminPage(`/admin/articles/published/${locale}/${slug}`);
 
-  const normalizedLocale = locale === "en" ? "en" : "zh";
-  const article = await getPublishedArticle(normalizedLocale, slug).catch(() => null);
+  const article = await getPublishedArticle("zh", slug).catch(() => null);
 
   if (!article) {
     notFound();

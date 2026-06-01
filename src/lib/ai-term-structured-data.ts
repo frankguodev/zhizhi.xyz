@@ -1,5 +1,5 @@
 import type { AiTermDetail } from "@/lib/ai-terms";
-import { siteConfig, type Locale } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
 function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -20,8 +20,8 @@ function absoluteUrl(path: string) {
 /**
  * 构建词条详情页的 JSON-LD：DefinedTerm（优先取 frontmatter structured_data）+ BreadcrumbList。
  */
-export function buildAiTermJsonLd(term: AiTermDetail, locale: Locale) {
-  const path = locale === "en" ? `/en/ai-terms/${term.slug}` : `/ai-terms/${term.slug}`;
+export function buildAiTermJsonLd(term: AiTermDetail) {
+  const path = `/ai-terms/${term.slug}`;
   const url = absoluteUrl(asString(term.canonicalUrl) || path);
 
   const structured = asRecord(asRecord(term.metadata).structuredData);
@@ -36,7 +36,7 @@ export function buildAiTermJsonLd(term: AiTermDetail, locale: Locale) {
     "@type": "DefinedTerm",
     name: asString(structured.name) || term.term,
     description: asString(structured.description) || term.shortConcept || term.shortDesc,
-    inLanguage: asString(structured.in_language) || (locale === "en" ? "en" : "zh-CN"),
+    inLanguage: asString(structured.in_language) || "zh-CN",
     url,
   };
 
@@ -44,14 +44,14 @@ export function buildAiTermJsonLd(term: AiTermDetail, locale: Locale) {
     definedTerm.alternateName = alternateName.length === 1 ? alternateName[0] : alternateName;
   }
 
-  const labels = locale === "en" ? { home: "Home", terms: "AI Terms" } : { home: "首页", terms: "AI 词条" };
+  const labels = { home: "首页", terms: "AI 词条" };
 
   const breadcrumb = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: labels.home, item: absoluteUrl(locale === "en" ? "/en" : "/") },
-      { "@type": "ListItem", position: 2, name: labels.terms, item: absoluteUrl(locale === "en" ? "/en/ai-terms" : "/ai-terms") },
+      { "@type": "ListItem", position: 1, name: labels.home, item: absoluteUrl("/") },
+      { "@type": "ListItem", position: 2, name: labels.terms, item: absoluteUrl("/ai-terms") },
       { "@type": "ListItem", position: 3, name: term.term, item: url },
     ],
   };

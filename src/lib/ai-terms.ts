@@ -11,7 +11,7 @@ import {
   aiTerms,
 } from "@/db/schema";
 
-export type AiTermLocale = "zh" | "en";
+export type AiTermLocale = "zh";
 export type AiTermType = "concept" | "protocol" | "framework" | "product" | "model" | "workflow" | "infra" | "slang" | "company" | "method";
 export type AiTermDifficulty = "beginner" | "intermediate" | "advanced";
 export type AiTermStatus = "draft" | "published" | "archived";

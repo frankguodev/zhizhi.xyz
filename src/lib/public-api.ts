@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isLocale, type Locale } from "@/lib/site";
+import { type Locale } from "@/lib/site";
 
 export const defaultPublicLimit = 20;
 export const maxPublicLimit = 50;
@@ -28,11 +28,9 @@ export function publicJsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status, headers: publicErrorHeaders });
 }
 
-export function parsePublicLocale(request: Request): Locale | null {
-  const { searchParams } = new URL(request.url);
-  const locale = searchParams.get("locale") ?? "zh";
-
-  return isLocale(locale) ? locale : null;
+export function parsePublicLocale(): Locale | null {
+  // 全站单语：忽略外部传入的 ?locale，始终返回中文。
+  return "zh";
 }
 
 export function readBoundedText(searchParams: URLSearchParams, name: string, maxLength = maxPublicFilterLength) {

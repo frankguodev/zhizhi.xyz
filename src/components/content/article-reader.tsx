@@ -17,13 +17,6 @@ const blockLabels: Record<Locale, Record<LayeredBlockType, string>> = {
     advanced: "进阶理解",
     author: "我的经验",
   },
-  en: {
-    detail: "Detailed explanation",
-    example: "Example",
-    warning: "Watch out",
-    advanced: "Advanced understanding",
-    author: "My experience",
-  },
 };
 
 const detailLayerTone = {
@@ -61,20 +54,12 @@ const modeCopy: Record<Locale, Record<ReadingMode, string>> = {
     full: "完整阅读：展开全部分层内容，适合系统阅读",
     quick: "快速阅读：保留关键提示，适合先建立主线",
   },
-  en: {
-    full: "Full reading: expand every layered note for a systematic read",
-    quick: "Quick reading: keep key signals to build the main thread first",
-  },
 };
 
 const modeLabels: Record<Locale, Record<ReadingMode, string>> = {
   zh: {
     full: "完整阅读",
     quick: "快速阅读",
-  },
-  en: {
-    full: "Full reading",
-    quick: "Quick reading",
   },
 };
 
@@ -83,11 +68,6 @@ const codeCopyLabels: Record<Locale, { copy: string; copied: string; failed: str
     copy: "复制代码",
     copied: "已复制",
     failed: "复制失败",
-  },
-  en: {
-    copy: "Copy code",
-    copied: "Copied",
-    failed: "Copy failed",
   },
 };
 
@@ -98,13 +78,6 @@ const imagePreviewLabels: Record<Locale, { close: string; dialog: string; open: 
     open: "打开图片预览",
     zoomIn: "放大图片",
     zoomOut: "还原图片",
-  },
-  en: {
-    close: "Close image preview",
-    dialog: "Image preview",
-    open: "Open image preview",
-    zoomIn: "Zoom image",
-    zoomOut: "Reset image zoom",
   },
 };
 

@@ -92,7 +92,6 @@ function buildHomeJsonLd() {
 }
 
 export function HomePage({ payload }: HomePageProps) {
-  const locale = payload.locale;
   const pageCopy = copy;
   const homeJsonLd = buildHomeJsonLd();
 

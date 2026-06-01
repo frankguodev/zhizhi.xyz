@@ -8,7 +8,7 @@ const paramsSchema = z.object({
 });
 
 const seriesSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   title: z.string().trim().min(1).max(120),
   slug: z.string().trim().min(1).max(120).regex(/^[a-z0-9\u4e00-\u9fa5-]+$/),
   description: z.string().trim().min(1).max(800),
@@ -64,12 +64,10 @@ function invalidArticleResponse(validation: Awaited<ReturnType<typeof validateSe
 }
 
 async function adminSeriesPayload() {
-  const [seriesList, zhArticleChoices, enArticleChoices] = await Promise.all([
+  const [seriesList, articleChoices] = await Promise.all([
     listAdminSeries(),
     listSeriesArticleChoices("zh"),
-    listSeriesArticleChoices("en"),
   ]);
-  const articleChoices = [...zhArticleChoices, ...enArticleChoices];
   return { seriesList, articleChoices };
 }
 

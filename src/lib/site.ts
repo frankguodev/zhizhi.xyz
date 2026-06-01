@@ -12,8 +12,8 @@ export const siteConfig = {
   },
 } as const;
 
-export type Locale = "zh" | "en";
+export type Locale = "zh";
 
 export function isLocale(value: string): value is Locale {
-  return value === "zh" || value === "en";
+  return value === "zh";
 }

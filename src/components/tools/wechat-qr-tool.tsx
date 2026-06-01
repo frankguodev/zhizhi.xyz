@@ -2,7 +2,7 @@
 
 import { Download, ImageIcon, Loader2, QrCode, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Locale } from "@/lib/site";
+import type { ToolLocale as Locale } from "./tool-types";
 
 type UploadedImage = {
   file: File;

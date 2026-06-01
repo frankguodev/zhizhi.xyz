@@ -75,7 +75,7 @@ function normalizeMediaSlug(value: string | undefined) {
 
 function keyForUpload(scope: MediaUploadScope, extension: string, options: UploadImageOptions = {}) {
   if (scope === "ai-term" && options.role === "diagram") {
-    const locale = options.locale === "en" ? "en" : options.locale === "zh" ? "zh" : null;
+    const locale = options.locale === "zh" ? "zh" : null;
     const slug = normalizeMediaSlug(options.slug);
 
     if (locale && slug) {

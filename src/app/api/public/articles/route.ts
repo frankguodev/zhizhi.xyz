@@ -18,7 +18,7 @@ type ParseResult = { ok: true; input: PublicArticleListInput } | { ok: false; er
 
 function parseRequest(request: Request): ParseResult {
   const { searchParams } = new URL(request.url);
-  const locale = parsePublicLocale(request);
+  const locale = parsePublicLocale();
 
   if (!locale) {
     return { ok: false, error: "Invalid locale. Use zh or en." };

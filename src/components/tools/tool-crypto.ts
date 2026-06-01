@@ -1,5 +1,4 @@
-import type { Locale } from "@/lib/site";
-import type { HashAlgorithm, HashOutputFormat, HashStructuredResultData, JwtStructuredResultData } from "./tool-types";
+import type { HashAlgorithm, HashOutputFormat, HashStructuredResultData, JwtStructuredResultData, ToolLocale as Locale } from "./tool-types";
 
 export function decodeJwtInput(input: string, locale: Locale) {
   const token = normalizeJwtInput(input);

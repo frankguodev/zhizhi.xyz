@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { countPublicAiTerms, listPublicAiTerms } from "@/lib/ai-terms";
 import { getPublicArticles } from "@/lib/public-articles";
 import { listPublicSeries } from "@/lib/series";
 import { siteConfig } from "@/lib/site";
@@ -7,7 +8,23 @@ function siteUrl(path = "") {
   return `${siteConfig.url}${path}`;
 }
 
-function safeDate(value: string | Date | null | undefined) {
+async function getAllPublicAiTerms() {
+  const total = await countPublicAiTerms({ locale: "zh" });
+  const pageSize = 100;
+  const terms: Awaited<ReturnType<typeof listPublicAiTerms>> = [];
+
+  for (let offset = 0; offset < total; offset += pageSize) {
+    const batch = await listPublicAiTerms({ locale: "zh", limit: pageSize, offset });
+    if (batch.length === 0) {
+      break;
+    }
+    terms.push(...batch);
+  }
+
+  return terms;
+}
+
+function safeDate(value: string | number | Date | null | undefined) {
   if (!value) {
     return new Date();
   }
@@ -17,9 +34,10 @@ function safeDate(value: string | Date | null | undefined) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [articles, seriesList] = await Promise.all([
+  const [articles, seriesList, aiTerms] = await Promise.all([
     getPublicArticles("zh"),
     listPublicSeries("zh"),
+    getAllPublicAiTerms(),
   ]);
 
   const staticRoutes: Array<{
@@ -29,6 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }> = [
     { path: "", priority: 1, changeFrequency: "weekly" },
     { path: "/articles", priority: 0.85, changeFrequency: "weekly" },
+    { path: "/ai-terms", priority: 0.8, changeFrequency: "weekly" },
     { path: "/series", priority: 0.75, changeFrequency: "weekly" },
     { path: "/about", priority: 0.55, changeFrequency: "monthly" },
     { path: "/tools", priority: 0.6, changeFrequency: "monthly" },
@@ -57,6 +76,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: safeDate(series.updatedAt),
       changeFrequency: "monthly" as const,
       priority: 0.72,
+    })),
+    ...aiTerms.map((term) => ({
+      url: siteUrl(`/ai-terms/${term.slug}`),
+      lastModified: safeDate(term.updatedAt || term.publishedAt),
+      changeFrequency: "monthly" as const,
+      priority: 0.78,
     })),
   ];
 }

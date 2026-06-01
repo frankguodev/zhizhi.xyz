@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     const locale = typeof localeValue === "string" ? localeValue.trim() : "";
     const slug = typeof slugValue === "string" ? slugValue.trim() : "";
 
-    if ((locale !== "zh" && locale !== "en") || !slug) {
+    if (locale !== "zh" || !slug) {
       return json({ error: "上传词条图解前，请先在 Frontmatter 中填写有效 locale 和 slug，或先解析预览。", status: 400 }, { status: 400 });
     }
   }

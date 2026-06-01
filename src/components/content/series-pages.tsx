@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, BookOpen, Clock, Route, SearchX } from "lucide-r
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { PublicSeriesDetail, PublicSeriesSummary } from "@/lib/series";
-import { siteConfig, type Locale } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
 const copy = {
   currentPath: "/series",
@@ -156,7 +156,7 @@ function CoverMark({ coverImage, title }: { coverImage: string | null; title: st
   );
 }
 
-export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; seriesList: PublicSeriesSummary[] }) {
+export function SeriesIndexPage({ seriesList }: { seriesList: PublicSeriesSummary[] }) {
   const pageCopy = copy;
   const listJsonLd = buildSeriesListJsonLd(seriesList);
 
@@ -236,7 +236,7 @@ export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; series
   );
 }
 
-export function SeriesDetailContent({ locale, item }: { locale: Locale; item: PublicSeriesDetail }) {
+export function SeriesDetailContent({ item }: { item: PublicSeriesDetail }) {
   const pageCopy = copy;
   const totalReadingMinutes = item.articles.reduce((total, article) => total + article.readingMinutes, 0);
   const detailJsonLd = buildSeriesDetailJsonLd(item, totalReadingMinutes);

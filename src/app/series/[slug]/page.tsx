@@ -27,5 +27,5 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ s
     notFound();
   }
 
-  return <SeriesDetailContent locale="zh" item={item} />;
+  return <SeriesDetailContent item={item} />;
 }

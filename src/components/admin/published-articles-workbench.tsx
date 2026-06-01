@@ -51,7 +51,7 @@ function formatDate(value: string | number) {
 }
 
 function publicArticleUrl(article: PublishedArticleListItem) {
-  return article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
+  return `/articles/${article.slug}`;
 }
 
 function includesText(value: string, query: string) {

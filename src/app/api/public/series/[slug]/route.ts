@@ -5,7 +5,7 @@ import { getPublicSeriesDetailPayload } from "@/lib/public-series-detail";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  const locale = parsePublicLocale(request);
+  const locale = parsePublicLocale();
 
   if (!locale) {
     return publicJsonError("Invalid locale. Use zh or en.");

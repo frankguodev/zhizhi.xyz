@@ -20,8 +20,7 @@ export default async function DraftEditorPage({ params }: { params: Promise<{ lo
   const { locale, slug } = await params;
   await requireAdminPage(`/admin/articles/drafts/${locale}/${slug}`);
 
-  const normalizedLocale = locale === "en" ? "en" : "zh";
-  const article = await getArticleDraft(normalizedLocale, slug).catch(() => null);
+  const article = await getArticleDraft("zh", slug).catch(() => null);
 
   if (!article) {
     notFound();

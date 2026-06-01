@@ -85,7 +85,7 @@ export default async function AiTermDetailRoute({ params }: AiTermDetailRoutePro
     stripRelations: term.relations.length > 0,
     extractReferences: true,
   });
-  const jsonLd = JSON.stringify(buildAiTermJsonLd(term, "zh")).replace(/</g, "\\u003c");
+  const jsonLd = JSON.stringify(buildAiTermJsonLd(term)).replace(/</g, "\\u003c");
 
   return (
     <>

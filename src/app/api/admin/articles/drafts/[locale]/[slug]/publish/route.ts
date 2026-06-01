@@ -6,7 +6,7 @@ import { checkArticleQuality } from "@/lib/article-quality";
 import { writeAdminArticleOperationLog } from "@/lib/admin-operation-logs";
 
 const paramsSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   slug: z.string().min(1),
 });
 
@@ -91,7 +91,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ lo
       },
     });
 
-    const articleUrl = published.locale === "en" ? `/en/articles/${published.slug}` : `/articles/${published.slug}`;
+    const articleUrl = `/articles/${published.slug}`;
 
     return json({ published, articleUrl });
   } catch (error) {

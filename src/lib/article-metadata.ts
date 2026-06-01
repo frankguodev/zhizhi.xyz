@@ -25,11 +25,7 @@ function uniqueStrings(values: Array<string | undefined>) {
 }
 
 function articlePath(article: ArticleRecord) {
-  return article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
-}
-
-function localeCode(locale: ArticleRecord["locale"]) {
-  return locale === "en" ? "en_US" : "zh_CN";
+  return `/articles/${article.slug}`;
 }
 
 function defaultRobots(article: ArticleRecord) {
@@ -80,7 +76,7 @@ export function buildArticleMetadata(article: ArticleRecord, origin: string = si
       description: ogDescription,
       url: canonical,
       siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
-      locale: localeCode(article.locale),
+      locale: "zh_CN",
       type: "article",
       publishedTime: article.publishedAt || undefined,
       modifiedTime: article.updatedAt || undefined,

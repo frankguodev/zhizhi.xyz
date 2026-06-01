@@ -17,7 +17,7 @@ export const users = sqliteTable(
     avatarUrl: text("avatar_url"),
     role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
     status: text("status", { enum: ["active", "disabled"] }).notNull().default("active"),
-    preferredLocale: text("preferred_locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    preferredLocale: text("preferred_locale", { enum: ["zh"] }).notNull().default("zh"),
     preferredReadingMode: text("preferred_reading_mode", { enum: ["full", "quick"] }).notNull().default("full"),
     emailVerifiedAt: integer("email_verified_at", { mode: "timestamp_ms" }),
     lastLoginAt: integer("last_login_at", { mode: "timestamp_ms" }),
@@ -31,7 +31,7 @@ export const categories = sqliteTable(
   "categories",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     translationKey: text("translation_key").notNull(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
@@ -47,7 +47,7 @@ export const tags = sqliteTable(
   "tags",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     translationKey: text("translation_key").notNull(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
@@ -61,7 +61,7 @@ export const articles = sqliteTable(
   "articles",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     translationKey: text("translation_key").notNull(),
     title: text("title").notNull(),
     slug: text("slug").notNull(),
@@ -123,7 +123,7 @@ export const series = sqliteTable(
   "series",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     translationKey: text("translation_key").notNull(),
     title: text("title").notNull(),
     slug: text("slug").notNull(),
@@ -177,7 +177,7 @@ export const articleLikes = sqliteTable(
   "article_likes",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     articleSlug: text("article_slug").notNull(),
     anonymousIdHash: text("anonymous_id_hash").notNull(),
     isLiked: integer("is_liked", { mode: "boolean" }).notNull().default(true),
@@ -194,7 +194,7 @@ export const articleViews = sqliteTable(
   "article_views",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     articleSlug: text("article_slug").notNull(),
     anonymousIdHash: text("anonymous_id_hash").notNull(),
     viewCount: integer("view_count").notNull().default(1),
@@ -212,7 +212,7 @@ export const anonymousFeedback = sqliteTable(
   "anonymous_feedback",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     pageUrl: text("page_url").notNull(),
     articleSlug: text("article_slug"),
     articleTitle: text("article_title"),
@@ -234,7 +234,7 @@ export const anonymousFeedback = sqliteTable(
 
 export const externalLinks = sqliteTable("external_links", {
   id: text("id").primaryKey(),
-  locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+  locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
   title: text("title").notNull(),
   description: text("description"),
   url: text("url").notNull(),
@@ -270,7 +270,7 @@ export const adminOperationLogs = sqliteTable(
     }).notNull(),
     targetType: text("target_type", { enum: ["article", "ai_term"] }).notNull(),
     targetId: text("target_id"),
-    targetLocale: text("target_locale", { enum: ["zh", "en"] }),
+    targetLocale: text("target_locale", { enum: ["zh"] }),
     targetSlug: text("target_slug"),
     targetTitle: text("target_title"),
     details: text("details", { mode: "json" }),
@@ -286,7 +286,7 @@ export const aiTerms = sqliteTable(
   "ai_terms",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     translationKey: text("translation_key").notNull(),
     term: text("term").notNull(),
     termZh: text("term_zh"),
@@ -349,7 +349,7 @@ export const aiTermCategories = sqliteTable(
   "ai_term_categories",
   {
     id: text("id").primaryKey(),
-    locale: text("locale", { enum: ["zh", "en"] }).notNull().default("zh"),
+    locale: text("locale", { enum: ["zh"] }).notNull().default("zh"),
     translationKey: text("translation_key").notNull(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),

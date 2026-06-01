@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Locale } from "@/lib/site";
 import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
@@ -61,6 +60,7 @@ import type {
   TimeDisplayMode,
   TimestampUnit,
   ToolGroup,
+  ToolLocale as Locale,
   ToolTab,
   UtilityAction,
   UtilityWorkerPending,

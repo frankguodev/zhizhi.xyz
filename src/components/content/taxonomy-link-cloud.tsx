@@ -20,7 +20,7 @@ export function TaxonomyLinkCloud({ categories, tags }: TaxonomyLinkCloudProps) 
             <Link
               key={category}
               className="inline-flex min-h-9 items-center rounded-md border border-line bg-paper px-3 text-sm font-semibold text-muted transition hover:border-accent/50 hover:text-foreground"
-              href={getCategoryHref(category, "zh")}
+              href={getCategoryHref(category)}
             >
               {category}
             </Link>
@@ -37,7 +37,7 @@ export function TaxonomyLinkCloud({ categories, tags }: TaxonomyLinkCloudProps) 
             <Link
               key={tag}
               className="inline-flex min-h-9 items-center rounded-md border border-line bg-paper px-3 text-sm font-semibold text-muted transition hover:border-accent/50 hover:text-foreground"
-              href={getTagHref(tag, "zh")}
+              href={getTagHref(tag)}
             >
               {tag}
             </Link>

@@ -1,6 +1,6 @@
 export type ArticleMeta = {
   slug: string;
-  locale: "zh" | "en";
+  locale: "zh";
   title: string;
   summary: string;
   category: string;
@@ -191,10 +191,10 @@ export const articles: ArticleRecord[] = [
   },
 ];
 
-export function getPublishedArticles(locale: "zh" | "en" = "zh") {
+export function getPublishedArticles(locale: "zh" = "zh") {
   return articles.filter((article) => article.locale === locale);
 }
 
-export function getArticleBySlug(slug: string, locale: "zh" | "en" = "zh") {
+export function getArticleBySlug(slug: string, locale: "zh" = "zh") {
   return articles.find((article) => article.slug === slug && article.locale === locale);
 }

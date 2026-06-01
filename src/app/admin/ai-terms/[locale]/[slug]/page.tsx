@@ -22,7 +22,7 @@ export default async function AdminAiTermEditorPage({ params }: { params: Promis
   const { locale, slug } = await params;
   await requireAdminPage(`/admin/ai-terms/${locale}/${slug}`);
 
-  if (locale !== "zh" && locale !== "en") {
+  if (locale !== "zh") {
     notFound();
   }
 
@@ -45,7 +45,7 @@ export default async function AdminAiTermEditorPage({ params }: { params: Promis
   });
   const logs = await listAiTermOperationLogs(aiTerm.id, 12).catch(() => []);
   const markdown = aiTermToMarkdown(aiTerm);
-  const fable = scanAiTermFable(aiTerm.contentMd, aiTerm.locale);
+  const fable = scanAiTermFable(aiTerm.contentMd);
 
   return (
     <AdminPageShell

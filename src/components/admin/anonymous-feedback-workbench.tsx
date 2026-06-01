@@ -22,7 +22,6 @@ const statusOptions = [
 const localeOptions = [
   { value: allValue, label: "全部语言" },
   { value: "zh", label: "中文" },
-  { value: "en", label: "English" },
 ] as const;
 const statusLabels: Record<AnonymousFeedbackStatus, string> = {
   new: "新反馈",

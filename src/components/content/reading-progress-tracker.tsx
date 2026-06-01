@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type ReadingProgressTrackerProps = {
   slug: string;
-  locale?: "zh" | "en";
+  locale?: "zh";
   enabled: boolean;
   initialProgress: number;
   resumeOnLoad?: boolean;

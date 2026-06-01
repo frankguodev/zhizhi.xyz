@@ -57,7 +57,7 @@ export async function GET(request: Request) {
 
   try {
     const taxonomy = await listAdminAiTermTaxonomy({
-      locale: locale === "zh" || locale === "en" ? locale : "all",
+      locale: locale === "zh" ? locale : "all",
       kind: kind === "category" ? kind : "all",
     });
     return json({ taxonomy });

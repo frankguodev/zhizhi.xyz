@@ -116,7 +116,7 @@ async function getDateAdjacentArticles(article: ArticleRecord) {
   const articles = await getPublicArticles(article.locale);
   const orderedArticles = articles
     .slice()
-    .sort((a, b) => a.publishedAt.localeCompare(b.publishedAt) || a.title.localeCompare(b.title, article.locale === "en" ? "en-US" : "zh-Hans-CN"));
+    .sort((a, b) => a.publishedAt.localeCompare(b.publishedAt) || a.title.localeCompare(b.title, "zh-Hans-CN"));
   const currentIndex = orderedArticles.findIndex((item) => item.slug === article.slug);
 
   if (currentIndex < 0) {

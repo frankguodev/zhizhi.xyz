@@ -178,7 +178,7 @@ function TermCard({ term }: { term: AiTermSummary }) {
   );
 }
 
-export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, difficulty, locale, page, pageSize, popularTerms, query, sort, terms, total }: AiTermsPageProps) {
+export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, difficulty, page, pageSize, popularTerms, query, sort, terms, total }: AiTermsPageProps) {
   const pageCopy = copy;
   const basePath = pageCopy.currentPath;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));

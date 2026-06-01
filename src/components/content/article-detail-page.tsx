@@ -89,7 +89,7 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
   const currentPath = `${pageCopy.currentPathPrefix}/${article.slug}`;
   const shareUrl = absoluteUrl(currentPath, origin);
   const category = normalizeArticleCategory(article.category, locale);
-  const categoryHref = getCategoryHref(category, locale);
+  const categoryHref = getCategoryHref(category);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

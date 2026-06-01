@@ -19,7 +19,7 @@ const updateSchema = z.object({
   trending: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
   humanReviewed: z.boolean().optional(),
-  listLocale: z.enum(["all", "zh", "en"]).optional(),
+  listLocale: z.enum(["all", "zh"]).optional(),
   listStatus: z.enum(["all", "draft", "published", "archived"]).optional(),
   listVisibility: z.enum(["all", "public", "login", "hidden"]).optional(),
   listQ: z.string().max(200).optional(),
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 
   try {
     const aiTerms = await listAdminAiTerms({
-      locale: locale === "zh" || locale === "en" ? locale : "all",
+      locale: locale === "zh" ? locale : "all",
       status: status === "draft" || status === "published" || status === "archived" ? status : "all",
       visibility: visibility === "public" || visibility === "login" || visibility === "hidden" ? visibility : "all",
       q,

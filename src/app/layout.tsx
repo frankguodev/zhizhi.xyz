@@ -46,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="zh"
+      lang="zh-CN"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${notoSansSc.variable} h-full scroll-smooth antialiased`}
     >

@@ -16,7 +16,7 @@ export function ArticleSummaryCard({ article, hot = false }: { article: ArticleS
     <article className="article-index-card index-surface grid gap-4 rounded-md border border-line p-5 md:grid-cols-[1fr_auto] md:items-center md:p-6 md:pl-10">
       <div className="relative z-10 min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold text-muted">
-          <Link className="vein-link px-2 py-1 text-accent hover:text-foreground" href={getCategoryHref(category, "zh")}>
+          <Link className="vein-link px-2 py-1 text-accent hover:text-foreground" href={getCategoryHref(category)}>
             {category}
           </Link>
           <span className="inline-flex items-center gap-1">

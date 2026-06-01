@@ -10,7 +10,7 @@ const importSchema = z.object({
   summary: z.string().catch(""),
   category: z.string().catch("未分类"),
   tags: z.array(z.string()).catch([]),
-  locale: z.enum(["zh", "en"]).catch("zh"),
+  locale: z.literal("zh").catch("zh"),
   visibility: z.enum(["public", "login", "hidden"]).catch("public"),
   reading_minutes: z.number().int().positive().catch(5),
   published_at: z.string().catch(""),
@@ -137,12 +137,12 @@ function normalizeSourceType(value: unknown) {
   return undefined;
 }
 
-function normalizeLocale(value: unknown): Locale {
-  return value === "en" ? "en" : "zh";
+function normalizeLocale(): Locale {
+  return "zh";
 }
 
-function categoryFallback(locale: Locale) {
-  return locale === "en" ? "Notes" : "随手笔记";
+function categoryFallback() {
+  return "随手笔记";
 }
 
 function buildSeoMetadata(data: Record<string, unknown>) {
@@ -196,7 +196,7 @@ export function parseArticleImport(markdown: string): ArticleImportResult {
   const twitter = recordValue(parsed.data.twitter);
   const content = recordValue(parsed.data.content);
   const source = recordValue(parsed.data.source);
-  const rawLocale = normalizeLocale(parsed.data.locale);
+  const rawLocale = normalizeLocale();
   const title = parsed.data.title || inferTitle(parsed.content);
   const summary = cleanString(parsed.data.summary) || "";
   const rawCategory = cleanString(parsed.data.category);
@@ -251,10 +251,10 @@ export function parseArticleImport(markdown: string): ArticleImportResult {
   if (!parsed.data.title) warnings.push("Frontmatter 缺少 title，已从一级标题推断。");
   if (!parsed.data.slug) warnings.push("Frontmatter 缺少 slug，已根据标题自动生成。");
   if (!parsed.data.summary) warnings.push("Frontmatter 缺少 summary，发布前建议补充摘要。");
-  if (!rawCategory) warnings.push(`Frontmatter 缺少 category，已归入“${categoryFallback(rawLocale)}”。`);
+  if (!rawCategory) warnings.push(`Frontmatter 缺少 category，已归入“${categoryFallback()}”。`);
   if (rawCategory && rawCategory !== normalizedCategory) warnings.push(`Frontmatter category 已从“${rawCategory}”归一为“${normalizedCategory}”。`);
   if (rawCategory && rawCategory === normalizedCategory && !isStandardArticleCategory(normalizedCategory, rawLocale)) {
-    warnings.push(`Frontmatter category “${normalizedCategory}”不在 ${rawLocale === "en" ? "English" : "中文"} 标准分类中，建议改为当前语言的 9 个主分类之一。`);
+    warnings.push(`Frontmatter category “${normalizedCategory}”不在中文标准分类中，建议改为当前语言的 9 个主分类之一。`);
   }
 
   return {

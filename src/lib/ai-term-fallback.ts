@@ -162,8 +162,7 @@ export const fallbackAiTermSummaries: AiTermSummary[] = Array.from({ length: FAL
 );
 
 /** 调试回退用的分类筛选项；真实页面优先读取数据库分类表。 */
-export const fallbackAiTermCategories = standardAiTermCategoryOptions("zh");
-export const fallbackAiTermCategoriesEn = standardAiTermCategoryOptions("en");
+export const fallbackAiTermCategories = standardAiTermCategoryOptions();
 
 /** 详情页回退数据：任意 mcp / mcp-N slug 都返回同一份 MCP 词条。 */
 export function buildFallbackAiTermDetail(locale: AiTermLocale, slug: string): AiTermDetail | null {
@@ -182,7 +181,7 @@ export function buildFallbackAiTermDetail(locale: AiTermLocale, slug: string): A
     seoTitle: "MCP 是什么？模型上下文协议的通俗解释",
     seoDescription: "MCP（Model Context Protocol）是连接 AI 应用与外部工具、数据源和工作流的开放协议。本文用小白能理解的方式解释 MCP 的作用、架构、使用场景和常见误解。",
     seoKeywords: ["MCP", "Model Context Protocol", "模型上下文协议", "AI Agent", "AI Coding", "工具调用", "AI 连接器"],
-    canonicalUrl: locale === "en" ? `/en/ai-terms/${slug}` : `/ai-terms/${slug}`,
+    canonicalUrl: `/ai-terms/${slug}`,
     robots: "index, follow",
     metadata: {
       openGraph: { title: "MCP 是什么？模型上下文协议的通俗解释", description: "用一篇词条理解 MCP 如何把 AI 应用、工具、数据源和工作流连接起来。", image: SHARE_IMAGE, image_alt: SHARE_IMAGE_ALT },
@@ -192,7 +191,7 @@ export function buildFallbackAiTermDetail(locale: AiTermLocale, slug: string): A
         name: "MCP",
         alternate_name: "Model Context Protocol, 模型上下文协议, MCP 协议",
         description: "MCP 是一种让 AI 应用以统一方式连接外部工具、数据源和工作流的开放协议。",
-        in_language: locale === "en" ? "en" : "zh-CN",
+        in_language: "zh-CN",
         publisher_name: "知之",
       },
     },

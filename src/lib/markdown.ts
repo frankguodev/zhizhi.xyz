@@ -43,12 +43,6 @@ const dedupHeadings: Record<Locale, { summary: string[]; beginnerNotes: string[]
     relations: ["相关概念"],
     references: ["参考资料"],
   },
-  en: {
-    summary: ["in one line", "one-line concept"],
-    beginnerNotes: ["for beginners", "plain explanation"],
-    relations: ["related concepts"],
-    references: ["references", "further reading"],
-  },
 };
 
 function normalizeHeading(value: string) {
@@ -129,8 +123,8 @@ type HastNode = {
   children?: HastNode[];
 };
 
-function enhanceArticleOverview(html: string, locale: Locale) {
-  const titlePattern = locale === "en" ? "(?:Article overview|Overview|At a glance)" : "文章一览";
+function enhanceArticleOverview(html: string) {
+  const titlePattern = "文章一览";
   const overviewPattern = new RegExp(`<h2\\b[^>]*>\\s*(${titlePattern})\\s*</h2>\\s*<ul>([\\s\\S]*?)</ul>`, "i");
   const match = html.match(overviewPattern);
 
@@ -140,7 +134,7 @@ function enhanceArticleOverview(html: string, locale: Locale) {
 
   const title = match[1];
   const listItems = match[2];
-  const kicker = locale === "en" ? "Reading map" : "阅读导图";
+  const kicker = "阅读导图";
 
   return html.replace(
     overviewPattern,
@@ -148,7 +142,7 @@ function enhanceArticleOverview(html: string, locale: Locale) {
   );
 }
 
-function enhanceOfficialResourceLinks(html: string, locale: Locale) {
+function enhanceOfficialResourceLinks(html: string) {
   const resourceParagraphPattern =
     /<p>([^<]*(?:官方资料|官方文档|资料入口|官方入口|Official resources|Official docs|Official documentation)[^<]*?)(<a\b[\s\S]*?<\/a>[\s\S]*?)<\/p>/gi;
   const linkPattern = /<a\b[\s\S]*?<\/a>/gi;
@@ -162,7 +156,7 @@ function enhanceOfficialResourceLinks(html: string, locale: Locale) {
     }
 
     const title = rawTitle.trim().replace(/[：:，,。.\s]+$/u, "");
-    const label = locale === "en" ? "Official resources" : "官方资料";
+    const label = "官方资料";
     const items = links.map((link) => `<li>${link}</li>`).join("");
 
     resourceBlocks.push(`<section class="article-official-resources" aria-label="${label}"><p class="article-official-resources-title">${title}</p><ul>${items}</ul></section>`);
@@ -195,7 +189,7 @@ function rehypeArticleExternalLinks() {
   };
 }
 
-async function markdownToHtml(markdown: string, locale: Locale) {
+async function markdownToHtml(markdown: string) {
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -205,7 +199,7 @@ async function markdownToHtml(markdown: string, locale: Locale) {
     .use(rehypeStringify)
     .process(markdown);
 
-  return enhanceOfficialResourceLinks(enhanceArticleOverview(String(file), locale), locale);
+  return enhanceOfficialResourceLinks(enhanceArticleOverview(String(file)));
 }
 
 function fallbackTitle(type: LayeredBlockType, locale: Locale) {
@@ -216,13 +210,6 @@ function fallbackTitle(type: LayeredBlockType, locale: Locale) {
       warning: "注意",
       advanced: "进阶内容",
       author: "作者判断",
-    },
-    en: {
-      detail: "Detailed explanation",
-      example: "Example",
-      warning: "Watch out",
-      advanced: "Advanced understanding",
-      author: "My experience",
     },
   };
 
@@ -246,7 +233,7 @@ export async function parseLayeredMarkdown(markdown: string, locale: Locale = "z
     blocks.push({
       id: `md-${index++}`,
       kind: "markdown",
-      html: await markdownToHtml(raw, locale),
+      html: await markdownToHtml(raw),
     });
   }
 
@@ -275,7 +262,7 @@ export async function parseLayeredMarkdown(markdown: string, locale: Locale = "z
       kind: "layer",
       type,
       title,
-      html: await markdownToHtml(inner.join("\n").trim(), locale),
+      html: await markdownToHtml(inner.join("\n").trim()),
     });
   }
 
@@ -283,7 +270,7 @@ export async function parseLayeredMarkdown(markdown: string, locale: Locale = "z
   return blocks;
 }
 
-function extractFableTitle(rawTitle: string | undefined, inner: string[], locale: Locale) {
+function extractFableTitle(rawTitle: string | undefined, inner: string[]) {
   if (rawTitle?.trim()) {
     return { title: rawTitle.trim(), content: inner };
   }
@@ -309,7 +296,7 @@ function extractFableTitle(rawTitle: string | undefined, inner: string[], locale
   }
 
   return {
-    title: locale === "en" ? "A Short Fable" : "寓言故事",
+    title: "寓言故事",
     content: inner,
   };
 }
@@ -340,14 +327,14 @@ export async function parseAiTermMarkdown(
     }
 
     if (!fable) {
-      const extracted = extractFableTitle(match[1], inner, locale);
+      const extracted = extractFableTitle(match[1], inner);
       const content = extracted.content.join("\n").trim();
 
       if (content) {
         fable = {
           id: "fable-0",
           title: extracted.title,
-          html: await markdownToHtml(content, locale),
+          html: await markdownToHtml(content),
         };
       }
     }
@@ -363,7 +350,7 @@ export async function parseAiTermMarkdown(
     const result = applyAiTermDedup(body, locale, dedup);
     body = result.body;
     if (result.referencesMarkdown) {
-      referencesHtml = await markdownToHtml(result.referencesMarkdown, locale);
+      referencesHtml = await markdownToHtml(result.referencesMarkdown);
     }
   }
 
@@ -374,7 +361,7 @@ export async function parseAiTermMarkdown(
   };
 }
 
-export function scanAiTermFable(markdown: string, locale: Locale = "zh"): AiTermFableScan {
+export function scanAiTermFable(markdown: string): AiTermFableScan {
   const lines = markdown.split(/\r?\n/);
 
   for (let cursor = 0; cursor < lines.length; cursor++) {
@@ -393,7 +380,7 @@ export function scanAiTermFable(markdown: string, locale: Locale = "zh"): AiTerm
     }
 
     const closed = cursor < lines.length;
-    const extracted = extractFableTitle(match[1], inner, locale);
+    const extracted = extractFableTitle(match[1], inner);
 
     return {
       exists: true,

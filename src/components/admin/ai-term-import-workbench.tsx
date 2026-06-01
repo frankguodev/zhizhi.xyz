@@ -422,7 +422,7 @@ export function AiTermImportWorkbench() {
                   <ArticleReader
                     blocks={preview.renderedBlocks}
                     defaultMode="full"
-                    locale={preview.aiTerm.locale === "en" ? "en" : "zh"}
+                    locale="zh"
                     supportsReadingMode={false}
                   />
                 </div>

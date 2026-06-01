@@ -16,7 +16,7 @@ import { listArticleOperationLogs, writeAdminArticleOperationLog } from "@/lib/a
 import { parseLayeredMarkdown } from "@/lib/markdown";
 
 const paramsSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   slug: z.string().min(1),
 });
 

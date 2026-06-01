@@ -30,7 +30,7 @@ const frontmatterSchema = z.object({
   term_zh: z.string().optional().catch(undefined),
   full_name: z.string().optional().catch(undefined),
   slug: z.string().optional().catch(undefined),
-  locale: z.enum(["zh", "en"]).catch("zh"),
+  locale: z.literal("zh").catch("zh"),
   translation_key: z.string().optional().catch(undefined),
   short_concept: z.string().min(1).catch(""),
   short_desc: z.string().min(1).catch(""),
@@ -230,9 +230,9 @@ export function parseAiTermImport(markdown: string): AiTermImportResult {
       }
 
       return {
-        name: data.locale === "en" ? standardCategory.nameEn : standardCategory.name,
+        name: standardCategory.name,
         slug: categorySlug,
-        description: data.locale === "en" ? standardCategory.descriptionEn : standardCategory.description,
+        description: standardCategory.description,
         sortOrder: standardCategory.sortOrder || index + 1,
         translationKey: standardCategory.slug,
       };

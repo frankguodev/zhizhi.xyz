@@ -8,7 +8,7 @@ import { parseArticleImport } from "@/lib/article-import";
 import { parseLayeredMarkdown } from "@/lib/markdown";
 
 const paramsSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   slug: z.string().min(1),
 });
 

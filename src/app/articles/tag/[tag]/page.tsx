@@ -40,7 +40,7 @@ export default async function ArticleTagPage({ params }: { params: Promise<{ tag
           </Link>
           <p className="mt-8 flex items-center gap-2 text-sm font-semibold text-accent">
             <Tag className="h-4 w-4" />
-            Tag
+            标签
           </p>
           <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl">{tagName}</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">这个标签下共有 {matchedArticles.length} 篇文章。</p>

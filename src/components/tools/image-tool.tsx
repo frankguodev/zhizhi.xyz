@@ -2,7 +2,7 @@
 
 import { Download, ImageIcon, Loader2, Maximize2, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Locale } from "@/lib/site";
+import type { ToolLocale as Locale } from "./tool-types";
 
 type ImageOutputFormat = "jpeg" | "png" | "webp";
 

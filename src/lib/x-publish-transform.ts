@@ -61,8 +61,7 @@ function absoluteUrl(url: string) {
 }
 
 function articleUrl(article: ArticleRecord) {
-  const path = article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
-  return `${siteConfig.url}${path}`;
+  return `${siteConfig.url}/articles/${article.slug}`;
 }
 
 function bodyFromMarkdown(markdown: string) {
@@ -411,7 +410,7 @@ export function buildXLongformDraft(article: ArticleRecord, markdown?: string): 
     article.title,
     lead,
     normalizedBody,
-    article.locale === "en" ? `Original article: ${url}` : `原文链接：${url}`,
+    `原文链接：${url}`,
     hashtags.length > 0 ? hashtags.join(" ") : "",
   ].filter((section) => section.trim().length > 0);
   const copyText = sections.join("\n\n").trim();

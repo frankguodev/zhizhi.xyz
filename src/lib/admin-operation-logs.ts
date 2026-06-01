@@ -18,14 +18,14 @@ export type AdminOperationAction =
 
 type ArticleLogTarget = {
   id: string | null;
-  locale: "zh" | "en";
+  locale: "zh";
   slug: string;
   title: string;
 };
 
 type AiTermLogTarget = {
   id: string | null;
-  locale: "zh" | "en";
+  locale: "zh";
   slug: string;
   term: string;
 };

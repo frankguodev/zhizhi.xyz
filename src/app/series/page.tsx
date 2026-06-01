@@ -9,5 +9,5 @@ export const metadata = buildSeriesIndexMetadata();
 export default async function SeriesPage() {
   const seriesList = await listPublicSeries("zh");
 
-  return <SeriesIndexPage locale="zh" seriesList={seriesList} />;
+  return <SeriesIndexPage seriesList={seriesList} />;
 }

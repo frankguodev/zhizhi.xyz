@@ -6,7 +6,7 @@ import { writeAdminAiTermOperationLog } from "@/lib/admin-operation-logs";
 import { requireAdminApi } from "@/lib/admin-auth";
 
 const paramsSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   slug: z.string().min(1),
 });
 
@@ -103,7 +103,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ lo
         nextVisibility: result.visibility,
       },
     });
-    const aiTermUrl = parsed.data.locale === "en" ? `/en/ai-terms/${parsed.data.slug}` : `/ai-terms/${parsed.data.slug}`;
+    const aiTermUrl = `/ai-terms/${parsed.data.slug}`;
 
     return json({ aiTerm, aiTermUrl });
   } catch (error) {

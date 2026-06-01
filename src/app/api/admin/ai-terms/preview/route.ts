@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   try {
     const result = parseAiTermImport(parsed.data.markdown);
     const quality = checkAiTermQuality(result.aiTerm);
-    const fable = scanAiTermFable(result.aiTerm.contentMd, result.aiTerm.locale);
+    const fable = scanAiTermFable(result.aiTerm.contentMd);
     const rendered = await parseAiTermMarkdown(result.aiTerm.contentMd, result.aiTerm.locale);
 
     return json({

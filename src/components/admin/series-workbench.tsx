@@ -41,10 +41,7 @@ const statusLabels: Record<SeriesStatus, string> = {
   published: "已发布",
   archived: "已归档",
 };
-const localeOptions = [
-  { value: "zh", label: "中文" },
-  { value: "en", label: "English" },
-] as const;
+const localeOptions = [{ value: "zh", label: "中文" }] as const;
 
 function getErrorMessage(data: unknown, fallback: string) {
   if (typeof data === "object" && data !== null && "error" in data && typeof data.error === "string") {
@@ -138,8 +135,8 @@ function formatDate(value: Date | string | number | null) {
   return Number.isNaN(date.getTime()) ? "未知时间" : date.toLocaleDateString("zh-CN");
 }
 
-function publicSeriesPath(item: Pick<AdminSeriesItem, "locale" | "slug">) {
-  return item.locale === "en" ? `/en/series/${item.slug}` : `/series/${item.slug}`;
+function publicSeriesPath(item: Pick<AdminSeriesItem, "slug">) {
+  return `/series/${item.slug}`;
 }
 
 export function SeriesWorkbench({

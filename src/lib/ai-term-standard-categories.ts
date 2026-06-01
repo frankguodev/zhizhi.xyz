@@ -121,9 +121,9 @@ export const STANDARD_AI_TERM_CATEGORIES = [
 
 export const STANDARD_AI_TERM_CATEGORY_BY_SLUG: ReadonlyMap<string, StandardAiTermCategory> = new Map(STANDARD_AI_TERM_CATEGORIES.map((category) => [category.slug, category]));
 
-export function standardAiTermCategoryOptions(locale: "zh" | "en") {
+export function standardAiTermCategoryOptions() {
   return STANDARD_AI_TERM_CATEGORIES.map((category) => ({
-    name: locale === "en" ? category.nameEn : category.name,
+    name: category.name,
     slug: category.slug,
   }));
 }

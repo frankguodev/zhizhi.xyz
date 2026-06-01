@@ -8,7 +8,7 @@ const paramsSchema = z.object({
 });
 
 const linkSchema = z.object({
-  locale: z.enum(["zh", "en"]),
+  locale: z.literal("zh"),
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(300).nullable(),
   url: z

@@ -42,7 +42,7 @@ export function checkAiTermQuality(aiTerm: SaveAiTermInput): AiTermQualityReport
   const twitter = nestedRecord(metadata, "twitter");
   const ogImage = nestedString(openGraph, "image");
   const twitterImage = nestedString(twitter, "image");
-  const fable = scanAiTermFable(aiTerm.contentMd, aiTerm.locale);
+  const fable = scanAiTermFable(aiTerm.contentMd);
 
   function add(issue: AiTermQualityIssue) {
     issues.push(issue);
