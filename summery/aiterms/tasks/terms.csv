@@ -1,0 +1,4 @@
+term,diagram,image,story,sync,notes
+RAG,true,true,false,false,"已生成 pro 和一图看懂，本地资料卡已回填"
+MCP,true,false,false,false,"已生成 pro，本地资料卡已回填；后续可补一图看懂"
+LoRA,true,true,false,false,"已生成 pro 和一图看懂，本地资料卡已回填"
