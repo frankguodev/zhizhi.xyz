@@ -12,6 +12,8 @@ import { getPublicArticles } from "@/lib/public-articles";
 import type { PublicArticleSort } from "@/lib/public-article-list";
 import { siteConfig, type Locale } from "@/lib/site";
 
+// locale 参数保留供数据层使用（查询 zh 文章）
+
 type ArticlesSearchParams = {
   q?: string | string[];
   category?: string | string[];
@@ -24,97 +26,35 @@ type ArticleIndexPageProps = {
 };
 
 const copy = {
-  zh: {
-    currentPath: "/articles",
-    action: "/articles",
-    eyebrow: "全部文章",
-    title: "知识文章索引",
-    description: "按分类和关键词整理的公开文章入口。你可以从一个问题、一类主题或一篇常读文章开始，继续进入完整阅读。",
-    readableArticles: "可读文章",
-    facetSummary(categoryCount: number) {
-      return `${categoryCount} 个分类可用于筛选，专题路线会继续串起更长的阅读路径。`;
-    },
-    search: "搜索",
-    searchPlaceholder: "输入标题、摘要或分类",
-    clearSearch: "清空搜索",
-    category: "分类",
-    allCategories: "全部分类",
-    sort: "排序",
-    sortPopular: "热门阅读",
-    sortLatest: "最新发布",
-    filter: "筛选",
-    all: "全部",
-    resultPrefix: "当前展示",
-    resultSuffix: "篇文章",
-    noArticlesTitle: "文章正在准备",
-    noArticlesDescription: "发布文章后，这里会自动形成可搜索、可筛选的文章索引。",
-    emptyTitle: "没有找到符合条件的文章",
-    emptyDescription: "换一个关键词，或者清空分类后再看一眼。",
-    loadedLabel: "已展示 {count} / {total} 篇，继续向下滚动加载更多",
-    loadMoreLabel: "加载更多",
-    completeLabel: "已经展示全部文章",
+  currentPath: "/articles",
+  action: "/articles",
+  eyebrow: "全部文章",
+  title: "知识文章索引",
+  description: "按分类和关键词整理的公开文章入口。你可以从一个问题、一类主题或一篇常读文章开始，继续进入完整阅读。",
+  readableArticles: "可读文章",
+  facetSummary(categoryCount: number) {
+    return `${categoryCount} 个分类可用于筛选，专题路线会继续串起更长的阅读路径。`;
   },
-  en: {
-    currentPath: "/en/articles",
-    action: "/en/articles",
-    eyebrow: "All articles",
-    title: "English article index",
-    description: "A public article index organized by categories and keywords. Start from a question, a theme, or a frequently read article, then move into full reading.",
-    readableArticles: "Readable articles",
-    facetSummary(categoryCount: number) {
-      return `${categoryCount} categories are available for filtering, while series routes connect longer reading paths.`;
-    },
-    search: "Search",
-    searchPlaceholder: "Search title, summary, or category",
-    clearSearch: "Clear search",
-    category: "Category",
-    allCategories: "All categories",
-    sort: "Sort",
-    sortPopular: "Popular",
-    sortLatest: "Latest",
-    filter: "Filter",
-    all: "All",
-    resultPrefix: "Showing",
-    resultSuffix: "articles",
-    noArticlesTitle: "English articles are in preparation",
-    noArticlesDescription: "Published articles will automatically become searchable and filterable here.",
-    emptyTitle: "No matching articles found",
-    emptyDescription: "Try another keyword, or clear the category filter to broaden the result set.",
-    loadedLabel: "Showing {count} / {total}. Keep scrolling to load more.",
-    loadMoreLabel: "Load more",
-    completeLabel: "All articles are visible.",
-  },
-} satisfies Record<
-  Locale,
-  {
-    currentPath: string;
-    action: string;
-    eyebrow: string;
-    title: string;
-    description: string;
-    readableArticles: string;
-    facetSummary: (categoryCount: number) => string;
-    search: string;
-    searchPlaceholder: string;
-    clearSearch: string;
-    category: string;
-    allCategories: string;
-    sort: string;
-    sortPopular: string;
-    sortLatest: string;
-    filter: string;
-    all: string;
-    resultPrefix: string;
-    resultSuffix: string;
-    noArticlesTitle: string;
-    noArticlesDescription: string;
-    emptyTitle: string;
-    emptyDescription: string;
-    loadedLabel: string;
-    loadMoreLabel: string;
-    completeLabel: string;
-  }
->;
+  search: "搜索",
+  searchPlaceholder: "输入标题、摘要或分类",
+  clearSearch: "清空搜索",
+  category: "分类",
+  allCategories: "全部分类",
+  sort: "排序",
+  sortPopular: "热门阅读",
+  sortLatest: "最新发布",
+  filter: "筛选",
+  all: "全部",
+  resultPrefix: "当前展示",
+  resultSuffix: "篇文章",
+  noArticlesTitle: "文章正在准备",
+  noArticlesDescription: "发布文章后，这里会自动形成可搜索、可筛选的文章索引。",
+  emptyTitle: "没有找到符合条件的文章",
+  emptyDescription: "换一个关键词，或者清空分类后再看一眼。",
+  loadedLabel: "已展示 {count} / {total} 篇，继续向下滚动加载更多",
+  loadMoreLabel: "加载更多",
+  completeLabel: "已经展示全部文章",
+};
 
 function firstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -142,21 +82,19 @@ function compareArticles(sort: PublicArticleSort) {
   };
 }
 
-function buildItemListJsonLd(locale: Locale, articles: ArticleRecord[]) {
-  const baseUrl = locale === "en" ? `${siteConfig.url}/en/articles` : `${siteConfig.url}/articles`;
-
+function buildItemListJsonLd(articles: ArticleRecord[]) {
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: locale === "en" ? "Articles" : "文章",
-    url: baseUrl,
-    inLanguage: locale === "en" ? "en" : "zh-CN",
+    name: "文章",
+    url: `${siteConfig.url}/articles`,
+    inLanguage: "zh-CN",
     mainEntity: {
       "@type": "ItemList",
       itemListElement: articles.slice(0, 20).map((article, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: `${siteConfig.url}${article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`}`,
+        url: `${siteConfig.url}/articles/${article.slug}`,
         name: article.title,
       })),
     },
@@ -164,7 +102,7 @@ function buildItemListJsonLd(locale: Locale, articles: ArticleRecord[]) {
 }
 
 export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPageProps) {
-  const pageCopy = copy[locale];
+  const pageCopy = copy;
   const articles = await getPublicArticles(locale);
   const query = firstParam(searchParams.q).trim().slice(0, 80);
   const rawSelectedCategory = firstParam(searchParams.category).trim().slice(0, 80);
@@ -190,11 +128,11 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
     { label: pageCopy.sortLatest, value: "latest" },
   ];
   const noArticles = articles.length === 0;
-  const listJsonLd = buildItemListJsonLd(locale, filteredArticles);
+  const listJsonLd = buildItemListJsonLd(filteredArticles);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader locale={locale} currentPath={pageCopy.currentPath} />
+      <SiteHeader currentPath={pageCopy.currentPath} />
 
       <main className="flex-1 bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }} />
@@ -294,7 +232,7 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
           </div>
         </section>
       </main>
-      <SiteFooter locale={locale} />
+      <SiteFooter />
     </div>
   );
 }

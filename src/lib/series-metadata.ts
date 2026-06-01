@@ -1,29 +1,10 @@
 import type { Metadata } from "next";
 import type { PublicSeriesDetail } from "@/lib/series";
-import { siteConfig, type Locale } from "@/lib/site";
-
-const indexCopy = {
-  zh: {
-    title: "专题",
-    description: "按主题组织的知识路线，把零散文章串成可持续学习的路径。",
-    path: "/series",
-    ogLocale: "zh_CN",
-  },
-  en: {
-    title: "Series",
-    description: "Topic routes in English, mapped as structured learning paths.",
-    path: "/en/series",
-    ogLocale: "en_US",
-  },
-} satisfies Record<Locale, { title: string; description: string; path: string; ogLocale: string }>;
+import { siteConfig } from "@/lib/site";
 
 function cleanString(value: string | null | undefined) {
   const normalized = value?.trim();
   return normalized || undefined;
-}
-
-function seriesPath(locale: Locale, slug: string) {
-  return locale === "en" ? `/en/series/${slug}` : `/series/${slug}`;
 }
 
 function imageMetadata(url: string | null | undefined) {
@@ -36,37 +17,31 @@ function imageMetadata(url: string | null | undefined) {
   return [{ url: normalizedUrl }];
 }
 
-export function buildSeriesIndexMetadata(locale: Locale): Metadata {
-  const copy = indexCopy[locale];
-
+export function buildSeriesIndexMetadata(): Metadata {
   return {
-    title: copy.title,
-    description: copy.description,
+    title: "专题",
+    description: "按主题组织的知识路线，把零散文章串成可持续学习的路径。",
     alternates: {
-      canonical: copy.path,
-      languages: {
-        "zh-CN": "/series",
-        en: "/en/series",
-      },
+      canonical: "/series",
     },
     openGraph: {
-      title: copy.title,
-      description: copy.description,
-      url: copy.path,
+      title: "专题",
+      description: "按主题组织的知识路线，把零散文章串成可持续学习的路径。",
+      url: "/series",
       siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
-      locale: copy.ogLocale,
+      locale: "zh_CN",
       type: "website",
     },
     twitter: {
       card: "summary",
-      title: copy.title,
-      description: copy.description,
+      title: "专题",
+      description: "按主题组织的知识路线，把零散文章串成可持续学习的路径。",
     },
   };
 }
 
-export function buildSeriesDetailMetadata(item: PublicSeriesDetail, locale: Locale): Metadata {
-  const canonical = seriesPath(locale, item.slug);
+export function buildSeriesDetailMetadata(item: PublicSeriesDetail): Metadata {
+  const canonical = `/series/${item.slug}`;
   const images = imageMetadata(item.coverImage);
   const indexed = item.articleCount > 0;
 
@@ -82,7 +57,7 @@ export function buildSeriesDetailMetadata(item: PublicSeriesDetail, locale: Loca
       description: item.description,
       url: canonical,
       siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
-      locale: locale === "en" ? "en_US" : "zh_CN",
+      locale: "zh_CN",
       type: "website",
       images,
     },

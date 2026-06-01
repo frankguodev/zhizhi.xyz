@@ -30,48 +30,20 @@ type ArticleDetailPageProps = {
 };
 
 const copy = {
-  zh: {
-    currentPathPrefix: "/articles",
-    articlesHref: "/articles",
-    back: "返回文章列表",
-    published: "发布",
-    updated: "更新",
-    relatedEyebrow: "延伸链接",
-    relatedTitle: "文章之外的延伸入口",
-    relatedDescription: "这些链接由后台配置在文章底部位置，适合放资料来源、项目入口或进一步阅读。",
-    previousArticle: "上一篇",
-    nextArticle: "下一篇",
-  },
-  en: {
-    currentPathPrefix: "/en/articles",
-    articlesHref: "/en/articles",
-    back: "Back to articles",
-    published: "Published",
-    updated: "Updated",
-    relatedEyebrow: "Related Links",
-    relatedTitle: "Further reading and references",
-    relatedDescription: "These links are configured for the article footer and can point to sources, projects, or next reads.",
-    previousArticle: "Previous",
-    nextArticle: "Next",
-  },
-} satisfies Record<
-  Locale,
-  {
-    currentPathPrefix: string;
-    articlesHref: string;
-    back: string;
-    published: string;
-    updated: string;
-    relatedEyebrow: string;
-    relatedTitle: string;
-    relatedDescription: string;
-    previousArticle: string;
-    nextArticle: string;
-  }
->;
+  currentPathPrefix: "/articles",
+  articlesHref: "/articles",
+  back: "返回文章列表",
+  published: "发布",
+  updated: "更新",
+  relatedEyebrow: "延伸链接",
+  relatedTitle: "文章之外的延伸入口",
+  relatedDescription: "这些链接由后台配置在文章底部位置，适合放资料来源、项目入口或进一步阅读。",
+  previousArticle: "上一篇",
+  nextArticle: "下一篇",
+};
 
-function articleHref(article: Pick<PublicArticleNavigationItem, "locale" | "slug">) {
-  return article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
+function articleHref(article: Pick<PublicArticleNavigationItem, "slug">) {
+  return `/articles/${article.slug}`;
 }
 
 function ArticleAdjacentLink({
@@ -97,15 +69,15 @@ function ArticleAdjacentLink({
   );
 }
 
-function ArticleAdjacentNavigation({ navigation, locale }: Pick<ArticleDetailPageProps, "navigation" | "locale">) {
-  const pageCopy = copy[locale];
+function ArticleAdjacentNavigation({ navigation }: Pick<ArticleDetailPageProps, "navigation">) {
+  const pageCopy = copy;
 
   if (!navigation.previous && !navigation.next) {
     return null;
   }
 
   return (
-    <nav className="mt-6 grid gap-4 md:grid-cols-2" aria-label={locale === "en" ? "Adjacent articles" : "相邻文章"}>
+    <nav className="mt-6 grid gap-4 md:grid-cols-2" aria-label="相邻文章">
       {navigation.previous ? <ArticleAdjacentLink item={navigation.previous} label={pageCopy.previousArticle} direction="previous" /> : <div className="hidden md:block" aria-hidden="true" />}
       {navigation.next ? <ArticleAdjacentLink item={navigation.next} label={pageCopy.nextArticle} direction="next" /> : <div className="hidden md:block" aria-hidden="true" />}
     </nav>
@@ -113,7 +85,7 @@ function ArticleAdjacentNavigation({ navigation, locale }: Pick<ArticleDetailPag
 }
 
 export function ArticleDetailPage({ article, blocks, tocItems, navigation, externalLinks, locale, origin }: ArticleDetailPageProps) {
-  const pageCopy = copy[locale];
+  const pageCopy = copy;
   const currentPath = `${pageCopy.currentPathPrefix}/${article.slug}`;
   const shareUrl = absoluteUrl(currentPath, origin);
   const category = normalizeArticleCategory(article.category, locale);
@@ -121,7 +93,7 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader locale={locale} currentPath={currentPath} />
+      <SiteHeader currentPath={currentPath} />
       <main className="flex-1 bg-background">
         <article>
           <header className="site-grid border-b border-line">
@@ -158,7 +130,7 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:py-12">
             <div className={tocItems.length > 0 ? "grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" : "mx-auto max-w-6xl"}>
               <div className="min-w-0">
-                <ArticleToc items={tocItems} locale={locale} variant="mobile" />
+                <ArticleToc items={tocItems} variant="mobile" />
                 <div className="article-reading-surface article-reading-surface-no-rail min-w-0 rounded-md border border-line px-4 py-6 sm:px-5 md:px-10 md:py-10">
                   <div className="min-w-0">
                     <ArticleReader blocks={blocks} defaultMode={article.defaultReadingMode} locale={locale} supportsReadingMode={article.supportsReadingMode} />
@@ -166,7 +138,7 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
                     <AnonymousFeedbackForm locale={locale} pageUrl={currentPath} articleSlug={article.slug} articleTitle={article.title} />
                   </div>
                 </div>
-                <ArticleAdjacentNavigation navigation={navigation} locale={locale} />
+                <ArticleAdjacentNavigation navigation={navigation} />
                 {externalLinks.length > 0 ? (
                   <section className="mt-10 border-t border-line pt-8">
                     <p className="eyebrow text-accent">{pageCopy.relatedEyebrow}</p>
@@ -178,13 +150,13 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
                   </section>
                 ) : null}
               </div>
-              <ArticleToc items={tocItems} locale={locale} variant="desktop" />
+              <ArticleToc items={tocItems} variant="desktop" />
             </div>
           </div>
         </article>
       </main>
-      <BackToTopButton locale={locale} />
-      <SiteFooter locale={locale} />
+      <BackToTopButton />
+      <SiteFooter />
     </div>
   );
 }

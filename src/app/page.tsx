@@ -10,10 +10,6 @@ export const metadata: Metadata = {
   description,
   alternates: {
     canonical: "/",
-    languages: {
-      "zh-CN": "/",
-      en: "/en",
-    },
   },
   openGraph: {
     title: siteConfig.name,

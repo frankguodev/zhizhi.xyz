@@ -4,7 +4,7 @@ import { buildSeriesIndexMetadata } from "@/lib/series-metadata";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = buildSeriesIndexMetadata("zh");
+export const metadata = buildSeriesIndexMetadata();
 
 export default async function SeriesPage() {
   const seriesList = await listPublicSeries("zh");

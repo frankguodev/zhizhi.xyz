@@ -2,24 +2,21 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SiteLogoMark } from "@/components/layout/site-logo-mark";
 import { SiteMobileMenu } from "@/components/layout/site-mobile-menu";
-import { localePath } from "@/lib/i18n";
-import { siteConfig, type Locale } from "@/lib/site";
-import { t } from "@/lib/translations";
+import { siteConfig } from "@/lib/site";
 
 type SiteHeaderProps = {
-  locale?: Locale;
   currentPath?: string;
 };
 
-export async function SiteHeader({ locale = "zh", currentPath = "/" }: SiteHeaderProps = {}) {
-  const brandName = locale === "en" ? siteConfig.nameEn : siteConfig.name;
-  const navItems = [
-    { href: localePath(locale, "/articles"), label: t(locale, "nav.articles") },
-    { href: localePath(locale, "/series"), label: t(locale, "nav.series") },
-    { href: localePath(locale, "/ai-terms"), label: t(locale, "nav.aiTerms") },
-    { href: localePath(locale, "/tools"), label: t(locale, "nav.tools") },
-    { href: localePath(locale, "/about"), label: t(locale, "nav.about") },
-  ];
+const navItems = [
+  { href: "/articles", label: "文章" },
+  { href: "/series", label: "专题" },
+  { href: "/ai-terms", label: "词条" },
+  { href: "/tools", label: "工具" },
+  { href: "/about", label: "关于" },
+];
+
+export async function SiteHeader({ currentPath = "/" }: SiteHeaderProps = {}) {
   const normalizedPath = normalizePath(currentPath);
   const mobileNavItems = navItems.map((item) => ({
     ...item,
@@ -31,12 +28,12 @@ export async function SiteHeader({ locale = "zh", currentPath = "/" }: SiteHeade
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-10">
           <Link
-            href={localePath(locale)}
+            href="/"
             className="group flex shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <SiteLogoMark className="h-8 w-8 shrink-0 shadow-sm transition group-hover:opacity-90 sm:h-9 sm:w-9" />
             <span className="flex items-baseline leading-none">
-              <span className="text-lg font-semibold text-foreground sm:text-xl">{brandName}</span>
+              <span className="text-lg font-semibold text-foreground sm:text-xl">{siteConfig.name}</span>
             </span>
           </Link>
           <nav className="hidden items-center gap-6 text-base font-semibold text-foreground/88 md:flex">
@@ -50,9 +47,9 @@ export async function SiteHeader({ locale = "zh", currentPath = "/" }: SiteHeade
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
           <ThemeToggle />
           <SiteMobileMenu
-            menuLabel={locale === "en" ? "Open navigation menu" : "打开导航菜单"}
-            navLabel={locale === "en" ? "Navigation" : "菜单导航"}
-            closeLabel={locale === "en" ? "Close navigation menu" : "关闭导航菜单"}
+            menuLabel="打开导航菜单"
+            navLabel="菜单导航"
+            closeLabel="关闭导航菜单"
             items={mobileNavItems}
           />
         </div>

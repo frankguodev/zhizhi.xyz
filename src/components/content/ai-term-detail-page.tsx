@@ -41,94 +41,42 @@ type AiTermDetailPageProps = {
 const beginnerNoteKeys = ["plain_explanation", "analogy", "why_it_matters", "common_misconception"] as const;
 
 const copy = {
-  zh: {
-    aiAssisted: "AI 辅助整理",
-    currentPathPrefix: "/ai-terms",
-    diagram: "词条解释信息图",
-    fable: "寓言故事",
-    home: "首页",
-    humanReviewed: "人工审核",
-    quick: "快速理解",
-    references: "参考资料",
-    related: "相关概念",
-    source: "来源与校验",
-    summary: "一句话理解",
-    terms: "AI 词条",
-    updated: "最近校验",
-    verifiedFallback: "最近更新",
-    notes: {
-      plain_explanation: "普通解释",
-      analogy: "类比理解",
-      why_it_matters: "为什么重要",
-      common_misconception: "常见误区",
-    },
-    relationTypes: {
-      related: "相关",
-      similar: "相似",
-      opposite: "对照",
-      upstream: "前置",
-      downstream: "延伸",
-      ecosystem: "生态",
-    },
-  },
-  en: {
-    aiAssisted: "AI-assisted",
-    currentPathPrefix: "/en/ai-terms",
-    diagram: "Term explanation diagram",
-    fable: "Fable",
-    home: "Home",
-    humanReviewed: "Human reviewed",
-    quick: "Quick understanding",
-    references: "References",
-    related: "Related concepts",
-    source: "Source and review",
-    summary: "In one line",
-    terms: "AI Terms",
-    updated: "Last verified",
-    verifiedFallback: "Recently updated",
-    notes: {
-      plain_explanation: "Plain explanation",
-      analogy: "Analogy",
-      why_it_matters: "Why it matters",
-      common_misconception: "Common misconception",
-    },
-    relationTypes: {
-      related: "Related",
-      similar: "Similar",
-      opposite: "Opposite",
-      upstream: "Upstream",
-      downstream: "Downstream",
-      ecosystem: "Ecosystem",
-    },
-  },
-} satisfies Record<
-  Locale,
-  {
-    aiAssisted: string;
-    currentPathPrefix: string;
-    diagram: string;
-    fable: string;
-    home: string;
-    humanReviewed: string;
-    notes: Record<string, string>;
-    quick: string;
-    references: string;
-    related: string;
-    relationTypes: Record<AiTermRelationSummary["relationType"], string>;
-    source: string;
-    summary: string;
-    terms: string;
-    updated: string;
-    verifiedFallback: string;
-  }
->;
+  aiAssisted: "AI 辅助整理",
+  currentPathPrefix: "/ai-terms",
+  diagram: "词条解释信息图",
+  fable: "寓言故事",
+  home: "首页",
+  humanReviewed: "人工审核",
+  quick: "快速理解",
+  references: "参考资料",
+  related: "相关概念",
+  source: "来源与校验",
+  summary: "一句话理解",
+  terms: "AI 词条",
+  updated: "最近校验",
+  verifiedFallback: "最近更新",
+  notes: {
+    plain_explanation: "普通解释",
+    analogy: "类比理解",
+    why_it_matters: "为什么重要",
+    common_misconception: "常见误区",
+  } as Record<string, string>,
+  relationTypes: {
+    related: "相关",
+    similar: "相似",
+    opposite: "对照",
+    upstream: "前置",
+    downstream: "延伸",
+    ecosystem: "生态",
+  } as Record<AiTermRelationSummary["relationType"], string>,
+};
 
 function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
-function beginnerNoteItems(beginnerNotes: unknown, locale: Locale) {
-  const labels = copy[locale].notes;
+function beginnerNoteItems(beginnerNotes: unknown) {
+  const labels = copy.notes;
   const notes = asRecord(beginnerNotes);
 
   return beginnerNoteKeys
@@ -139,26 +87,26 @@ function beginnerNoteItems(beginnerNotes: unknown, locale: Locale) {
     .filter((item): item is { key: (typeof beginnerNoteKeys)[number]; label: string; value: string } => Boolean(item));
 }
 
-export function aiTermHasBeginnerNotes(beginnerNotes: unknown, locale: Locale) {
-  return beginnerNoteItems(beginnerNotes, locale).length > 0;
+export function aiTermHasBeginnerNotes(beginnerNotes: unknown) {
+  return beginnerNoteItems(beginnerNotes).length > 0;
 }
 
-function relationHref(locale: Locale, relation: AiTermRelationSummary) {
-  return locale === "en" ? `/en/ai-terms/${relation.slug}` : `/ai-terms/${relation.slug}`;
+function relationHref(relation: AiTermRelationSummary) {
+  return `/ai-terms/${relation.slug}`;
 }
 
 export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }: AiTermDetailPageProps) {
-  const pageCopy = copy[locale];
+  const pageCopy = copy;
   const currentPath = `${pageCopy.currentPathPrefix}/${term.slug}`;
   const listHref = pageCopy.currentPathPrefix;
-  const homeHref = locale === "en" ? "/en" : "/";
+  const homeHref = "/";
   const lead = term.shortDesc || term.shortConcept;
   const notes = asRecord(term.beginnerNotes);
   const analogy = typeof notes.analogy === "string" ? notes.analogy.trim() : "";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader locale={locale} currentPath={currentPath} />
+      <SiteHeader currentPath={currentPath} />
       <main className="flex-1 bg-background">
         <article>
           <header className="site-grid border-b border-line">
@@ -190,7 +138,7 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
               {term.diagramImage ? (
                 <section aria-labelledby="ai-term-diagram">
                   <h2 id="ai-term-diagram" className="ai-term-section-heading scroll-mt-24 text-2xl font-bold leading-tight text-foreground">
-                    {locale === "en" ? "At a glance" : "一图看懂"}
+                    一图看懂
                   </h2>
                   <figure className="mt-4 overflow-hidden rounded-md border border-line bg-paper/82 shadow-[var(--shadow-quiet)]" aria-label={pageCopy.diagram}>
                     <div className="aspect-video bg-background/45 p-3 sm:p-4">
@@ -230,7 +178,7 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
                     {term.relations.map((relation) => (
                       <li key={`${relation.relationType}:${relation.slug}`} className="border-b border-line/70">
                         <Link
-                          href={relationHref(locale, relation)}
+                          href={relationHref(relation)}
                           className="group block min-w-0 rounded-md py-3.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
                         >
                           <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
@@ -259,15 +207,15 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
 
               <aside className="hidden lg:block">
                 <div className="lg:sticky lg:top-24">
-                  <AiTermToc locale={locale} />
+                  <AiTermToc />
                 </div>
               </aside>
             </div>
           </div>
         </article>
       </main>
-      <BackToTopButton locale={locale} />
-      <SiteFooter locale={locale} />
+      <BackToTopButton />
+      <SiteFooter />
     </div>
   );
 }

@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Locale } from "@/lib/site";
-
 type TocHeading = {
   id: string;
   text: string;
 };
 
-export function AiTermToc({ locale }: { locale: Locale }) {
+export function AiTermToc() {
   const [headings, setHeadings] = useState<TocHeading[]>([]);
   const [activeId, setActiveId] = useState<string>("");
 
@@ -60,7 +58,7 @@ export function AiTermToc({ locale }: { locale: Locale }) {
     return null;
   }
 
-  const label = locale === "en" ? "On this page" : "目录";
+  const label = "目录";
 
   return (
     <nav aria-label={label} className="text-sm">

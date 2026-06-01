@@ -4,183 +4,86 @@ import { ExternalLinkList } from "@/components/content/external-link-list";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { PublicHomeArticle, PublicHomePayload } from "@/lib/public-home";
-import { siteConfig, type Locale } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
 type HomePageProps = {
   payload: PublicHomePayload;
 };
 
 const copy = {
-  zh: {
-    currentPath: "/",
-    articlesHref: "/articles",
-    seriesHref: "/series",
-    heroTitle: "免费分享",
-    heroDescription: "分享普通人也能复制的实战经验和真实成长路径",
-    startReading: "开始阅读",
-    topicRoutes: "专题路线",
-    knowledgeBase: "个人知识库",
-    liveUpdates: "持续更新",
-    contentOverview: "内容概览",
-    publicArticles: "公开文章",
-    seriesRoutes: "专题路线",
-    longTermThemes: "长期主题",
-    focusAreas: "关注方向",
-    focusDescription: "长期沉淀的主题",
-    latestEyebrow: "最新发布",
-    popularEyebrow: "热门文章",
-    viewAllArticles: "查看全部文章",
-    readingMinutes(minutes: number) {
-      return `${minutes} 分钟`;
-    },
-    viewCount(count: string) {
-      return `累计 ${count} 次阅读`;
-    },
-    published(date: string) {
-      return `发布 ${date}`;
-    },
-    updated(date: string) {
-      return `更新 ${date}`;
-    },
-    read: "阅读",
-    articlesPreparingTitle: "文章正在准备",
-    articlesPreparingDescription: "发布文章后，首页会自动展示真实内容入口。",
-    seriesEyebrow: "精选专题",
-    seriesDescription: "把相关文章连成一条路。",
-    viewAllSeries: "查看全部专题",
-    seriesEmptyTitle: "专题正在整理",
-    seriesEmptyDescription: "相关主题积累稳定后，首页会展示连续阅读路线。",
-    seriesArticleCount(count: number) {
-      return `${count} 篇文章`;
-    },
-    externalEyebrow: "外部线索",
-    externalTitle: "继续沿着外部线索探索",
-    externalDescription: "一些适合继续追踪的资料、项目和公开入口，会放在这里集中收纳。",
+  currentPath: "/",
+  articlesHref: "/articles",
+  seriesHref: "/series",
+  heroTitle: "免费分享",
+  heroDescription: "分享普通人也能复制的实战经验和真实成长路径",
+  startReading: "开始阅读",
+  topicRoutes: "专题路线",
+  knowledgeBase: "个人知识库",
+  liveUpdates: "持续更新",
+  contentOverview: "内容概览",
+  publicArticles: "公开文章",
+  seriesRoutes: "专题路线",
+  longTermThemes: "长期主题",
+  focusAreas: "关注方向",
+  focusDescription: "长期沉淀的主题",
+  latestEyebrow: "最新发布",
+  popularEyebrow: "热门文章",
+  viewAllArticles: "查看全部文章",
+  readingMinutes(minutes: number) {
+    return `${minutes} 分钟`;
   },
-  en: {
-    currentPath: "/en",
-    articlesHref: "/en/articles",
-    seriesHref: "/en/series",
-    heroTitle: "Guest. This may save you a few detours.",
-    heroDescription: "Sharing practical experience ordinary people can replicate, along with honest paths of real growth.",
-    startReading: "Start reading",
-    topicRoutes: "Topic routes",
-    knowledgeBase: "Personal knowledge base",
-    liveUpdates: "Live updates",
-    contentOverview: "Content overview",
-    publicArticles: "Public articles",
-    seriesRoutes: "Topic routes",
-    longTermThemes: "Long-term themes",
-    focusAreas: "Focus areas",
-    focusDescription: "Themes built over time.",
-    latestEyebrow: "Latest",
-    popularEyebrow: "Popular articles",
-    viewAllArticles: "View all articles",
-    readingMinutes(minutes: number) {
-      return `${minutes} min`;
-    },
-    viewCount(count: string) {
-      return `${count} views`;
-    },
-    published(date: string) {
-      return `Published ${date}`;
-    },
-    updated(date: string) {
-      return `Updated ${date}`;
-    },
-    read: "Read",
-    articlesPreparingTitle: "English articles are in preparation",
-    articlesPreparingDescription: "Published English articles will appear here automatically.",
-    seriesEyebrow: "Featured series",
-    seriesDescription: "Turn related articles into a route.",
-    viewAllSeries: "View all series",
-    seriesEmptyTitle: "English series are being assembled",
-    seriesEmptyDescription: "Once related English articles are connected into routes, they will appear here.",
-    seriesArticleCount(count: number) {
-      return `${count} articles`;
-    },
-    externalEyebrow: "Elsewhere",
-    externalTitle: "Continue from external signals",
-    externalDescription: "A small set of useful resources, projects, and public channels kept close to the site.",
+  viewCount(count: string) {
+    return `累计 ${count} 次阅读`;
   },
-} satisfies Record<
-  Locale,
-  {
-    currentPath: string;
-    articlesHref: string;
-    seriesHref: string;
-    heroTitle: string;
-    heroDescription: string;
-    startReading: string;
-    topicRoutes: string;
-    knowledgeBase: string;
-    liveUpdates: string;
-    contentOverview: string;
-    publicArticles: string;
-    seriesRoutes: string;
-    longTermThemes: string;
-    focusAreas: string;
-    focusDescription: string;
-    latestEyebrow: string;
-    popularEyebrow: string;
-    viewAllArticles: string;
-    readingMinutes: (minutes: number) => string;
-    viewCount: (count: string) => string;
-    published: (date: string) => string;
-    updated: (date: string) => string;
-    read: string;
-    articlesPreparingTitle: string;
-    articlesPreparingDescription: string;
-    seriesEyebrow: string;
-    seriesDescription: string;
-    viewAllSeries: string;
-    seriesEmptyTitle: string;
-    seriesEmptyDescription: string;
-    seriesArticleCount: (count: number) => string;
-    externalEyebrow: string;
-    externalTitle: string;
-    externalDescription: string;
-  }
->;
+  published(date: string) {
+    return `发布 ${date}`;
+  },
+  updated(date: string) {
+    return `更新 ${date}`;
+  },
+  read: "阅读",
+  articlesPreparingTitle: "文章正在准备",
+  articlesPreparingDescription: "发布文章后，首页会自动展示真实内容入口。",
+  seriesEyebrow: "精选专题",
+  seriesDescription: "把相关文章连成一条路。",
+  viewAllSeries: "查看全部专题",
+  seriesEmptyTitle: "专题正在整理",
+  seriesEmptyDescription: "相关主题积累稳定后，首页会展示连续阅读路线。",
+  seriesArticleCount(count: number) {
+    return `${count} 篇文章`;
+  },
+  externalEyebrow: "外部线索",
+  externalTitle: "继续沿着外部线索探索",
+  externalDescription: "一些适合继续追踪的资料、项目和公开入口，会放在这里集中收纳。",
+};
 
-function formatViewCount(count: number | undefined, locale: Locale) {
+function formatViewCount(count: number | undefined) {
   const safeCount = Math.max(0, count ?? 0);
 
-  if (locale === "zh") {
-    if (safeCount >= 10000) {
-      return `${(safeCount / 10000).toFixed(1)}w`;
-    }
-
-    return safeCount.toLocaleString("zh-CN");
+  if (safeCount >= 10000) {
+    return `${(safeCount / 10000).toFixed(1)}w`;
   }
 
-  if (safeCount >= 1000) {
-    return `${(safeCount / 1000).toFixed(1)}k`;
-  }
-
-  return safeCount.toLocaleString("en-US");
+  return safeCount.toLocaleString("zh-CN");
 }
 
 function articleHref(article: PublicHomeArticle) {
-  return article.locale === "en" ? `/en/articles/${article.slug}` : `/articles/${article.slug}`;
+  return `/articles/${article.slug}`;
 }
 
-function seriesHref(locale: Locale, slug: string) {
-  return locale === "en" ? `/en/series/${slug}` : `/series/${slug}`;
+function seriesHref(slug: string) {
+  return `/series/${slug}`;
 }
 
-function buildHomeJsonLd(locale: Locale) {
-  const isEnglish = locale === "en";
-  const url = isEnglish ? `${siteConfig.url}/en` : siteConfig.url;
-
+function buildHomeJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: isEnglish ? siteConfig.nameEn : siteConfig.name,
-    alternateName: isEnglish ? siteConfig.name : siteConfig.nameEn,
-    url,
-    inLanguage: isEnglish ? "en" : "zh-CN",
-    description: isEnglish ? siteConfig.description.en : siteConfig.description.zh,
+    name: siteConfig.name,
+    alternateName: siteConfig.nameEn,
+    url: siteConfig.url,
+    inLanguage: "zh-CN",
+    description: siteConfig.description,
     publisher: {
       "@type": "Person",
       name: siteConfig.name,
@@ -190,12 +93,12 @@ function buildHomeJsonLd(locale: Locale) {
 
 export function HomePage({ payload }: HomePageProps) {
   const locale = payload.locale;
-  const pageCopy = copy[locale];
-  const homeJsonLd = buildHomeJsonLd(locale);
+  const pageCopy = copy;
+  const homeJsonLd = buildHomeJsonLd();
 
   return (
     <>
-      <SiteHeader locale={locale} currentPath={pageCopy.currentPath} />
+      <SiteHeader currentPath={pageCopy.currentPath} />
 
       <main className="min-h-screen bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }} />
@@ -326,7 +229,7 @@ export function HomePage({ payload }: HomePageProps) {
                           </span>
                           <span className="inline-flex items-center gap-1.5">
                             <Radar className="h-4 w-4 text-accent" />
-                            {pageCopy.viewCount(formatViewCount(article.viewCount, locale))}
+                            {pageCopy.viewCount(formatViewCount(article.viewCount))}
                           </span>
                           <span className="inline-flex items-center gap-1">
                             <CalendarDays className="h-4 w-4 text-accent" />
@@ -370,7 +273,7 @@ export function HomePage({ payload }: HomePageProps) {
             {payload.featuredSeries.length > 0 ? (
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {payload.featuredSeries.map((item) => (
-                  <Link key={item.slug} className="home-popular-card rounded-md border border-line p-5" href={seriesHref(locale, item.slug)}>
+                  <Link key={item.slug} className="home-popular-card rounded-md border border-line p-5" href={seriesHref(item.slug)}>
                     <span className="flex items-center">
                       <span className="flex h-10 w-10 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-accent">
                         <Milestone className="h-5 w-5" />
@@ -416,7 +319,7 @@ export function HomePage({ payload }: HomePageProps) {
         ) : null}
       </main>
 
-      <SiteFooter locale={locale} />
+      <SiteFooter />
     </>
   );
 }

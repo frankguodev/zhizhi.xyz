@@ -2,32 +2,28 @@ import { FileText } from "lucide-react";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { type LegalPageContent } from "@/lib/legal-pages";
-import { type Locale } from "@/lib/site";
 
 type LegalPageProps = {
   content: LegalPageContent;
   currentPath: string;
-  locale?: Locale;
 };
 
-export function LegalPage({ content, currentPath, locale = "zh" }: LegalPageProps) {
-  const isEnglish = locale === "en";
-
+export function LegalPage({ content, currentPath }: LegalPageProps) {
   return (
     <>
-      <SiteHeader locale={locale} currentPath={currentPath} />
+      <SiteHeader currentPath={currentPath} />
 
       <main className="min-h-screen bg-background">
         <section className="site-grid border-b border-line">
           <div className="mx-auto max-w-4xl px-6 py-12 md:py-16">
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-accent">
               <FileText className="h-4 w-4" />
-              {isEnglish ? "Legal Notice" : "合规声明"}
+              合规声明
             </p>
             <h1 className="mt-4 break-words text-3xl font-semibold leading-tight text-foreground [overflow-wrap:anywhere]">{content.title}</h1>
             <p className="mt-5 break-words text-lg leading-8 text-muted [overflow-wrap:anywhere]">{content.description}</p>
             <p className="mt-4 text-sm font-medium text-muted">
-              {isEnglish ? "Last updated" : "最后更新"}：{content.updatedAt}
+              最后更新：{content.updatedAt}
             </p>
           </div>
         </section>
@@ -48,7 +44,7 @@ export function LegalPage({ content, currentPath, locale = "zh" }: LegalPageProp
         </section>
       </main>
 
-      <SiteFooter locale={locale} />
+      <SiteFooter />
     </>
   );
 }

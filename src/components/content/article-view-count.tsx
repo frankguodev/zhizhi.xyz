@@ -2,10 +2,9 @@
 
 import { Radar } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Locale } from "@/lib/site";
 
 type ArticleViewCountProps = {
-  locale: Locale;
+  locale: string;
   slug: string;
   initialCount: number | undefined;
 };
@@ -15,35 +14,14 @@ type ViewPayload = {
   viewCount: number;
 };
 
-const copy = {
-  zh: {
-    viewCount(count: string) {
-      return `累计 ${count} 次阅读`;
-    },
-  },
-  en: {
-    viewCount(count: string) {
-      return `${count} views`;
-    },
-  },
-} satisfies Record<Locale, { viewCount: (count: string) => string }>;
-
-function formatViewCount(count: number | undefined, locale: Locale) {
+function formatViewCount(count: number | undefined) {
   const safeCount = Math.max(0, count ?? 0);
 
-  if (locale === "zh") {
-    if (safeCount >= 10000) {
-      return `${(safeCount / 10000).toFixed(1)}w`;
-    }
-
-    return safeCount.toLocaleString("zh-CN");
+  if (safeCount >= 10000) {
+    return `${(safeCount / 10000).toFixed(1)}w`;
   }
 
-  if (safeCount >= 1000) {
-    return `${(safeCount / 1000).toFixed(1)}k`;
-  }
-
-  return safeCount.toLocaleString("en-US");
+  return safeCount.toLocaleString("zh-CN");
 }
 
 export function ArticleViewCount({ locale, slug, initialCount }: ArticleViewCountProps) {
@@ -116,7 +94,7 @@ export function ArticleViewCount({ locale, slug, initialCount }: ArticleViewCoun
   return (
     <span className="inline-flex items-center gap-1.5">
       <Radar className="h-3.5 w-3.5 text-accent" />
-      {copy[locale].viewCount(formatViewCount(viewCount, locale))}
+      {`累计 ${formatViewCount(viewCount)} 次阅读`}
     </span>
   );
 }

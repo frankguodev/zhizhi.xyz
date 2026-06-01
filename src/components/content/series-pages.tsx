@@ -7,91 +7,39 @@ import type { PublicSeriesDetail, PublicSeriesSummary } from "@/lib/series";
 import { siteConfig, type Locale } from "@/lib/site";
 
 const copy = {
-  zh: {
-    currentPath: "/series",
-    eyebrow: "专题路线",
-    title: "专题路径地图",
-    description: "专题不是文章合集，而是围绕同一问题逐步展开的学习路径。适合从一个入口进入，沿着上下文连续阅读，把零散知识接成完整脉络。",
-    publishedRoutes: "已发布路径",
-    routeHint: "每条路径都可以继续补文章、调整顺序和扩展主题。",
-    articleCount(count: number) {
-      return `${count} 篇文章`;
-    },
-    updatedAt(value: string) {
-      return `更新于 ${value}`;
-    },
-    enter: "进入专题",
-    emptyTitle: "还没有已发布专题",
-    emptyDescription: "可以先进入文章索引阅读单篇内容，等相关主题积累稳定后，再把它们整理成连续路线。",
-    backToSeries: "返回专题",
-    detailEyebrow: "知识路径",
-    routeNodes: "路径节点",
-    minutes(value: number) {
-      return `${value} 分钟`;
-    },
-    totalMinutes: "预计总时长",
-    read: "阅读",
-    detailEmptyTitle: "专题结构已建立",
-    detailEmptyDescription: "专题已经创建，但相关文章还在整理或审核中。",
+  currentPath: "/series",
+  eyebrow: "专题路线",
+  title: "专题路径地图",
+  description: "专题不是文章合集，而是围绕同一问题逐步展开的学习路径。适合从一个入口进入，沿着上下文连续阅读，把零散知识接成完整脉络。",
+  publishedRoutes: "已发布路径",
+  routeHint: "每条路径都可以继续补文章、调整顺序和扩展主题。",
+  articleCount(count: number) {
+    return `${count} 篇文章`;
   },
-  en: {
-    currentPath: "/en/series",
-    eyebrow: "Series routes",
-    title: "English series map",
-    description: "Series are not just grouped posts. They are routes built around one evolving topic so readers can continue with context.",
-    publishedRoutes: "Published routes",
-    routeHint: "Each route can grow with new articles, reordered steps, and wider scope.",
-    articleCount(count: number) {
-      return `${count} articles`;
-    },
-    updatedAt(value: string) {
-      return `Updated ${value}`;
-    },
-    enter: "Enter route",
-    emptyTitle: "No published series yet",
-    emptyDescription: "Start from the article index for now. Once related topics settle, they can be connected into a continuous route.",
-    backToSeries: "Back to series",
-    detailEyebrow: "Series Path",
-    routeNodes: "Route articles",
-    minutes(value: number) {
-      return `${value} min`;
-    },
-    totalMinutes: "Estimated total",
-    read: "Read",
-    detailEmptyTitle: "This route is being assembled",
-    detailEmptyDescription: "Published English articles will appear here once they are attached to the route.",
+  updatedAt(value: string) {
+    return `更新于 ${value}`;
   },
-} satisfies Record<
-  Locale,
-  {
-    currentPath: string;
-    eyebrow: string;
-    title: string;
-    description: string;
-    publishedRoutes: string;
-    routeHint: string;
-    articleCount: (count: number) => string;
-    updatedAt: (value: string) => string;
-    enter: string;
-    emptyTitle: string;
-    emptyDescription: string;
-    backToSeries: string;
-    detailEyebrow: string;
-    routeNodes: string;
-    minutes: (value: number) => string;
-    totalMinutes: string;
-    read: string;
-    detailEmptyTitle: string;
-    detailEmptyDescription: string;
-  }
->;
+  enter: "进入专题",
+  emptyTitle: "还没有已发布专题",
+  emptyDescription: "可以先进入文章索引阅读单篇内容，等相关主题积累稳定后，再把它们整理成连续路线。",
+  backToSeries: "返回专题",
+  detailEyebrow: "知识路径",
+  routeNodes: "路径节点",
+  minutes(value: number) {
+    return `${value} 分钟`;
+  },
+  totalMinutes: "预计总时长",
+  read: "阅读",
+  detailEmptyTitle: "专题结构已建立",
+  detailEmptyDescription: "专题已经创建，但相关文章还在整理或审核中。",
+};
 
-function seriesPath(locale: Locale, slug: string) {
-  return locale === "en" ? `/en/series/${slug}` : `/series/${slug}`;
+function seriesPath(slug: string) {
+  return `/series/${slug}`;
 }
 
-function articlePath(locale: Locale, slug: string) {
-  return locale === "en" ? `/en/articles/${slug}` : `/articles/${slug}`;
+function articlePath(slug: string) {
+  return `/articles/${slug}`;
 }
 
 function coverStyle(coverImage: string | null): CSSProperties | undefined {
@@ -120,22 +68,20 @@ function absoluteMediaUrl(value: string | null) {
   return `${siteConfig.url}${normalized.startsWith("/") ? normalized : `/${normalized}`}`;
 }
 
-function buildSeriesListJsonLd(locale: Locale, seriesList: PublicSeriesSummary[]) {
-  const pageUrl = locale === "en" ? `${siteConfig.url}/en/series` : `${siteConfig.url}/series`;
-
+function buildSeriesListJsonLd(seriesList: PublicSeriesSummary[]) {
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: locale === "en" ? "Series" : "专题",
-    description: copy[locale].description,
-    url: pageUrl,
-    inLanguage: locale === "en" ? "en" : "zh-CN",
+    name: "专题",
+    description: copy.description,
+    url: `${siteConfig.url}/series`,
+    inLanguage: "zh-CN",
     mainEntity: {
       "@type": "ItemList",
       itemListElement: seriesList.slice(0, 20).map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: `${siteConfig.url}${seriesPath(locale, item.slug)}`,
+        url: `${siteConfig.url}${seriesPath(item.slug)}`,
         name: item.title,
         description: item.description,
       })),
@@ -143,8 +89,8 @@ function buildSeriesListJsonLd(locale: Locale, seriesList: PublicSeriesSummary[]
   };
 }
 
-function buildSeriesDetailJsonLd(locale: Locale, item: PublicSeriesDetail, totalReadingMinutes: number) {
-  const detailUrl = `${siteConfig.url}${seriesPath(locale, item.slug)}`;
+function buildSeriesDetailJsonLd(item: PublicSeriesDetail, totalReadingMinutes: number) {
+  const detailUrl = `${siteConfig.url}${seriesPath(item.slug)}`;
 
   return [
     {
@@ -154,7 +100,7 @@ function buildSeriesDetailJsonLd(locale: Locale, item: PublicSeriesDetail, total
       description: item.description,
       url: detailUrl,
       image: absoluteMediaUrl(item.coverImage),
-      inLanguage: locale === "en" ? "en" : "zh-CN",
+      inLanguage: "zh-CN",
       timeRequired: `PT${totalReadingMinutes}M`,
       mainEntity: {
         "@type": "ItemList",
@@ -162,7 +108,7 @@ function buildSeriesDetailJsonLd(locale: Locale, item: PublicSeriesDetail, total
         itemListElement: item.articles.map((article, index) => ({
           "@type": "ListItem",
           position: index + 1,
-          url: `${siteConfig.url}${articlePath(locale, article.slug)}`,
+          url: `${siteConfig.url}${articlePath(article.slug)}`,
           name: article.title,
           description: article.summary,
         })),
@@ -175,8 +121,8 @@ function buildSeriesDetailJsonLd(locale: Locale, item: PublicSeriesDetail, total
         {
           "@type": "ListItem",
           position: 1,
-          name: locale === "en" ? "Series" : "专题",
-          item: `${siteConfig.url}${copy[locale].currentPath}`,
+          name: "专题",
+          item: `${siteConfig.url}${copy.currentPath}`,
         },
         {
           "@type": "ListItem",
@@ -211,12 +157,12 @@ function CoverMark({ coverImage, title }: { coverImage: string | null; title: st
 }
 
 export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; seriesList: PublicSeriesSummary[] }) {
-  const pageCopy = copy[locale];
-  const listJsonLd = buildSeriesListJsonLd(locale, seriesList);
+  const pageCopy = copy;
+  const listJsonLd = buildSeriesListJsonLd(seriesList);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader locale={locale} currentPath={pageCopy.currentPath} />
+      <SiteHeader currentPath={pageCopy.currentPath} />
 
       <main className="flex-1 bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listJsonLd) }} />
@@ -261,11 +207,11 @@ export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; series
                       {item.updatedAt ? <span>{pageCopy.updatedAt(item.updatedAt)}</span> : null}
                     </div>
                     <h3 className="mt-3 break-words text-2xl font-semibold text-foreground [overflow-wrap:anywhere]">
-                      <Link href={seriesPath(locale, item.slug)}>{item.title}</Link>
+                      <Link href={seriesPath(item.slug)}>{item.title}</Link>
                     </h3>
                     <p className="mt-3 break-words leading-7 text-muted [overflow-wrap:anywhere]">{item.description}</p>
                   </div>
-                  <Link className="motion-inline mt-5 inline-flex items-center gap-2 font-semibold text-foreground transition hover:text-accent" href={seriesPath(locale, item.slug)}>
+                  <Link className="motion-inline mt-5 inline-flex items-center gap-2 font-semibold text-foreground transition hover:text-accent" href={seriesPath(item.slug)}>
                     {pageCopy.enter}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -285,20 +231,20 @@ export function SeriesIndexPage({ locale, seriesList }: { locale: Locale; series
           )}
         </section>
       </main>
-      <SiteFooter locale={locale} />
+      <SiteFooter />
     </div>
   );
 }
 
 export function SeriesDetailContent({ locale, item }: { locale: Locale; item: PublicSeriesDetail }) {
-  const pageCopy = copy[locale];
+  const pageCopy = copy;
   const totalReadingMinutes = item.articles.reduce((total, article) => total + article.readingMinutes, 0);
-  const detailJsonLd = buildSeriesDetailJsonLd(locale, item, totalReadingMinutes);
+  const detailJsonLd = buildSeriesDetailJsonLd(item, totalReadingMinutes);
   const coverImageStyle = coverStyle(item.coverImage);
 
   return (
     <>
-      <SiteHeader locale={locale} currentPath={seriesPath(locale, item.slug)} />
+      <SiteHeader currentPath={seriesPath(item.slug)} />
 
       <main className="min-h-screen bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(detailJsonLd) }} />
@@ -358,12 +304,12 @@ export function SeriesDetailContent({ locale, item }: { locale: Locale; item: Pu
                       </span>
                     </div>
                     <h3 className="mt-3 break-words text-2xl font-semibold text-foreground [overflow-wrap:anywhere]">
-                      <Link href={articlePath(locale, article.slug)}>{article.title}</Link>
+                      <Link href={articlePath(article.slug)}>{article.title}</Link>
                     </h3>
                     <p className="mt-3 line-clamp-3 max-w-3xl break-words leading-7 text-muted [overflow-wrap:anywhere]">{article.summary}</p>
                   </div>
                   <div className="md:pt-3">
-                    <Link className="motion-inline inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-accent focus-visible:text-accent" href={articlePath(locale, article.slug)}>
+                    <Link className="motion-inline inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-accent focus-visible:text-accent" href={articlePath(article.slug)}>
                       {pageCopy.read}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
@@ -386,7 +332,7 @@ export function SeriesDetailContent({ locale, item }: { locale: Locale; item: Pu
           )}
         </section>
       </main>
-      <SiteFooter locale={locale} />
+      <SiteFooter />
     </>
   );
 }

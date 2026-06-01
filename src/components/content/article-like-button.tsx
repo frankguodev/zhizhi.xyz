@@ -2,56 +2,26 @@
 
 import { ThumbsUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Locale } from "@/lib/site";
-
 type ArticleLikeButtonProps = {
-  locale: Locale;
+  locale: string;
   slug: string;
   shareTitle: string;
   shareUrl: string;
 };
 
 const copy = {
-  zh: {
-    prompt: "觉得这篇文章有帮助？",
-    like: "点赞",
-    liked: "已点赞",
-    count(count: number) {
-      return `${count} 次点赞`;
-    },
-    loading: "读取点赞状态中",
-    failed: "点赞暂时不可用，请稍后再试。",
-    shareTitle: "分享给需要的人",
-    shareText: "如果这篇文章刚好帮你避开一个坑，也可以把它转给同样需要的人。",
-    shareAction: "分享到 X / Twitter",
+  prompt: "觉得这篇文章有帮助？",
+  like: "点赞",
+  liked: "已点赞",
+  count(count: number) {
+    return `${count} 次点赞`;
   },
-  en: {
-    prompt: "Was this article helpful?",
-    like: "Like",
-    liked: "Liked",
-    count(count: number) {
-      return `${count} likes`;
-    },
-    loading: "Loading like state",
-    failed: "Likes are temporarily unavailable. Please try again later.",
-    shareTitle: "Share it with someone who needs it",
-    shareText: "If this article helped you avoid a detour, pass it along to someone working through the same thing.",
-    shareAction: "Share to X / Twitter",
-  },
-} satisfies Record<
-  Locale,
-  {
-    prompt: string;
-    like: string;
-    liked: string;
-    count: (count: number) => string;
-    loading: string;
-    failed: string;
-    shareTitle: string;
-    shareText: string;
-    shareAction: string;
-  }
->;
+  loading: "读取点赞状态中",
+  failed: "点赞暂时不可用，请稍后再试。",
+  shareTitle: "分享给需要的人",
+  shareText: "如果这篇文章刚好帮你避开一个坑，也可以把它转给同样需要的人。",
+  shareAction: "分享到 X / Twitter",
+};
 
 type LikeState = {
   liked: boolean;
@@ -98,7 +68,7 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
           return;
         }
 
-        setError(copy[locale].failed);
+        setError(copy.failed);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -133,14 +103,14 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
       setLiked(Boolean(payload.liked));
       setCount(Number.isFinite(payload.count) ? payload.count : 0);
     } catch {
-      setError(copy[locale].failed);
+      setError(copy.failed);
     } finally {
       setSubmitting(false);
     }
   }
 
-  const buttonLabel = liked ? copy[locale].liked : copy[locale].like;
-  const statusText = loading ? copy[locale].loading : copy[locale].count(count);
+  const buttonLabel = liked ? copy.liked : copy.like;
+  const statusText = loading ? copy.loading : copy.count(count);
   const twitterShareUrl = buildTwitterShareUrl(shareTitle, shareUrl);
 
   return (
@@ -148,7 +118,7 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
       <div className="rounded-md border border-line bg-surface/58 px-4 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold text-muted">{copy[locale].prompt}</p>
+            <p className="text-sm font-semibold text-muted">{copy.prompt}</p>
             <p className="mt-1 text-xs font-semibold text-muted">{statusText}</p>
           </div>
           <button
@@ -167,10 +137,10 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
 
         <div className="mt-5 flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-base font-semibold text-foreground">{copy[locale].shareTitle}</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{copy[locale].shareText}</p>
+            <p className="text-base font-semibold text-foreground">{copy.shareTitle}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{copy.shareText}</p>
           </div>
-          <a className="article-share-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-sm font-semibold transition" href={twitterShareUrl} target="_blank" rel="noreferrer" aria-label={copy[locale].shareAction}>
+          <a className="article-share-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-sm font-semibold transition" href={twitterShareUrl} target="_blank" rel="noreferrer" aria-label={copy.shareAction}>
             <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M13.9 10.5 21.3 2h-1.8l-6.4 7.4L8 2H2.1l7.8 11.3L2.1 22h1.8l6.8-7.7L16.1 22H22l-8.1-11.5Zm-2.4 2.7-.8-1.1L4.4 3.3h2.8l5 7.1.8 1.1 6.6 9.3h-2.8l-5.3-7.6Z" />
             </svg>

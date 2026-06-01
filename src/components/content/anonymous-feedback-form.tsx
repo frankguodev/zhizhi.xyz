@@ -2,10 +2,8 @@
 
 import { MessageSquareText, Send } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Locale } from "@/lib/site";
-
 type AnonymousFeedbackFormProps = {
-  locale: Locale;
+  locale: string;
   pageUrl: string;
   articleSlug?: string;
   articleTitle?: string;
@@ -17,71 +15,33 @@ type SubmitState = {
 };
 
 const copy = {
-  zh: {
-    eyebrow: "匿名反馈",
-    title: "这篇文章哪里还可以更好？",
-    description: "欢迎留一句真实反馈：错别字、没讲清楚的地方、想继续看的方向都可以。联系方式可不填。",
-    contentLabel: "反馈内容",
-    contentPlaceholder: "例如：这里的步骤 3 我没看懂；或者这个主题还想看一篇部署实战。",
-    contactLabel: "联系方式（可选）",
-    contactPlaceholder: "邮箱、X / Twitter、微信备注等，可不填",
-    privacy: "会记录当前页面和提交时间；请不要提交密码、验证码、身份证等敏感信息。",
-    submit: "提交反馈",
-    submitting: "提交中",
-    success: "收到啦，感谢你认真留下这一句。",
-    contentRequired: "请先写一点反馈内容。",
-    contentTooLong: "反馈内容最多 1200 个字符。",
-    failed: "反馈暂时提交失败，请稍后再试。",
-    tooFrequent: "提交得有点快，稍等一会儿再试。",
-  },
-  en: {
-    eyebrow: "Anonymous feedback",
-    title: "What could be better in this article?",
-    description: "Leave a short note: typo, unclear section, missing detail, or what you want to read next. Contact is optional.",
-    contentLabel: "Feedback",
-    contentPlaceholder: "For example: step 3 was hard to follow, or I would like a deployment follow-up.",
-    contactLabel: "Contact (optional)",
-    contactPlaceholder: "Email, X / Twitter, or any note you want to leave",
-    privacy: "The current page and submission time are recorded. Please do not submit passwords, codes, IDs, or sensitive data.",
-    submit: "Send feedback",
-    submitting: "Sending",
-    success: "Received. Thank you for taking the time to leave this.",
-    contentRequired: "Please write a little feedback first.",
-    contentTooLong: "Feedback can be up to 1200 characters.",
-    failed: "Feedback is temporarily unavailable. Please try again later.",
-    tooFrequent: "That was a bit quick. Please wait and try again.",
-  },
-} satisfies Record<
-  Locale,
-  {
-    eyebrow: string;
-    title: string;
-    description: string;
-    contentLabel: string;
-    contentPlaceholder: string;
-    contactLabel: string;
-    contactPlaceholder: string;
-    privacy: string;
-    submit: string;
-    submitting: string;
-    success: string;
-    contentRequired: string;
-    contentTooLong: string;
-    failed: string;
-    tooFrequent: string;
-  }
->;
+  eyebrow: "匿名反馈",
+  title: "这篇文章哪里还可以更好？",
+  description: "欢迎留一句真实反馈：错别字、没讲清楚的地方、想继续看的方向都可以。联系方式可不填。",
+  contentLabel: "反馈内容",
+  contentPlaceholder: "例如：这里的步骤 3 我没看懂；或者这个主题还想看一篇部署实战。",
+  contactLabel: "联系方式（可选）",
+  contactPlaceholder: "邮箱、X / Twitter、微信备注等，可不填",
+  privacy: "会记录当前页面和提交时间；请不要提交密码、验证码、身份证等敏感信息。",
+  submit: "提交反馈",
+  submitting: "提交中",
+  success: "收到啦，感谢你认真留下这一句。",
+  contentRequired: "请先写一点反馈内容。",
+  contentTooLong: "反馈内容最多 1200 个字符。",
+  failed: "反馈暂时提交失败，请稍后再试。",
+  tooFrequent: "提交得有点快，稍等一会儿再试。",
+};
 
-function getErrorMessage(status: number, locale: Locale) {
+function getErrorMessage(status: number) {
   if (status === 429) {
-    return copy[locale].tooFrequent;
+    return copy.tooFrequent;
   }
 
-  return copy[locale].failed;
+  return copy.failed;
 }
 
 export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTitle }: AnonymousFeedbackFormProps) {
-  const pageCopy = copy[locale];
+  const pageCopy = copy;
   const [content, setContent] = useState("");
   const [contact, setContact] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle", message: "" });
@@ -127,7 +87,7 @@ export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTit
       });
 
       if (!response.ok) {
-        throw new Error(getErrorMessage(response.status, locale));
+        throw new Error(getErrorMessage(response.status));
       }
 
       setContent("");

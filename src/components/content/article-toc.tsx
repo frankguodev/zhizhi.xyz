@@ -4,27 +4,19 @@ import { ListTree } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { cn } from "@/lib/utils";
-import type { Locale } from "@/lib/site";
 import type { ArticleTocItem } from "./types";
 
 type ArticleTocProps = {
   items: ArticleTocItem[];
-  locale?: Locale;
   variant: "mobile" | "desktop";
 };
 
 const copy = {
-  zh: {
-    title: "本文目录",
-    summary: "目录",
-  },
-  en: {
-    title: "On This Page",
-    summary: "Contents",
-  },
-} satisfies Record<Locale, { title: string; summary: string }>;
+  title: "本文目录",
+  summary: "目录",
+};
 
-export function ArticleToc({ items, locale = "zh", variant }: ArticleTocProps) {
+export function ArticleToc({ items, variant }: ArticleTocProps) {
   const [activeId, setActiveId] = useState(items[0]?.id ?? "");
   const clickedLockRef = useRef("");
   const clickedLockTimerRef = useRef<number | null>(null);
@@ -150,7 +142,7 @@ export function ArticleToc({ items, locale = "zh", variant }: ArticleTocProps) {
   }
 
   const nav = (
-    <nav aria-label={copy[locale].title}>
+    <nav aria-label={copy.title}>
       <ol className="space-y-1">
         {items.map((item) => (
           <li key={item.id}>
@@ -176,7 +168,7 @@ export function ArticleToc({ items, locale = "zh", variant }: ArticleTocProps) {
       <details ref={detailsRef} className="mb-5 min-w-0 rounded-md border border-line bg-surface p-4 lg:hidden">
         <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35">
           <ListTree className="h-4 w-4 text-accent" />
-          {copy[locale].summary}
+          {copy.summary}
         </summary>
         <div className="article-mobile-toc-scroll mt-4 max-h-[50dvh] overflow-y-auto pr-1">{nav}</div>
       </details>
@@ -187,7 +179,7 @@ export function ArticleToc({ items, locale = "zh", variant }: ArticleTocProps) {
     <aside className="article-toc-scroll sticky top-28 hidden max-h-[calc(100vh-8rem)] overflow-y-auto rounded-md border border-line bg-surface p-4 lg:block">
       <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
         <ListTree className="h-4 w-4 text-accent" />
-        {copy[locale].title}
+        {copy.title}
       </div>
       {nav}
     </aside>

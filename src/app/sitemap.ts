@@ -17,11 +17,9 @@ function safeDate(value: string | Date | null | undefined) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [zhArticles, enArticles, zhSeries, enSeries] = await Promise.all([
+  const [articles, seriesList] = await Promise.all([
     getPublicArticles("zh"),
-    getPublicArticles("en"),
     listPublicSeries("zh"),
-    listPublicSeries("en"),
   ]);
 
   const staticRoutes: Array<{
@@ -39,16 +37,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/terms", priority: 0.25, changeFrequency: "yearly" },
     { path: "/cookies", priority: 0.25, changeFrequency: "yearly" },
     { path: "/disclaimer", priority: 0.25, changeFrequency: "yearly" },
-    { path: "/en", priority: 0.75, changeFrequency: "weekly" },
-    { path: "/en/articles", priority: 0.65, changeFrequency: "weekly" },
-    { path: "/en/series", priority: 0.55, changeFrequency: "weekly" },
-    { path: "/en/about", priority: 0.4, changeFrequency: "monthly" },
-    { path: "/en/tools", priority: 0.45, changeFrequency: "monthly" },
-    { path: "/en/donate", priority: 0.35, changeFrequency: "monthly" },
-    { path: "/en/privacy", priority: 0.2, changeFrequency: "yearly" },
-    { path: "/en/terms", priority: 0.2, changeFrequency: "yearly" },
-    { path: "/en/cookies", priority: 0.2, changeFrequency: "yearly" },
-    { path: "/en/disclaimer", priority: 0.2, changeFrequency: "yearly" },
   ];
 
   return [
@@ -58,29 +46,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: route.changeFrequency,
       priority: route.priority,
     })),
-    ...zhArticles.map((article) => ({
+    ...articles.map((article) => ({
       url: siteUrl(`/articles/${article.slug}`),
       lastModified: safeDate(article.updatedAt || article.publishedAt),
       changeFrequency: "monthly" as const,
       priority: 0.8,
     })),
-    ...enArticles.map((article) => ({
-      url: siteUrl(`/en/articles/${article.slug}`),
-      lastModified: safeDate(article.updatedAt || article.publishedAt),
-      changeFrequency: "monthly" as const,
-      priority: 0.65,
-    })),
-    ...zhSeries.map((series) => ({
+    ...seriesList.map((series) => ({
       url: siteUrl(`/series/${series.slug}`),
       lastModified: safeDate(series.updatedAt),
       changeFrequency: "monthly" as const,
       priority: 0.72,
-    })),
-    ...enSeries.map((series) => ({
-      url: siteUrl(`/en/series/${series.slug}`),
-      lastModified: safeDate(series.updatedAt),
-      changeFrequency: "monthly" as const,
-      priority: 0.55,
     })),
   ];
 }

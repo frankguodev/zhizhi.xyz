@@ -26,12 +26,12 @@ export const metadata: Metadata = {
     default: `${siteConfig.name} | ${siteConfig.nameEn}`,
     template: `%s | ${siteConfig.name}`,
   },
-  description: siteConfig.description.zh,
+  description: siteConfig.description,
   applicationName: siteConfig.name,
   authors: [{ name: siteConfig.nameEn, url: siteConfig.url }],
   openGraph: {
     title: `${siteConfig.name} | ${siteConfig.nameEn}`,
-    description: siteConfig.description.zh,
+    description: siteConfig.description,
     url: siteConfig.url,
     siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
     locale: "zh_CN",
@@ -46,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang={siteConfig.defaultLocale}
+      lang="zh"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${notoSansSc.variable} h-full scroll-smooth antialiased`}
     >

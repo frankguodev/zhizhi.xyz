@@ -81,7 +81,7 @@ export default async function AiTermDetailRoute({ params }: AiTermDetailRoutePro
   const { blocks, fable, referencesHtml } = await parseAiTermMarkdown(term.contentMd, "zh", {
     stripLeadingTitle: true,
     stripSummary: true,
-    stripBeginnerNotes: aiTermHasBeginnerNotes(term.beginnerNotes, "zh"),
+    stripBeginnerNotes: aiTermHasBeginnerNotes(term.beginnerNotes),
     stripRelations: term.relations.length > 0,
     extractReferences: true,
   });

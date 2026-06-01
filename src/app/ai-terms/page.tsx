@@ -11,10 +11,6 @@ export const metadata: Metadata = {
   description,
   alternates: {
     canonical: "/ai-terms",
-    languages: {
-      "zh-CN": "/ai-terms",
-      en: "/en/ai-terms",
-    },
   },
   openGraph: {
     title: `AI 词条｜${siteConfig.name}`,

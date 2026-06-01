@@ -2,14 +2,8 @@
 
 import { ArrowUp } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Locale } from "@/lib/site";
 
-const labels: Record<Locale, string> = {
-  zh: "返回顶部",
-  en: "Back to top",
-};
-
-export function BackToTopButton({ locale }: { locale: Locale }) {
+export function BackToTopButton() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -38,8 +32,8 @@ export function BackToTopButton({ locale }: { locale: Locale }) {
     <button
       type="button"
       className="article-back-to-top"
-      aria-label={labels[locale]}
-      title={labels[locale]}
+      aria-label="返回顶部"
+      title="返回顶部"
       data-visible={visible ? "true" : "false"}
       onClick={scrollToTop}
     >

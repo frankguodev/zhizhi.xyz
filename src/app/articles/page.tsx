@@ -9,10 +9,6 @@ export const metadata: Metadata = {
   description: "知之的高质量知识文章，支持完整阅读、关键词搜索、分类筛选和热门/最新排序。",
   alternates: {
     canonical: "/articles",
-    languages: {
-      "zh-CN": "/articles",
-      en: "/en/articles",
-    },
   },
   openGraph: {
     title: "文章",

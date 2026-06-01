@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     };
   }
 
-  return buildSeriesDetailMetadata(item, "zh");
+  return buildSeriesDetailMetadata(item);
 }
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ slug: string }> }) {

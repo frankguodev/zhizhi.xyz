@@ -13,12 +13,15 @@ export const publicErrorHeaders = {
   "X-Content-Type-Options": "nosniff",
 };
 
-export function publicSuccessHeaders(locale: Locale) {
-  return {
-    "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
-    "Content-Language": locale === "zh" ? "zh-CN" : "en",
-    "X-Content-Type-Options": "nosniff",
-  };
+export const publicSuccessHeadersZh = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+  "Content-Language": "zh-CN",
+  "X-Content-Type-Options": "nosniff",
+};
+
+/** @deprecated 使用 publicSuccessHeadersZh */
+export function publicSuccessHeaders(_locale: Locale) {
+  return publicSuccessHeadersZh;
 }
 
 export function publicJsonError(message: string, status = 400) {

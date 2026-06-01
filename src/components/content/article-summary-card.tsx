@@ -10,34 +10,30 @@ export type ArticleSummaryItem = Pick<
 
 export function ArticleSummaryCard({ article, hot = false }: { article: ArticleSummaryItem; hot?: boolean }) {
   const articleHref = getArticleHref(article);
-  const category = normalizeArticleCategory(article.category, article.locale);
-  const readLabel = article.locale === "en" ? "Read article" : "阅读文章";
-  const minuteLabel = article.locale === "en" ? "min" : "分钟";
-  const publishedLabel = article.locale === "en" ? "Published" : "发布";
-  const updatedLabel = article.locale === "en" ? "Updated" : "更新";
+  const category = normalizeArticleCategory(article.category, "zh");
 
   return (
     <article className="article-index-card index-surface grid gap-4 rounded-md border border-line p-5 md:grid-cols-[1fr_auto] md:items-center md:p-6 md:pl-10">
       <div className="relative z-10 min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold text-muted">
-          <Link className="vein-link px-2 py-1 text-accent hover:text-foreground" href={getCategoryHref(category, article.locale)}>
+          <Link className="vein-link px-2 py-1 text-accent hover:text-foreground" href={getCategoryHref(category, "zh")}>
             {category}
           </Link>
           <span className="inline-flex items-center gap-1">
             <Clock className="h-4 w-4 text-accent" />
-            {article.readingMinutes} {minuteLabel}
+            {article.readingMinutes} 分钟
           </span>
           <span className="inline-flex items-center gap-1">
             <CalendarDays className="h-4 w-4 text-accent" />
-            {publishedLabel} {article.publishedAt}
+            发布 {article.publishedAt}
           </span>
           <span className="inline-flex items-center gap-1">
             <RefreshCw className="h-3.5 w-3.5 text-accent md:h-4 md:w-4" />
-            {updatedLabel} {article.updatedAt}
+            更新 {article.updatedAt}
           </span>
           {hot ? (
             <span className="inline-flex items-center rounded-md border border-accent/35 bg-accent/12 px-2 py-0.5 text-xs font-semibold text-accent">
-              {article.locale === "en" ? "Hot" : "热门"}
+              热门
             </span>
           ) : null}
         </div>
@@ -49,7 +45,7 @@ export function ArticleSummaryCard({ article, hot = false }: { article: ArticleS
         </Link>
       </div>
       <Link className="motion-inline relative z-10 inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-accent md:justify-self-end" href={articleHref}>
-        {readLabel}
+        阅读文章
         <ArrowRight className="h-4 w-4" />
       </Link>
     </article>

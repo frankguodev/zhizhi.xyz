@@ -7,6 +7,8 @@ import type { AiTermSummary } from "@/lib/ai-terms";
 import { cn } from "@/lib/utils";
 import { siteConfig, type Locale } from "@/lib/site";
 
+// locale 保留在 props 中供数据层（分类查询）使用，UI 文本固定中文
+
 type CategoryOption = { name: string; slug: string };
 
 type AiTermsPageProps = {
@@ -53,71 +55,40 @@ type Copy = {
   pageStatus: (page: number, totalPages: number) => string;
 };
 
-const copy = {
-  zh: {
-    currentPath: "/ai-terms",
-    eyebrow: "AI 词条",
-    titleStart: "理解 AI 世界的",
-    titleAccent: "常用语言",
-    description: "把 AI 术语、概念、工具和新兴说法，用普通人能读懂的方式整理成一张安静的知识地图。",
-    searchPlaceholder: "搜索 AI 词条、概念、工具...",
-    searchLabel: "搜索词条",
-    clearSearch: "清除搜索",
-    clearAll: "清除全部",
-    popular: "热门",
-    resultCount: (count) => `共 ${count.toLocaleString("zh-CN")} 个词条`,
-    sortLabel: "排序",
-    sort: { featured: "趋势", latest: "最新", heat: "最热" },
-    filterAll: "全部",
-    filterSubmit: "筛选",
-    categoryLabel: "分类",
-    difficultyLabel: "难度",
-    difficulties: { beginner: "入门", intermediate: "进阶", advanced: "高阶" },
-    heat: (value) => `热度 ${Math.max(0, value)}`,
-    trending: "趋势",
-    noResults: "没有匹配的词条",
-    noResultsHint: "可以换个关键词，或清除筛选条件重新浏览。后台发布词条后会自动展示真实数据。",
-    paginationLabel: "分页",
-    prev: "上一页",
-    next: "下一页",
-    pageStatus: (page, totalPages) => `第 ${page} / ${totalPages} 页`,
-  },
-  en: {
-    currentPath: "/en/ai-terms",
-    eyebrow: "AI Terms",
-    titleStart: "Understand the",
-    titleAccent: "language of AI",
-    description: "AI terms, concepts, tools, and emerging ideas explained in a calm map for people learning in public.",
-    searchPlaceholder: "Search AI terms, concepts, tools...",
-    searchLabel: "Search terms",
-    clearSearch: "Clear search",
-    clearAll: "Clear all",
-    popular: "Popular",
-    resultCount: (count) => `${count.toLocaleString("en-US")} terms`,
-    sortLabel: "Sort",
-    sort: { featured: "Trending", latest: "Latest", heat: "Popular" },
-    filterAll: "All",
-    filterSubmit: "Apply",
-    categoryLabel: "Category",
-    difficultyLabel: "Level",
-    difficulties: { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" },
-    heat: (value) => `Heat ${Math.max(0, value)}`,
-    trending: "Trending",
-    noResults: "No matching terms",
-    noResultsHint: "Try another keyword or clear the filters. Published terms will appear here automatically.",
-    paginationLabel: "Pagination",
-    prev: "Previous",
-    next: "Next",
-    pageStatus: (page, totalPages) => `Page ${page} / ${totalPages}`,
-  },
-} satisfies Record<Locale, Copy>;
+const copy: Copy = {
+  currentPath: "/ai-terms",
+  eyebrow: "AI 词条",
+  titleStart: "理解 AI 世界的",
+  titleAccent: "常用语言",
+  description: "把 AI 术语、概念、工具和新兴说法，用普通人能读懂的方式整理成一张安静的知识地图。",
+  searchPlaceholder: "搜索 AI 词条、概念、工具...",
+  searchLabel: "搜索词条",
+  clearSearch: "清除搜索",
+  clearAll: "清除全部",
+  popular: "热门",
+  resultCount: (count) => `共 ${count.toLocaleString("zh-CN")} 个词条`,
+  sortLabel: "排序",
+  sort: { featured: "趋势", latest: "最新", heat: "最热" },
+  filterAll: "全部",
+  filterSubmit: "筛选",
+  categoryLabel: "分类",
+  difficultyLabel: "难度",
+  difficulties: { beginner: "入门", intermediate: "进阶", advanced: "高阶" },
+  heat: (value) => `热度 ${Math.max(0, value)}`,
+  trending: "趋势",
+  noResults: "没有匹配的词条",
+  noResultsHint: "可以换个关键词，或清除筛选条件重新浏览。后台发布词条后会自动展示真实数据。",
+  paginationLabel: "分页",
+  prev: "上一页",
+  next: "下一页",
+  pageStatus: (page, totalPages) => `第 ${page} / ${totalPages} 页`,
+};
 
 const SORT_KEYS = ["featured", "latest", "heat"] as const;
 const DIFFICULTY_KEYS = ["beginner", "intermediate", "advanced"] as const;
 
-export function aiTermPath(locale: Locale, slug: string) {
-  const base = locale === "en" ? "/en/ai-terms" : "/ai-terms";
-  return `${base}/${encodeURIComponent(slug)}`;
+export function aiTermPath(slug: string) {
+  return `/ai-terms/${encodeURIComponent(slug)}`;
 }
 
 type HrefParams = {
@@ -174,13 +145,13 @@ function SidebarLink({ active, count, href, label }: { active: boolean; count?: 
   );
 }
 
-function TermCard({ term, locale }: { locale: Locale; term: AiTermSummary }) {
-  const pageCopy = copy[locale];
+function TermCard({ term }: { term: AiTermSummary }) {
+  const pageCopy = copy;
   const subtitle = term.fullName ?? (term.termZh && term.termZh !== term.term ? term.termZh : null);
   const difficultyLabel = pageCopy.difficulties[term.difficulty];
 
   return (
-    <Link className="group block h-full min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(locale, term.slug)}>
+    <Link className="group block h-full min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35" href={aiTermPath(term.slug)}>
       <article id={`term-${term.slug}`} className="home-popular-card flex h-full min-w-0 flex-col rounded-md border border-line p-5 shadow-sm transition group-hover:border-accent/30">
         <div className="flex items-start justify-between gap-3">
           <h3 className="min-w-0 break-words text-lg font-semibold text-foreground transition group-hover:text-accent [overflow-wrap:anywhere]">{term.term}</h3>
@@ -208,7 +179,7 @@ function TermCard({ term, locale }: { locale: Locale; term: AiTermSummary }) {
 }
 
 export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, difficulty, locale, page, pageSize, popularTerms, query, sort, terms, total }: AiTermsPageProps) {
-  const pageCopy = copy[locale];
+  const pageCopy = copy;
   const basePath = pageCopy.currentPath;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -227,17 +198,17 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: locale === "en" ? "AI Terms" : "AI 词条",
+    name: "AI 词条",
     description: pageCopy.description,
     url: `${siteConfig.url}${basePath}`,
-    inLanguage: locale === "en" ? "en" : "zh-CN",
+    inLanguage: "zh-CN",
     mainEntity: {
       "@type": "ItemList",
       numberOfItems: total,
       itemListElement: terms.map((term, index) => ({
         "@type": "ListItem",
         position: offset + index + 1,
-        url: `${siteConfig.url}${aiTermPath(locale, term.slug)}`,
+        url: `${siteConfig.url}${aiTermPath(term.slug)}`,
         name: term.term,
       })),
     },
@@ -245,7 +216,7 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader locale={locale} currentPath={basePath} />
+      <SiteHeader currentPath={basePath} />
 
       <main className="flex-1 bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
@@ -292,7 +263,7 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
               <div className="mx-auto mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-2">
                 <span className="text-xs font-semibold uppercase text-muted">{pageCopy.popular}</span>
                 {popularDeduped.map((item) => (
-                  <Link key={item.slug} href={aiTermPath(locale, item.slug)} className="rounded-md border border-line bg-surface/50 px-2.5 py-1 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-accent">
+                  <Link key={item.slug} href={aiTermPath(item.slug)} className="rounded-md border border-line bg-surface/50 px-2.5 py-1 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-accent">
                     {item.term}
                   </Link>
                 ))}
@@ -442,7 +413,7 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
               {terms.length > 0 ? (
                 <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {terms.map((term) => (
-                    <TermCard key={term.slug} locale={locale} term={term} />
+                    <TermCard key={term.slug} term={term} />
                   ))}
                 </div>
               ) : (
@@ -514,7 +485,7 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
         </section>
       </main>
 
-      <SiteFooter locale={locale} />
+      <SiteFooter />
     </div>
   );
 }
