@@ -3,7 +3,7 @@ import { z } from "zod";
 import { parseAiTermImport } from "@/lib/ai-term-import";
 import { checkAiTermQuality } from "@/lib/ai-term-quality";
 import { requireAdminApi } from "@/lib/admin-auth";
-import { parseAiTermMarkdown, scanAiTermFable } from "@/lib/markdown";
+import { buildAiTermBodyDedup, parseAiTermMarkdown, scanAiTermFable } from "@/lib/markdown";
 
 const requestSchema = z.object({
   markdown: z.string().trim().min(1).max(800_000),
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const result = parseAiTermImport(parsed.data.markdown);
     const quality = checkAiTermQuality(result.aiTerm);
     const fable = scanAiTermFable(result.aiTerm.contentMd);
-    const rendered = await parseAiTermMarkdown(result.aiTerm.contentMd, result.aiTerm.locale);
+    const rendered = await parseAiTermMarkdown(result.aiTerm.contentMd, result.aiTerm.locale, buildAiTermBodyDedup(result.aiTerm));
 
     return json({
       aiTerm: result.aiTerm,

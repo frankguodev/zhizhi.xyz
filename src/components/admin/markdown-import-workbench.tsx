@@ -7,6 +7,7 @@ import { ArticleMediaManager } from "@/components/admin/article-media-manager";
 import { handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
+import { useMarkdownBackup } from "@/components/admin/use-markdown-backup";
 import { XLongformPreview } from "@/components/admin/x-longform-preview";
 import { ArticleReader } from "@/components/content/article-reader";
 import { QualityReport } from "@/components/content/quality-report";
@@ -184,8 +185,6 @@ structured_data:
 export function MarkdownImportWorkbench() {
   const [markdown, setMarkdown] = useState(sampleMarkdown);
   const [dirty, setDirty] = useState(false);
-  const [backupText, setBackupText] = useState("");
-  const [backupAvailable, setBackupAvailable] = useState(false);
   const [importedFileName, setImportedFileName] = useState("");
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [previewedMarkdown, setPreviewedMarkdown] = useState("");
@@ -197,7 +196,12 @@ export function MarkdownImportWorkbench() {
   const [previewTab, setPreviewTab] = useState<PreviewTab>("summary");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const backupKey = "zhizhi.admin.import-markdown.backup";
+  const { backupAvailable, backupText, hideBackup, clearBackup } = useMarkdownBackup({
+    backupKey: "zhizhi.admin.import-markdown.backup",
+    value: markdown,
+    baseline: sampleMarkdown,
+    dirty,
+  });
   const frontmatterEntries = useMemo(() => Object.entries(preview?.frontmatter ?? {}), [preview]);
   const frontmatterSummary = useMemo(() => summarizeFrontmatter(preview?.frontmatter ?? {}), [preview]);
   const markdownStats = useMemo(
@@ -216,30 +220,6 @@ export function MarkdownImportWorkbench() {
     dirty,
     description: "导入工作台还有未保存修改。离开后数据库草稿不会更新；本地临时稿会尽量保留，方便下次恢复。",
   });
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const backup = window.localStorage.getItem(backupKey);
-      if (backup && backup !== sampleMarkdown) {
-        setBackupText(backup);
-        setBackupAvailable(true);
-      }
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!dirty || markdown === sampleMarkdown) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      window.localStorage.setItem(backupKey, markdown);
-    }, 500);
-
-    return () => window.clearTimeout(timer);
-  }, [dirty, markdown]);
 
   function insertMarkdown(snippet: string) {
     const textarea = textareaRef.current;
@@ -271,14 +251,8 @@ export function MarkdownImportWorkbench() {
   function restoreBackup() {
     setMarkdown(backupText);
     setDirty(true);
-    setBackupAvailable(false);
+    hideBackup();
     setSaveState({ status: "idle", message: "已恢复本地临时稿，保存前不会写入数据库。" });
-  }
-
-  function discardBackup() {
-    window.localStorage.removeItem(backupKey);
-    setBackupText("");
-    setBackupAvailable(false);
   }
 
   async function importMarkdownFile(file: File | undefined) {
@@ -387,8 +361,7 @@ export function MarkdownImportWorkbench() {
       const saved = data as { draft?: { slug?: string; locale?: ArticleRecord["locale"] } };
       const draftSlug = saved.draft?.slug ?? "";
       const draftLocale = saved.draft?.locale ?? preview?.article.locale ?? "zh";
-      window.localStorage.removeItem(backupKey);
-      setBackupAvailable(false);
+      clearBackup();
       setDirty(false);
       setSavedDraft(draftSlug ? { slug: draftSlug, locale: draftLocale } : null);
       const savedAt = formatSavedTime(new Date());
@@ -441,7 +414,7 @@ export function MarkdownImportWorkbench() {
                 <button className="h-9 border border-amber-300 bg-white px-3 font-semibold" type="button" onClick={restoreBackup}>
                   恢复
                 </button>
-                <button className="h-9 border border-amber-300 bg-amber-100 px-3 font-semibold" type="button" onClick={discardBackup}>
+                <button className="h-9 border border-amber-300 bg-amber-100 px-3 font-semibold" type="button" onClick={clearBackup}>
                   忽略
                 </button>
               </div>

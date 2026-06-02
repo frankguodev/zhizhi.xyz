@@ -8,9 +8,12 @@ import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
+import { useMarkdownBackup } from "@/components/admin/use-markdown-backup";
+import { ArticleReader } from "@/components/content/article-reader";
+import type { ArticleContentBlock } from "@/components/content/types";
 import type { AdminAiTermDetail } from "@/lib/ai-terms";
 import type { AiTermQualityReport } from "@/lib/ai-term-quality";
-import type { AiTermFableScan } from "@/lib/markdown";
+import type { AiTermFableBlock, AiTermFableScan } from "@/lib/markdown";
 
 type AiTermEditorData = {
   aiTerm: AdminAiTermDetail;
@@ -18,6 +21,8 @@ type AiTermEditorData = {
   markdown: string;
   quality: AiTermQualityReport;
   importWarnings?: string[];
+  renderedBlocks?: ArticleContentBlock[];
+  renderedFable?: AiTermFableBlock | null;
   logs?: Array<{
     id: string;
     adminEmail: string | null;
@@ -144,6 +149,18 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
     dirty,
     description: "这条 AI 词条还有未保存修改。离开后数据库内容不会更新。",
   });
+  const { backupAvailable, backupText, hideBackup, clearBackup } = useMarkdownBackup({
+    backupKey: `zhizhi.admin.aiterm.${initialData.aiTerm.locale}.${initialData.aiTerm.slug}.backup`,
+    value: markdown,
+    baseline: initialData.markdown,
+    dirty,
+  });
+
+  function restoreBackup() {
+    setMarkdown(backupText);
+    hideBackup();
+    setSaveState({ status: "idle", message: "已恢复本地临时稿，保存前不会覆盖数据库。" });
+  }
 
   function updateEditorValue(value: string) {
     if (editorMode === "frontmatter") {
@@ -183,6 +200,8 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
         fable: AiTermFableScan;
         quality: AiTermQualityReport;
         importWarnings?: string[];
+        renderedBlocks?: ArticleContentBlock[];
+        renderedFable?: AiTermFableBlock | null;
       };
       setData((value) => ({
         ...value,
@@ -197,6 +216,8 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
         fable: preview.fable,
         quality: preview.quality,
         importWarnings: preview.importWarnings,
+        renderedBlocks: preview.renderedBlocks,
+        renderedFable: preview.renderedFable,
       }));
       setPreviewTab("quality");
       setSaveState({ status: "idle", message: "检查完成，未写入数据库。" });
@@ -232,6 +253,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
           ? { url: next.aiTerm.diagramImage, alt: next.aiTerm.diagramImageAlt ?? "" }
           : null,
       );
+      clearBackup();
       setSaveState({ status: "saved", message: "AI 词条已保存。" });
     } catch (error) {
       setSaveState({ status: "error", message: error instanceof Error ? error.message : "保存 AI 词条失败。" });
@@ -273,6 +295,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
         setMarkdown(payload.markdown);
       }
 
+      clearBackup();
       setSaveState({ status: "saved", message: "AI 词条操作已完成。" });
     } catch (error) {
       setSaveState({ status: "error", message: error instanceof Error ? error.message : "AI 词条操作失败。" });
@@ -445,6 +468,20 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
               )}
             </div>
 
+            {backupAvailable ? (
+              <div className="mt-5 flex flex-col gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+                <p>检测到这条词条有本地临时稿，可能是上次离开前没有保存。</p>
+                <div className="flex shrink-0 gap-2">
+                  <button className="h-9 border border-amber-300 bg-white px-3 font-semibold" type="button" onClick={restoreBackup}>
+                    恢复
+                  </button>
+                  <button className="h-9 border border-amber-300 bg-amber-100 px-3 font-semibold" type="button" onClick={clearBackup}>
+                    忽略
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
             <textarea
               className="mt-5 min-h-[640px] w-full resize-y border border-line bg-background p-4 font-mono text-sm leading-6 outline-none focus:border-accent"
               value={editorValue}
@@ -529,7 +566,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
 
           {previewTab === "info" ? <InfoPanel aiTerm={data.aiTerm} fable={data.fable} logs={data.logs ?? []} /> : null}
           {previewTab === "quality" ? <QualityPanel report={data.quality} warnings={data.importWarnings ?? []} /> : null}
-          {previewTab === "preview" ? <PreviewPanel aiTerm={data.aiTerm} /> : null}
+          {previewTab === "preview" ? <PreviewPanel aiTerm={data.aiTerm} blocks={data.renderedBlocks ?? []} fable={data.renderedFable ?? null} /> : null}
         </section>
       </div>
     </>
@@ -640,7 +677,7 @@ function QualityPanel({ report, warnings }: { report: AiTermQualityReport; warni
   );
 }
 
-function PreviewPanel({ aiTerm }: { aiTerm: AdminAiTermDetail }) {
+function PreviewPanel({ aiTerm, blocks, fable }: { aiTerm: AdminAiTermDetail; blocks: ArticleContentBlock[]; fable: AiTermFableBlock | null }) {
   return (
     <div className="border border-line bg-surface p-5">
       <p className="text-sm font-semibold text-accent">解析预览</p>
@@ -661,6 +698,22 @@ function PreviewPanel({ aiTerm }: { aiTerm: AdminAiTermDetail }) {
           </span>
         ))}
       </div>
+
+      {fable ? (
+        <section className="mt-6 border border-line bg-background p-4">
+          <p className="text-xs font-semibold uppercase text-accent">寓言故事</p>
+          <h3 className="mt-2 break-words text-xl font-semibold text-foreground [overflow-wrap:anywhere]">{fable.title}</h3>
+          <div className="article-prose mt-3" dangerouslySetInnerHTML={{ __html: fable.html }} />
+        </section>
+      ) : null}
+
+      {blocks.length > 0 ? (
+        <div className="ai-term-prose mt-6 border-t border-line pt-5">
+          <ArticleReader blocks={blocks} defaultMode="full" locale="zh" supportsReadingMode={false} />
+        </div>
+      ) : (
+        <p className="mt-6 border-t border-line pt-5 text-sm text-muted">点击「检查」后这里会显示正文解析结果。</p>
+      )}
     </div>
   );
 }

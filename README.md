@@ -372,7 +372,7 @@ npm run db:migrate:test
 生产 D1：
 
 ```bash
-npx wrangler d1 migrations apply zhizhi --remote
+npx wrangler d1 migrations apply zhizhi --remote --config wrangler.toml
 ```
 
 ### 测试环境部署
@@ -650,14 +650,14 @@ drizzle/
 
 | 命令 | 实际执行 | 说明 |
 | --- | --- | --- |
-| `npm run cf:build` | `opennextjs-cloudflare build` | 将 Next.js 应用构建为 Cloudflare Workers 可运行产物，输出到 `.open-next/`。 |
-| `npm run cf:build:test` | `opennextjs-cloudflare build --env=test` | 使用 `wrangler.toml` 的 `env.test` 配置构建测试环境产物。 |
-| `npm run cf:preview` | `npm run cf:build && opennextjs-cloudflare preview` | 构建并启动本地 Cloudflare preview，适合验证 D1/R2/Worker binding。 |
-| `npm run cf:preview:test` | `npm run cf:build:test && opennextjs-cloudflare preview --env=test` | 使用 test 配置启动本地 preview，默认连接本地 test D1/R2 模拟数据。 |
-| `npm run cf:preview:test:remote` | `npm run cf:build:test && opennextjs-cloudflare preview --env=test --remote` | 使用 test 配置和远程 Cloudflare binding 联调，适合验证远程 D1/R2 行为。 |
-| `npm run cf:preview:only` | `opennextjs-cloudflare preview` | 复用已有 `.open-next/` 产物直接启动 preview，不重新构建。 |
-| `npm run cf:deploy` | `opennextjs-cloudflare deploy` | 部署生产 Worker。部署前应确认生产 D1/R2、secret 和 migration 已准备好。 |
-| `npm run cf:deploy:test` | `opennextjs-cloudflare deploy --env=test` | 部署测试 Worker，优先用于上线前验证。 |
+| `npm run cf:build` | `opennextjs-cloudflare build --config wrangler.toml` | 使用真实生产配置将 Next.js 应用构建为 Cloudflare Workers 可运行产物，输出到 `.open-next/`。 |
+| `npm run cf:build:test` | `opennextjs-cloudflare build --config wrangler.toml --env=test` | 使用 `wrangler.toml` 的 `env.test` 配置构建测试环境产物。 |
+| `npm run cf:preview` | `npm run cf:build && opennextjs-cloudflare preview --config wrangler.toml` | 使用真实生产配置构建并启动本地 Cloudflare preview，适合验证 D1/R2/Worker binding。 |
+| `npm run cf:preview:test` | `npm run cf:build:test && opennextjs-cloudflare preview --config wrangler.toml --env=test` | 使用 test 配置启动本地 preview，默认连接本地 test D1/R2 模拟数据。 |
+| `npm run cf:preview:test:remote` | `npm run cf:build:test && opennextjs-cloudflare preview --config wrangler.toml --env=test --remote` | 使用 test 配置和远程 Cloudflare binding 联调，适合验证远程 D1/R2 行为。 |
+| `npm run cf:preview:only` | `opennextjs-cloudflare preview --config wrangler.toml` | 复用已有 `.open-next/` 产物并使用真实生产配置直接启动 preview，不重新构建。 |
+| `npm run cf:deploy` | `opennextjs-cloudflare deploy --config wrangler.toml` | 使用真实生产配置部署生产 Worker。部署前应确认生产 D1/R2、secret 和 migration 已准备好。 |
+| `npm run cf:deploy:test` | `opennextjs-cloudflare deploy --config wrangler.toml --env=test` | 部署测试 Worker，优先用于上线前验证。 |
 | `npm run dev:cf:local` | `npm run cf:preview:test` | 本地 test Cloudflare preview 的别名。 |
 | `npm run dev:remote` | `npm run cf:preview:test:remote` | 远程 test binding 联调别名。 |
 | `npm run dev:remote:restart` | `node scripts/remote-stop.mjs && npm run dev:remote` | 停止残留远程联调进程后重新启动。 |
@@ -668,7 +668,7 @@ drizzle/
 | 命令 | 实际执行 | 说明 |
 | --- | --- | --- |
 | `npm run db:generate` | `drizzle-kit generate` | 根据 `src/db/schema.ts` 生成新的 Drizzle migration。 |
-| `npm run db:migrate:local` | `wrangler d1 migrations apply zhizhi --local` | 将 `drizzle/` migrations 应用到本地生产名 D1。 |
+| `npm run db:migrate:local` | `wrangler d1 migrations apply zhizhi --local --config wrangler.toml` | 将 `drizzle/` migrations 应用到本地生产名 D1。 |
 | `npm run db:migrate:test:local` | `wrangler d1 migrations apply zhizhi-test --local --env test` | 将 migrations 应用到本地 test D1。 |
 | `npm run db:migrate:test` | `wrangler d1 migrations apply zhizhi-test --remote --env test` | 将 migrations 应用到远程 test D1。 |
 | `npm run db:studio` | `drizzle-kit studio` | 打开 Drizzle Studio，查看和调试数据库。 |
@@ -676,7 +676,7 @@ drizzle/
 生产远程 D1 migration 当前建议显式执行：
 
 ```bash
-npx wrangler d1 migrations apply zhizhi --remote
+npx wrangler d1 migrations apply zhizhi --remote --config wrangler.toml
 ```
 
 ### 管理员账号
@@ -685,12 +685,12 @@ npx wrangler d1 migrations apply zhizhi --remote
 | --- | --- | --- |
 | `npm run admin:create:local -- email --password pwd` | `node scripts/create-admin.mjs --local` | 在本地生产名 D1 创建或更新管理员。 |
 | `npm run admin:create:test:local -- email --password pwd` | `node scripts/create-admin.mjs --local --db zhizhi-test --env test` | 在本地 test D1 创建或更新管理员。 |
-| `npm run admin:create:test -- email --password pwd` | `node scripts/create-admin.mjs --remote --db zhizhi-test --env test` | 在远程 test D1 创建或更新管理员。 |
-| `npm run admin:create:remote -- email --password pwd` | `node scripts/create-admin.mjs --remote` | 在远程生产 D1 创建或更新管理员。 |
+| `npm run admin:create:test -- email --password pwd` | `node scripts/create-admin.mjs --remote --db zhizhi-test --env test --config wrangler.toml` | 在远程 test D1 创建或更新管理员。 |
+| `npm run admin:create:remote -- email --password pwd` | `node scripts/create-admin.mjs --remote --config wrangler.toml` | 在远程生产 D1 创建或更新管理员。 |
 | `npm run admin:promote:local -- email` | `node scripts/promote-admin.mjs --local` | 将本地生产名 D1 中已有用户提升为管理员。 |
 | `npm run admin:promote:test:local -- email` | `node scripts/promote-admin.mjs --local --db zhizhi-test --env test` | 将本地 test D1 中已有用户提升为管理员。 |
-| `npm run admin:promote:test -- email` | `node scripts/promote-admin.mjs --remote --db zhizhi-test --env test` | 将远程 test D1 中已有用户提升为管理员。 |
-| `npm run admin:promote:remote -- email` | `node scripts/promote-admin.mjs --remote` | 将远程生产 D1 中已有用户提升为管理员。 |
+| `npm run admin:promote:test -- email` | `node scripts/promote-admin.mjs --remote --db zhizhi-test --env test --config wrangler.toml` | 将远程 test D1 中已有用户提升为管理员。 |
+| `npm run admin:promote:remote -- email` | `node scripts/promote-admin.mjs --remote --config wrangler.toml` | 将远程生产 D1 中已有用户提升为管理员。 |
 
 前台普通用户系统当前软下线。第一次使用后台时，优先使用 `admin:create:*` 创建管理员，而不是依赖前台注册。
 

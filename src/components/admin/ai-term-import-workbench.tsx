@@ -4,6 +4,7 @@ import { Database, FileText, Loader2, ScanSearch, Sparkles } from "lucide-react"
 import { useMemo, useState } from "react";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
+import { useMarkdownBackup } from "@/components/admin/use-markdown-backup";
 import { ArticleReader } from "@/components/content/article-reader";
 import type { ArticleContentBlock } from "@/components/content/types";
 import type { SaveAiTermInput } from "@/lib/ai-terms";
@@ -223,6 +224,19 @@ export function AiTermImportWorkbench() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
+  const { backupAvailable, backupText, hideBackup, clearBackup } = useMarkdownBackup({
+    backupKey: "zhizhi.admin.aiterm.import.backup",
+    value: markdown,
+    baseline: sampleMarkdown,
+  });
+
+  function restoreBackup() {
+    setMarkdown(backupText);
+    setPreview(null);
+    setPreviewedMarkdown("");
+    hideBackup();
+    setSaveState({ status: "idle", message: "已恢复本地临时稿，保存前不会写入数据库。" });
+  }
 
   const previewFresh = Boolean(preview && previewedMarkdown === markdown);
   const markdownStats = useMemo(
@@ -297,6 +311,7 @@ export function AiTermImportWorkbench() {
       }
 
       const saved = data as SaveResponse;
+      clearBackup();
       setSaveState({
         status: "saved",
         message: `已保存：${saved.aiTerm?.locale ?? "zh"} / ${saved.aiTerm?.slug ?? preview?.aiTerm.slug ?? "未解析"}`,
@@ -337,6 +352,20 @@ export function AiTermImportWorkbench() {
             填入示例
           </button>
         </div>
+
+        {backupAvailable ? (
+          <div className="flex flex-col gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 sm:flex-row sm:items-center sm:justify-between">
+            <p>检测到导入工作台有本地临时稿，可能是上次离开前没有保存。</p>
+            <div className="flex shrink-0 gap-2">
+              <button className="h-9 border border-amber-300 bg-white px-3 font-semibold" type="button" onClick={restoreBackup}>
+                恢复
+              </button>
+              <button className="h-9 border border-amber-300 bg-amber-100 px-3 font-semibold" type="button" onClick={clearBackup}>
+                忽略
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <label className="block">
           <span className="sr-only">AI 词条 Markdown 发布稿</span>

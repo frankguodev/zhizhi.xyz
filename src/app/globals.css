@@ -603,6 +603,7 @@ html[data-theme="dark"] .hero-primary-action:hover {
   margin-bottom: 0.5em;
   padding-left: 0.85rem;
   padding-top: 0;
+  position: relative;
   scroll-margin-top: 6rem;
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookOpenText, ChevronRight, Home, Link2, Sparkles } from "lucide-react";
+import { AiTermDiagram } from "@/components/content/ai-term-diagram";
 import { AiTermToc } from "@/components/content/ai-term-toc";
 import { ArticleReader } from "@/components/content/article-reader";
 import { BackToTopButton } from "@/components/content/back-to-top-button";
@@ -140,12 +141,7 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
                   <h2 id="ai-term-diagram" className="ai-term-section-heading scroll-mt-24 text-2xl font-bold leading-tight text-foreground">
                     一图看懂
                   </h2>
-                  <figure className="mt-4 overflow-hidden rounded-md border border-line bg-paper/82 shadow-[var(--shadow-quiet)]" aria-label={pageCopy.diagram}>
-                    <div className="aspect-video bg-background/45 p-3 sm:p-4">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={term.diagramImage} alt={term.diagramImageAlt ?? ""} className="mx-auto h-full w-full object-contain" loading="eager" />
-                    </div>
-                  </figure>
+                  <AiTermDiagram src={term.diagramImage} alt={term.diagramImageAlt ?? ""} label={pageCopy.diagram} />
                 </section>
               ) : null}
 

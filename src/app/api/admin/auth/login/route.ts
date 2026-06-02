@@ -30,7 +30,19 @@ export async function POST(request: Request) {
     return json({ error: parsed.error.issues[0]?.message ?? "后台登录信息无效" }, { status: 400 });
   }
 
-  const user = await authenticateUser(parsed.data.email, parsed.data.password).catch(() => null);
+  let user;
+  try {
+    user = await authenticateUser(parsed.data.email, parsed.data.password);
+  } catch {
+    return json(
+      {
+        error: "暂时无法连接后台数据库。",
+        hint: "请确认生产 Worker 已使用 wrangler.toml 部署，并且 DB binding 指向生产 D1。",
+      },
+      { status: 503 },
+    );
+  }
+
   if (!user || user.role !== "admin") {
     return json({ error: "后台账号或密码不正确。" }, { status: 401 });
   }

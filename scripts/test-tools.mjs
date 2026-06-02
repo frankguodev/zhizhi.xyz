@@ -29,7 +29,7 @@ function loadWorker(scriptPath) {
   vm.runInNewContext(fs.readFileSync(scriptPath, "utf8"), context, { filename: scriptPath });
   return (payload) => {
     messages.length = 0;
-    self.onmessage({ data: { id: 1, locale: "en", ...payload } });
+    self.onmessage({ data: { id: 1, ...payload } });
     return messages.at(-1);
   };
 }
@@ -123,7 +123,7 @@ assert.deepEqual(findInvalidJsonPunctuationRange(fullWidthJson, fullWidthCommaIn
   end: fullWidthJson.indexOf("}}", fullWidthCommaIndex),
   start: fullWidthJson.indexOf("\"version\""),
 });
-assert.match(describeInvalidJsonPunctuation("，", "zh"), /全角标点/);
+assert.match(describeInvalidJsonPunctuation("，"), /全角标点/);
 
 const runUtilityWorker = loadWorker("public/tools-utility-worker.js");
 const base64Result = runUtilityWorker({ action: "base64Encode", input: "知之" });
@@ -158,16 +158,16 @@ const jwt = [
   base64UrlEncodeJson({ sub: "user-1", name: "知之", exp: Math.floor(Date.now() / 1000) + 3600 }),
   "signature",
 ].join(".");
-const decodedJwt = decodeJwtInput(`Bearer ${jwt}`, "en");
+const decodedJwt = decodeJwtInput(`Bearer ${jwt}`);
 assert.equal(decodedJwt.normalizedToken, jwt);
-assert.match(decodedJwt.raw, /Signature segment: present/);
+assert.match(decodedJwt.raw, /签名字段：存在/);
 assert.match(decodedJwt.structured.payloadJson, /"name": "知之"/);
-assert.match(decodedJwt.structured.expirationBody, /Status: not expired/);
-assert.throws(() => decodeJwtInput("not-a-token", "en"), /valid JWT|Unexpected token|JSON/);
+assert.match(decodedJwt.structured.expirationBody, /状态：未过期/);
+assert.throws(() => decodeJwtInput("not-a-token"), /有效 JWT|JSON/);
 
 const hashBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("abc"));
-assert.equal(formatHashResult(hashBytes, "SHA-256", "hex", 3, "en").structured.digest, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-assert.equal(formatHashResult(hashBytes, "SHA-256", "base64", 3, "en").structured.digest, "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=");
-assert.equal(formatHashResult(hashBytes, "SHA-256", "base64url", 3, "en").structured.digest, "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+assert.equal(formatHashResult(hashBytes, "SHA-256", "hex", 3).structured.digest, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+assert.equal(formatHashResult(hashBytes, "SHA-256", "base64", 3).structured.digest, "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=");
+assert.equal(formatHashResult(hashBytes, "SHA-256", "base64url", 3).structured.digest, "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
 
 console.log("Tools smoke tests passed.");

@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { ArticleRecord } from "@/data/articles";
 import { getDb } from "@/db/client";
-import { articleTags, articles, categories, seriesArticles, tags } from "@/db/schema";
+import { articleLikes, articleTags, articleViews, articles, categories, seriesArticles, tags } from "@/db/schema";
 import { normalizeArticleCategory } from "@/lib/article-taxonomy";
 
 function now() {
@@ -676,7 +676,7 @@ export async function listPublishedArticleSummaries() {
       updatedAt: articles.updatedAt,
     })
     .from(articles)
-    .where(inArray(articles.status, ["published", "archived"]))
+    .where(and(eq(articles.locale, "zh"), inArray(articles.status, ["published", "archived"])))
     .orderBy(desc(articles.publishedAt), desc(articles.updatedAt))
     .limit(100);
 }
@@ -775,6 +775,9 @@ export async function deletePublishedArticle(locale: ArticleRecord["locale"], sl
 
   await db.delete(articleTags).where(eq(articleTags.articleId, article.id));
   await db.delete(seriesArticles).where(eq(seriesArticles.articleId, article.id));
+  // article_likes / article_views 以 (locale, slug) 关联、无外键，需按 slug 手动清除，避免删除文章后残留孤立计数。
+  await db.delete(articleLikes).where(and(eq(articleLikes.locale, locale), eq(articleLikes.articleSlug, slug)));
+  await db.delete(articleViews).where(and(eq(articleViews.locale, locale), eq(articleViews.articleSlug, slug)));
   await db.delete(articles).where(eq(articles.id, article.id));
 
   return article;

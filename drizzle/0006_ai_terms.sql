@@ -181,3 +181,4 @@ BEGIN
     content_md = new.content_md
   WHERE rowid = old.rowid;
 END;
+--> statement-breakpoint

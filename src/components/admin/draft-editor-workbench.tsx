@@ -9,6 +9,7 @@ import { ArticleMediaManager } from "@/components/admin/article-media-manager";
 import { handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
+import { useMarkdownBackup } from "@/components/admin/use-markdown-backup";
 import { XLongformPreview } from "@/components/admin/x-longform-preview";
 import { ArticleReader } from "@/components/content/article-reader";
 import { QualityReport } from "@/components/content/quality-report";
@@ -203,8 +204,6 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
   const requestedPanel = searchParams.get("panel");
   const [markdown, setMarkdown] = useState(initialData.markdown);
   const [data, setData] = useState<DraftEditorData>(initialData);
-  const [backupText, setBackupText] = useState("");
-  const [backupAvailable, setBackupAvailable] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [confirmUpdate, setConfirmUpdate] = useState<{ label: string } | null>(null);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
@@ -218,7 +217,6 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const routeLocale = initialData.article.locale;
   const routeSlug = initialData.article.slug;
-  const backupKey = `zhizhi.admin.${mode}.${initialData.article.locale}.${initialData.article.slug}.backup`;
   const apiBase = isPublishedMode
     ? `/api/admin/articles/published/${routeLocale}/${routeSlug}`
     : `/api/admin/articles/drafts/${routeLocale}/${routeSlug}`;
@@ -238,29 +236,12 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
       : "这篇草稿还有未保存修改。离开后数据库里的草稿不会更新；本地临时稿会尽量保留，方便下次恢复。",
   });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const backup = window.localStorage.getItem(backupKey);
-      if (backup && backup !== initialData.markdown) {
-        setBackupText(backup);
-        setBackupAvailable(true);
-      }
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [backupKey, initialData.markdown]);
-
-  useEffect(() => {
-    if (!dirty) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      window.localStorage.setItem(backupKey, markdown);
-    }, 500);
-
-    return () => window.clearTimeout(timer);
-  }, [backupKey, dirty, markdown]);
+  const { backupAvailable, backupText, hideBackup, clearBackup } = useMarkdownBackup({
+    backupKey: `zhizhi.admin.${mode}.${initialData.article.locale}.${initialData.article.slug}.backup`,
+    value: markdown,
+    baseline: initialData.markdown,
+    dirty,
+  });
 
   function insertMarkdown(snippet: string) {
     const textarea = textareaRef.current;
@@ -340,17 +321,11 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
 
   function restoreBackup() {
     setMarkdown(backupText);
-    setBackupAvailable(false);
+    hideBackup();
     setSaveState({
       status: "idle",
       message: isPublishedMode ? "已恢复本地临时稿，更新前不会覆盖公开文章。" : "已恢复本地临时稿，保存前不会覆盖数据库草稿。",
     });
-  }
-
-  function discardBackup() {
-    window.localStorage.removeItem(backupKey);
-    setBackupText("");
-    setBackupAvailable(false);
   }
 
   async function updateDraft(label: string) {
@@ -379,8 +354,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
       setData(nextData);
       setMarkdown(nextData.markdown);
       setXLongformSyncedMarkdown(nextData.markdown);
-      window.localStorage.removeItem(backupKey);
-      setBackupAvailable(false);
+      clearBackup();
       const savedAt = formatSavedTime(new Date());
       setLastSavedAt(savedAt);
       setSaveState({ status: "saved", message: `${label}完成 · ${savedAt}` });
@@ -496,8 +470,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
 
       const payload = result as { articleUrl?: string };
       const articleUrl = payload.articleUrl ?? publishUrl;
-      window.localStorage.removeItem(backupKey);
-      setBackupAvailable(false);
+      clearBackup();
       setPublishedArticleUrl(articleUrl);
       setSaveState({ status: "published", message: `发布完成：${articleUrl}` });
     } catch (error) {
@@ -606,7 +579,7 @@ export function DraftEditorWorkbench({ initialData, mode = "draft" }: { initialD
                 <button className="admin-btn h-9 border border-amber-300 bg-white px-3 font-semibold" type="button" onClick={restoreBackup}>
                   恢复
                 </button>
-                <button className="admin-btn h-9 border border-amber-300 bg-amber-100 px-3 font-semibold" type="button" onClick={discardBackup}>
+                <button className="admin-btn h-9 border border-amber-300 bg-amber-100 px-3 font-semibold" type="button" onClick={clearBackup}>
                   忽略
                 </button>
               </div>

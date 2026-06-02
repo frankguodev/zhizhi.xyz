@@ -36,6 +36,30 @@ export type AiTermBodyDedup = {
   extractReferences?: boolean;
 };
 
+const beginnerNoteDedupKeys = ["plain_explanation", "analogy", "why_it_matters", "common_misconception"] as const;
+
+function hasBeginnerNotesContent(beginnerNotes: unknown) {
+  if (!beginnerNotes || typeof beginnerNotes !== "object" || Array.isArray(beginnerNotes)) {
+    return false;
+  }
+  const notes = beginnerNotes as Record<string, unknown>;
+  return beginnerNoteDedupKeys.some((key) => typeof notes[key] === "string" && (notes[key] as string).trim().length > 0);
+}
+
+/**
+ * 词条正文去重配置，与公开详情页 `src/app/ai-terms/[slug]/page.tsx` 保持一致，
+ * 供后台编辑/导入的解析预览复用，确保预览效果与发布后一致。
+ */
+export function buildAiTermBodyDedup(term: { beginnerNotes?: unknown; relations?: unknown[] }): AiTermBodyDedup {
+  return {
+    stripLeadingTitle: true,
+    stripSummary: true,
+    stripBeginnerNotes: hasBeginnerNotesContent(term.beginnerNotes),
+    stripRelations: Array.isArray(term.relations) && term.relations.length > 0,
+    extractReferences: true,
+  };
+}
+
 const dedupHeadings: Record<Locale, { summary: string[]; beginnerNotes: string[]; relations: string[]; references: string[] }> = {
   zh: {
     summary: ["一句话概念"],
