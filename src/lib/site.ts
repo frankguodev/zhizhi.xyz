@@ -4,7 +4,7 @@ export const siteConfig = {
   domain: "zhizhi.xyz",
   url: "https://zhizhi.xyz",
   tagline: "把知识整理成可追溯、可复用、可继续生长的路径。",
-  description: "知之是一个个人知识分享系统，整理高质量文章、专题路线、分层阅读和可复用的创作方法。",
+  description: "知之是一个个人知识分享系统，有高质量文章、术语词条、实用工具等。",
   social: {
     email: "hello@frankguo.com",
     xUrl: "https://x.com/frankguodev",

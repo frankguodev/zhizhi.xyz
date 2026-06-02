@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquareText, Send } from "lucide-react";
+import { ChevronDown, MessageSquareText, Send } from "lucide-react";
 import { useMemo, useState } from "react";
 type AnonymousFeedbackFormProps = {
   locale: string;
@@ -16,7 +16,6 @@ type SubmitState = {
 
 const copy = {
   eyebrow: "匿名反馈",
-  title: "这篇文章哪里还可以更好？",
   description: "欢迎留一句真实反馈：错别字、没讲清楚的地方、想继续看的方向都可以。联系方式可不填。",
   contentLabel: "反馈内容",
   contentPlaceholder: "例如：这里的步骤 3 我没看懂；或者这个主题还想看一篇部署实战。",
@@ -42,6 +41,7 @@ function getErrorMessage(status: number) {
 
 export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTitle }: AnonymousFeedbackFormProps) {
   const pageCopy = copy;
+  const [expanded, setExpanded] = useState(false);
   const [content, setContent] = useState("");
   const [contact, setContact] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle", message: "" });
@@ -99,21 +99,27 @@ export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTit
   }
 
   return (
-    <section className="mt-10 border-t border-line pt-7" aria-labelledby="anonymous-feedback-title">
-      <div className="rounded-md border border-line bg-surface/58 px-4 py-4 sm:px-5">
-        <div className="flex items-start gap-3">
+    <section className="mt-7 border-t border-line pt-7" aria-labelledby="anonymous-feedback-title">
+      <div>
+        <button
+          type="button"
+          className="-mx-2 flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--accent)_7%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          aria-expanded={expanded}
+          aria-controls="anonymous-feedback-body"
+          onClick={() => setExpanded((value) => !value)}
+        >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-accent">
             <MessageSquareText className="h-5 w-5" />
           </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-accent">{pageCopy.eyebrow}</p>
-            <h2 id="anonymous-feedback-title" className="mt-1 text-xl font-semibold text-foreground">
-              {pageCopy.title}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{pageCopy.description}</p>
-          </div>
-        </div>
+          <p id="anonymous-feedback-title" className="min-w-0 flex-1 text-sm font-semibold text-accent">
+            {pageCopy.eyebrow}
+          </p>
+          <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
 
+        {expanded ? (
+          <div id="anonymous-feedback-body">
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">{pageCopy.description}</p>
         <div className="mt-5 grid gap-4">
           <label className="grid gap-2">
             <span className="text-sm font-semibold text-foreground">{pageCopy.contentLabel}</span>
@@ -157,6 +163,8 @@ export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTit
           <p className={`mt-3 text-sm font-semibold ${statusClass}`} role={submitState.status === "error" ? "alert" : "status"}>
             {submitState.message}
           </p>
+        ) : null}
+          </div>
         ) : null}
       </div>
     </section>

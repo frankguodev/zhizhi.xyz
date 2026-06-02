@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ExternalLink as ExternalLinkIcon, Mail } from "lucide-react";
 import { ExternalLinkList } from "@/components/content/external-link-list";
+import { FooterWechatContact } from "@/components/layout/footer-wechat-contact";
 import { SiteLogoMark } from "@/components/layout/site-logo-mark";
 import { listExternalLinks } from "@/lib/external-links";
 import { siteConfig } from "@/lib/site";
@@ -27,8 +28,8 @@ export async function SiteFooter() {
   return (
     <footer className="footer-surface mt-8 md:mt-10">
       <div className="mx-auto max-w-6xl px-6 py-11">
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_0.8fr_1fr]">
-          <div>
+        <div className="grid grid-cols-2 gap-10 lg:grid-cols-[1.15fr_0.8fr_1fr]">
+          <div className="col-span-2 lg:col-span-1">
             <Link href="/" className="inline-flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background">
               <SiteLogoMark className="h-10 w-10 shrink-0" />
               <span className="text-xl font-semibold text-foreground">{siteConfig.name}</span>
@@ -70,6 +71,7 @@ export async function SiteFooter() {
               >
                 <Mail className="h-4 w-4" />
               </a>
+              <FooterWechatContact />
             </div>
           </div>
 

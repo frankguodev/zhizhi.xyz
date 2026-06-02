@@ -4,7 +4,7 @@ import {
   maxPublicLimit,
   parsePublicLocale,
   publicJsonError,
-  publicSuccessHeaders,
+  publicSuccessHeadersZh,
   readBoundedText,
   readUnsignedInteger,
 } from "@/lib/public-api";
@@ -21,7 +21,7 @@ function parseRequest(request: Request): ParseResult {
   const locale = parsePublicLocale();
 
   if (!locale) {
-    return { ok: false, error: "Invalid locale. Use zh or en." };
+    return { ok: false, error: "语言参数无效。" };
   }
 
   const sortParam = searchParams.get("sort") ?? "popular";
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
   try {
     const payload = await getPublicArticleListPayload(parsed.input);
-    return NextResponse.json(payload, { headers: publicSuccessHeaders(parsed.input.locale) });
+    return NextResponse.json(payload, { headers: publicSuccessHeadersZh });
   } catch {
     return publicJsonError("Article list is temporarily unavailable.", 503);
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { defaultPublicLimit, maxPublicLimit, parsePublicLocale, publicJsonError, publicSuccessHeaders, readUnsignedInteger } from "@/lib/public-api";
+import { defaultPublicLimit, maxPublicLimit, parsePublicLocale, publicJsonError, publicSuccessHeadersZh, readUnsignedInteger } from "@/lib/public-api";
 import { getPublicLinkListPayload, isPublicExternalLinkPosition, type PublicLinkListInput } from "@/lib/public-link-list";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ function parseRequest(request: Request): ParseResult {
   const locale = parsePublicLocale();
 
   if (!locale) {
-    return { ok: false, error: "Invalid locale. Use zh or en." };
+    return { ok: false, error: "语言参数无效。" };
   }
 
   const positionParam = searchParams.get("position") ?? "";
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
 
   try {
     const payload = await getPublicLinkListPayload(parsed.input);
-    return NextResponse.json(payload, { headers: publicSuccessHeaders(parsed.input.locale) });
+    return NextResponse.json(payload, { headers: publicSuccessHeadersZh });
   } catch {
     return publicJsonError("External links are temporarily unavailable.", 503);
   }

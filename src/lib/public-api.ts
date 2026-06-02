@@ -19,11 +19,6 @@ export const publicSuccessHeadersZh = {
   "X-Content-Type-Options": "nosniff",
 };
 
-/** @deprecated 使用 publicSuccessHeadersZh */
-export function publicSuccessHeaders(_locale: Locale) {
-  return publicSuccessHeadersZh;
-}
-
 export function publicJsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status, headers: publicErrorHeaders });
 }

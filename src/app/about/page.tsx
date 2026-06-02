@@ -18,6 +18,7 @@ const focusAreas = [
 
 const contacts = [
   { label: "邮箱", value: "hello@frankguo.com", href: "mailto:hello@frankguo.com", external: false },
+  { label: "微信", value: "frankguodev" },
   { label: "X", value: "@frankguodev", href: "https://x.com/frankguodev", external: true },
   { label: "GitHub", value: "frankguodev", href: "https://github.com/frankguodev", external: true },
 ];
@@ -88,13 +89,17 @@ export default function AboutPage() {
               {contacts.map((item) => (
                 <li key={item.label} className="flex items-center gap-3 text-sm text-muted">
                   <span className="w-12 shrink-0 font-semibold text-foreground">{item.label}</span>
-                  <a
-                    className="rounded-md transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-                    href={item.href}
-                    {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                  >
-                    {item.value}
-                  </a>
+                  {"href" in item ? (
+                    <a
+                      className="rounded-md transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      href={item.href}
+                      {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                    >
+                      {item.value}
+                    </a>
+                  ) : (
+                    <span className="font-medium text-muted">{item.value}</span>
+                  )}
                 </li>
               ))}
             </ul>

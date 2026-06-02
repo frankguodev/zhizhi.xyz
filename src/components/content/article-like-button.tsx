@@ -114,8 +114,8 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
   const twitterShareUrl = buildTwitterShareUrl(shareTitle, shareUrl);
 
   return (
-    <section className="article-like-panel mt-10 border-t border-line pt-7">
-      <div className="rounded-md border border-line bg-surface/58 px-4 py-4">
+    <section className="article-like-panel">
+      <div>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-muted">{copy.prompt}</p>
@@ -135,7 +135,7 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
         </div>
         {error ? <p className="mt-3 text-xs font-semibold text-amber">{error}</p> : null}
 
-        <div className="mt-5 flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-5 flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-base font-semibold text-foreground">{copy.shareTitle}</p>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{copy.shareText}</p>

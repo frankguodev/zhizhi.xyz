@@ -20,7 +20,7 @@ const blockLabels: Record<Locale, Record<LayeredBlockType, string>> = {
 };
 
 const detailLayerTone = {
-  tone: "border-line border-l-accent bg-[color-mix(in_srgb,var(--accent)_4%,var(--paper))]",
+  tone: "bg-[color-mix(in_srgb,var(--accent)_4%,var(--paper))]",
   iconTone: "border-accent/28 bg-accent/8 text-accent",
   labelTone: "text-accent",
   triggerTone: "hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--accent)_7%,transparent)]",
@@ -111,7 +111,7 @@ function LayerBlock({
   }, [block.type, mode]);
 
   return (
-    <section className={cn("my-7 min-w-0 overflow-hidden rounded-md border border-l-4 px-4 py-4 shadow-sm transition md:px-5", meta.tone)} data-layer-type={block.type}>
+    <section className={cn("my-7 min-w-0 overflow-hidden rounded-md px-4 py-4 shadow-sm transition md:px-5", meta.tone)} data-layer-type={block.type}>
       <button
         type="button"
         className={cn(
@@ -405,13 +405,13 @@ export function ArticleReader({
   return (
     <div className="min-w-0" data-article-reader onClick={openImagePreview} onKeyDown={openImagePreviewFromKeyboard}>
       {supportsReadingMode ? (
-        <div className="z-10 mb-6 rounded-md border border-line bg-paper/86 p-2 shadow-sm backdrop-blur-sm sm:sticky sm:top-0 md:mb-8">
+        <div className="z-10 mb-6 rounded-md bg-paper/86 p-2 shadow-sm backdrop-blur-sm sm:sticky sm:top-0 md:mb-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2 px-2 text-sm font-medium leading-6 text-muted">
               {mode === "full" ? <Layers3 className="h-4 w-4 text-accent" /> : <Gauge className="h-4 w-4 text-accent" />}
               <span className="min-w-0">{modeCopy[locale][mode]}</span>
             </div>
-            <div className="grid grid-cols-2 rounded-md border border-line bg-surface/70 p-1">
+            <div className="grid grid-cols-2 rounded-md bg-surface/70 p-1">
               <button
                 type="button"
                 className={cn(

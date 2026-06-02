@@ -131,11 +131,13 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
             <div className={tocItems.length > 0 ? "grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" : "mx-auto max-w-6xl"}>
               <div className="min-w-0">
                 <ArticleToc items={tocItems} variant="mobile" />
-                <div className="article-reading-surface article-reading-surface-no-rail min-w-0 rounded-md border border-line px-4 py-6 sm:px-5 md:px-10 md:py-10">
+                <div className="min-w-0 px-4 pb-6 sm:px-5 md:px-10 md:pb-10">
                   <div className="min-w-0">
                     <ArticleReader blocks={blocks} defaultMode={article.defaultReadingMode} locale={locale} supportsReadingMode={article.supportsReadingMode} />
-                    <ArticleLikeButton locale={locale} slug={article.slug} shareTitle={article.title} shareUrl={shareUrl} />
-                    <AnonymousFeedbackForm locale={locale} pageUrl={currentPath} articleSlug={article.slug} articleTitle={article.title} />
+                    <div className="mt-10 rounded-md bg-surface/58 px-4 py-5 sm:px-5">
+                      <ArticleLikeButton locale={locale} slug={article.slug} shareTitle={article.title} shareUrl={shareUrl} />
+                      <AnonymousFeedbackForm locale={locale} pageUrl={currentPath} articleSlug={article.slug} articleTitle={article.title} />
+                    </div>
                   </div>
                 </div>
                 <ArticleAdjacentNavigation navigation={navigation} />

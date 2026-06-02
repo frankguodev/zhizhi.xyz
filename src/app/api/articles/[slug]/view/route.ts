@@ -1,6 +1,6 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { canReadFullArticle } from "@/lib/article-access";
+import { type AnonymousDevice, getAnonymousDeviceId, isSameOriginMutation, noStoreHeaders, withAnonymousDeviceCookie } from "@/lib/anonymous-device";
 import { getArticleViewCount, recordArticleView } from "@/lib/article-views";
 import { parsePublicLocale, parsePublicSlug, publicJsonError } from "@/lib/public-api";
 import { getPublicArticle } from "@/lib/public-articles";
@@ -8,85 +8,17 @@ import { getPublicArticle } from "@/lib/public-articles";
 export const dynamic = "force-dynamic";
 
 const anonymousViewCookieName = "zz_view_device";
-const anonymousViewCookieMaxAgeSeconds = 60 * 60 * 24 * 400;
-const anonymousIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const noStoreHeaders = {
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-};
 const publicViewer = { isAuthenticated: false, user: null };
 
-function cookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: anonymousViewCookieMaxAgeSeconds,
-  };
-}
-
-async function getAnonymousViewId() {
-  const cookieStore = await cookies();
-  const currentId = cookieStore.get(anonymousViewCookieName)?.value;
-
-  if (currentId && anonymousIdPattern.test(currentId)) {
-    return { id: currentId, shouldSetCookie: false };
-  }
-
-  return { id: crypto.randomUUID(), shouldSetCookie: true };
-}
-
-function successJson(payload: { counted?: boolean; viewCount: number }, anonymousId: string, shouldSetCookie: boolean) {
-  const response = NextResponse.json(payload, { headers: noStoreHeaders });
-
-  if (shouldSetCookie) {
-    response.cookies.set(anonymousViewCookieName, anonymousId, cookieOptions());
-  }
-
-  return response;
-}
-
-function isSameOriginMutation(request: Request) {
-  const fetchSite = request.headers.get("sec-fetch-site");
-
-  if (fetchSite === "cross-site") {
-    return false;
-  }
-
-  if (fetchSite === "same-origin") {
-    return true;
-  }
-
-  const origin = request.headers.get("origin");
-
-  if (!origin) {
-    return true;
-  }
-
-  try {
-    const originUrl = new URL(origin);
-    const requestUrl = new URL(request.url);
-
-    if (originUrl.origin === requestUrl.origin) {
-      return true;
-    }
-
-    const forwardedHost = request.headers.get("x-forwarded-host");
-    const forwardedProto = request.headers.get("x-forwarded-proto") ?? requestUrl.protocol.replace(":", "");
-    const host = forwardedHost ?? request.headers.get("host");
-
-    return Boolean(host && originUrl.origin === `${forwardedProto}://${host}`);
-  } catch {
-    return false;
-  }
+function successJson(payload: { counted?: boolean; viewCount: number }, device: AnonymousDevice) {
+  return withAnonymousDeviceCookie(NextResponse.json(payload, { headers: noStoreHeaders }), anonymousViewCookieName, device);
 }
 
 async function parseArticleRequest(rawSlug: string) {
   const locale = parsePublicLocale();
 
   if (!locale) {
-    return { ok: false as const, response: publicJsonError("Invalid locale. Use zh or en.") };
+    return { ok: false as const, response: publicJsonError("语言参数无效。") };
   }
 
   const slug = parsePublicSlug(rawSlug);
@@ -122,11 +54,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     return parsed.response;
   }
 
-  const anonymous = await getAnonymousViewId();
+  const anonymous = await getAnonymousDeviceId(anonymousViewCookieName);
 
   try {
     const viewCount = await getArticleViewCount(parsed.locale, parsed.slug);
-    return successJson({ viewCount: viewCount ?? parsed.fallbackViewCount }, anonymous.id, anonymous.shouldSetCookie);
+    return successJson({ viewCount: viewCount ?? parsed.fallbackViewCount }, anonymous);
   } catch {
     return databaseError();
   }
@@ -144,7 +76,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     return parsed.response;
   }
 
-  const anonymous = await getAnonymousViewId();
+  const anonymous = await getAnonymousDeviceId(anonymousViewCookieName);
 
   try {
     const payload = await recordArticleView(parsed.locale, parsed.slug, anonymous.id);
@@ -153,7 +85,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       return publicJsonError("Article not found.", 404);
     }
 
-    return successJson(payload, anonymous.id, anonymous.shouldSetCookie);
+    return successJson(payload, anonymous);
   } catch {
     return databaseError();
   }

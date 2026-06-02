@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
+import { CookieNotice } from "@/components/layout/cookie-notice";
 import { ThemeScript } from "@/components/layout/theme-script";
 import { siteConfig } from "@/lib/site";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body suppressHydrationWarning className="min-h-full bg-background text-foreground">
         <ThemeScript />
         {children}
+        <CookieNotice />
       </body>
     </html>
   );

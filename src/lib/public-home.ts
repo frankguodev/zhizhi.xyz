@@ -8,7 +8,7 @@ import { listPublicSeries, type PublicSeriesSummary } from "@/lib/series";
 import type { Locale } from "@/lib/site";
 
 const focusTopicsByLocale: Record<Locale, string[]> = {
-  zh: ["AI 探索与应用", "内容出海", "项目开发实践", "个人品牌"],
+  zh: ["AI 探索与应用", "项目开发实践"]
 };
 
 export type PublicHomeArticle = Pick<

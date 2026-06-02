@@ -79,7 +79,7 @@ async function runTests() {
     const { response, body } = await getJson("/api/public/home?locale=fr");
     assert.equal(response.status, 400);
     expectNoStore(response);
-    assert.equal(body.error, "Invalid locale. Use zh or en.");
+    assert.equal(body.error, "语言参数无效。");
   }
 
   {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parsePublicLocale, parsePublicSlug, publicJsonError, publicSuccessHeaders } from "@/lib/public-api";
+import { parsePublicLocale, parsePublicSlug, publicJsonError, publicSuccessHeadersZh } from "@/lib/public-api";
 import { getPublicArticleDetailPayload } from "@/lib/public-article-detail";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
   const locale = parsePublicLocale();
 
   if (!locale) {
-    return publicJsonError("Invalid locale. Use zh or en.");
+    return publicJsonError("语言参数无效。");
   }
 
   const { slug: rawSlug } = await params;
@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       return publicJsonError("Article not found.", 404);
     }
 
-    return NextResponse.json(payload, { headers: publicSuccessHeaders(locale) });
+    return NextResponse.json(payload, { headers: publicSuccessHeadersZh });
   } catch {
     return publicJsonError("Article detail is temporarily unavailable.", 503);
   }

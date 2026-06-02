@@ -20,8 +20,7 @@ const copy = {
   currentPath: "/",
   articlesHref: "/articles",
   aiTermsHref: "/ai-terms",
-  heroTitle: "免费分享",
-  heroDescription: "分享普通人也能复制的实战经验和真实成长路径",
+  heroTitle: "分享有用、有趣的东西",
   startReading: "文章阅读",
   aiTermsNav: "AI 词条",
   knowledgeBase: "个人知识库",
@@ -32,8 +31,6 @@ const copy = {
   aiTermsStat: "AI 词条",
   aiTermsEyebrow: "最新词条",
   viewAllAiTerms: "查看全部词条",
-  focusAreas: "关注方向",
-  focusDescription: "长期沉淀的主题",
   latestEyebrow: "最新文章",
   viewAllArticles: "查看全部文章",
   readingMinutes(minutes: number) {
@@ -94,12 +91,11 @@ export function HomePage({ payload }: HomePageProps) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }} />
 
         <section className="site-grid border-b border-line" aria-labelledby="home-hero-title">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-9 sm:px-6 md:grid-cols-[0.92fr_1.08fr] md:items-center md:py-14 lg:py-16">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-9 pt-[4.5rem] sm:px-6 md:grid-cols-[0.92fr_1.08fr] md:items-start md:pb-14 md:pt-28 lg:pb-16 lg:pt-32">
             <div className="flex min-w-0 flex-col justify-center">
               <h1 id="home-hero-title" className="max-w-3xl text-[2rem] font-semibold leading-tight text-foreground sm:text-5xl md:text-6xl">
                 {pageCopy.heroTitle}
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-muted md:text-lg">{pageCopy.heroDescription}</p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Link className="hero-action hero-primary-action inline-flex h-11 w-full items-center justify-center gap-2 rounded-md px-5 text-sm font-semibold shadow-sm transition sm:w-auto" href={pageCopy.articlesHref}>
                   {pageCopy.startReading}
@@ -111,7 +107,7 @@ export function HomePage({ payload }: HomePageProps) {
               </div>
             </div>
 
-            <aside className="glass-surface tech-border vein-map min-h-0 rounded-md p-4 sm:min-h-[24rem] sm:p-5 md:min-h-[31rem] md:p-6" aria-labelledby="home-overview-title">
+            <aside className="glass-surface tech-border vein-map rounded-md p-4 sm:p-5 md:p-6" aria-labelledby="home-overview-title">
               <div className="relative z-10 border-b border-line pb-5">
                 <span className="inline-flex items-center gap-2 text-sm font-semibold text-accent">
                   {pageCopy.knowledgeBase}
@@ -140,18 +136,6 @@ export function HomePage({ payload }: HomePageProps) {
                     <p className="text-2xl font-semibold text-foreground">{payload.stats.aiTermCount}</p>
                     <p className="mt-1 text-xs font-semibold text-muted">{pageCopy.aiTermsStat}</p>
                   </div>
-                </div>
-              </div>
-
-              <div className="relative z-10 mt-6">
-                <p className="text-sm font-semibold text-muted">{pageCopy.focusAreas}</p>
-                <p className="mt-2 text-sm leading-6 text-muted">{pageCopy.focusDescription}</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {payload.focusTopics.map((topic) => (
-                    <span key={topic} className="rounded-md border border-accent/18 bg-accent/6 px-3 py-3 text-sm font-semibold text-foreground">
-                      {topic}
-                    </span>
-                  ))}
                 </div>
               </div>
             </aside>

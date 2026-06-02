@@ -9,6 +9,7 @@ type SiteHeaderProps = {
 };
 
 const navItems = [
+  { href: "/", label: "首页" },
   { href: "/articles", label: "文章" },
   { href: "/series", label: "专题" },
   { href: "/ai-terms", label: "词条" },

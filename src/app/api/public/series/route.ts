@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { defaultPublicLimit, maxPublicLimit, parsePublicLocale, publicJsonError, publicSuccessHeaders, readUnsignedInteger } from "@/lib/public-api";
+import { defaultPublicLimit, maxPublicLimit, parsePublicLocale, publicJsonError, publicSuccessHeadersZh, readUnsignedInteger } from "@/lib/public-api";
 import { getPublicSeriesListPayload, type PublicSeriesListInput, type PublicSeriesSort } from "@/lib/public-series-list";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ function parseRequest(request: Request): ParseResult {
   const locale = parsePublicLocale();
 
   if (!locale) {
-    return { ok: false, error: "Invalid locale. Use zh or en." };
+    return { ok: false, error: "语言参数无效。" };
   }
 
   const sortParam = searchParams.get("sort") ?? "default";
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   try {
     const payload = await getPublicSeriesListPayload(parsed.input);
-    return NextResponse.json(payload, { headers: publicSuccessHeaders(parsed.input.locale) });
+    return NextResponse.json(payload, { headers: publicSuccessHeadersZh });
   } catch {
     return publicJsonError("Series list is temporarily unavailable.", 503);
   }

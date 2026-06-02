@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getAnonymousDeviceId, isSameOriginMutation, noStoreHeaders, withAnonymousDeviceCookie } from "@/lib/anonymous-device";
 import {
   AnonymousFeedbackRateLimitError,
   AnonymousFeedbackValidationError,
@@ -11,68 +11,6 @@ import { isLocale, type Locale } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 const anonymousFeedbackCookieName = "zz_feedback_device";
-const anonymousFeedbackCookieMaxAgeSeconds = 60 * 60 * 24 * 400;
-const anonymousIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const noStoreHeaders = {
-  "Cache-Control": "no-store",
-  "X-Content-Type-Options": "nosniff",
-};
-
-function cookieOptions() {
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: anonymousFeedbackCookieMaxAgeSeconds,
-  };
-}
-
-async function getAnonymousFeedbackId() {
-  const cookieStore = await cookies();
-  const currentId = cookieStore.get(anonymousFeedbackCookieName)?.value;
-
-  if (currentId && anonymousIdPattern.test(currentId)) {
-    return { id: currentId, shouldSetCookie: false };
-  }
-
-  return { id: crypto.randomUUID(), shouldSetCookie: true };
-}
-
-function isSameOriginMutation(request: Request) {
-  const fetchSite = request.headers.get("sec-fetch-site");
-
-  if (fetchSite === "cross-site") {
-    return false;
-  }
-
-  if (fetchSite === "same-origin") {
-    return true;
-  }
-
-  const origin = request.headers.get("origin");
-
-  if (!origin) {
-    return true;
-  }
-
-  try {
-    const originUrl = new URL(origin);
-    const requestUrl = new URL(request.url);
-
-    if (originUrl.origin === requestUrl.origin) {
-      return true;
-    }
-
-    const forwardedHost = request.headers.get("x-forwarded-host");
-    const forwardedProto = request.headers.get("x-forwarded-proto") ?? requestUrl.protocol.replace(":", "");
-    const host = forwardedHost ?? request.headers.get("host");
-
-    return Boolean(host && originUrl.origin === `${forwardedProto}://${host}`);
-  } catch {
-    return false;
-  }
-}
 
 function readString(payload: unknown, key: string) {
   if (typeof payload !== "object" || payload === null || !(key in payload)) {
@@ -104,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400, headers: noStoreHeaders });
   }
 
-  const anonymous = await getAnonymousFeedbackId();
+  const anonymous = await getAnonymousDeviceId(anonymousFeedbackCookieName);
 
   try {
     const result = await createAnonymousFeedback({
@@ -118,13 +56,8 @@ export async function POST(request: Request) {
       anonymousId: anonymous.id,
       userAgent: request.headers.get("user-agent"),
     });
-    const response = NextResponse.json({ ok: true, id: result.id }, { headers: noStoreHeaders });
 
-    if (anonymous.shouldSetCookie) {
-      response.cookies.set(anonymousFeedbackCookieName, anonymous.id, cookieOptions());
-    }
-
-    return response;
+    return withAnonymousDeviceCookie(NextResponse.json({ ok: true, id: result.id }, { headers: noStoreHeaders }), anonymousFeedbackCookieName, anonymous);
   } catch (error) {
     if (error instanceof AnonymousFeedbackRateLimitError) {
       return NextResponse.json({ error: "Please wait before submitting feedback again." }, { status: 429, headers: noStoreHeaders });
