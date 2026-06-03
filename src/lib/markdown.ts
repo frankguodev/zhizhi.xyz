@@ -213,6 +213,43 @@ function rehypeArticleExternalLinks() {
   };
 }
 
+const imageDimensionTitlePattern = /^(\d{1,5})x(\d{1,5})$/i;
+
+function rehypeImageAttributes() {
+  return function transform(tree: HastNode) {
+    function visit(node: HastNode) {
+      if (node.type === "element" && node.tagName === "img") {
+        const properties = node.properties ?? {};
+
+        if (properties.loading === undefined) {
+          properties.loading = "lazy";
+        }
+        if (properties.decoding === undefined) {
+          properties.decoding = "async";
+        }
+
+        const title = properties.title;
+        if (typeof title === "string") {
+          const match = title.match(imageDimensionTitlePattern);
+          if (match) {
+            properties.width = Number(match[1]);
+            properties.height = Number(match[2]);
+            delete properties.title;
+          }
+        }
+
+        node.properties = properties;
+      }
+
+      for (const child of node.children ?? []) {
+        visit(child);
+      }
+    }
+
+    visit(tree);
+  };
+}
+
 async function markdownToHtml(markdown: string) {
   const file = await unified()
     .use(remarkParse)
@@ -220,6 +257,7 @@ async function markdownToHtml(markdown: string) {
     .use(remarkRehype)
     .use(rehypeSlug)
     .use(rehypeArticleExternalLinks)
+    .use(rehypeImageAttributes)
     .use(rehypeStringify)
     .process(markdown);
 

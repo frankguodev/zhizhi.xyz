@@ -201,6 +201,11 @@ export type UpdateAiTermTaxonomyInput = {
 export type BulkAiTermAction = "publish" | "archive" | "restore" | "delete" | "markReviewed" | "unmarkReviewed" | "setTrending" | "unsetTrending";
 
 const AI_TERM_CATEGORIES_CACHE_TAG = "ai-term-categories";
+const PUBLIC_AI_TERMS_CACHE_TAG = "public-ai-terms";
+
+function revalidatePublicAiTermsCache() {
+  revalidateTag(PUBLIC_AI_TERMS_CACHE_TAG, { expire: 0 });
+}
 
 function clampLimit(value: number | undefined) {
   return Math.min(Math.max(value ?? 24, 1), 100);
@@ -601,19 +606,27 @@ async function buildPublicAiTermConditions(locale: AiTermLocale, options: ListPu
 }
 
 export async function countPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
-  try {
-    const db = await getDb();
-    const locale = options.locale ?? "zh";
-    const conditions = await buildPublicAiTermConditions(locale, options);
-    if (conditions === null) {
+  return cachedCountPublicAiTerms(options);
+}
+
+const cachedCountPublicAiTerms = unstable_cache(
+  async (options: ListPublicAiTermsOptions = {}) => {
+    try {
+      const db = await getDb();
+      const locale = options.locale ?? "zh";
+      const conditions = await buildPublicAiTermConditions(locale, options);
+      if (conditions === null) {
+        return 0;
+      }
+      const rows = await db.select({ value: count() }).from(aiTerms).where(and(...conditions));
+      return Number(rows[0]?.value ?? 0);
+    } catch {
       return 0;
     }
-    const rows = await db.select({ value: count() }).from(aiTerms).where(and(...conditions));
-    return Number(rows[0]?.value ?? 0);
-  } catch {
-    return 0;
-  }
-}
+  },
+  ["public-ai-terms-count"],
+  { revalidate: 120, tags: [PUBLIC_AI_TERMS_CACHE_TAG] },
+);
 
 /** 各分类下的公开词条数（slug → count），用于列表页分类筛选计数。 */
 export async function countPublicAiTermsByCategory(locale: AiTermLocale = "zh"): Promise<Record<string, number>> {
@@ -638,37 +651,45 @@ export async function countPublicAiTermsByCategory(locale: AiTermLocale = "zh"):
 }
 
 export async function listPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
-  try {
-    const db = await getDb();
-    const locale = options.locale ?? "zh";
-    const conditions = await buildPublicAiTermConditions(locale, options);
-    if (conditions === null) {
+  return cachedListPublicAiTerms(options);
+}
+
+const cachedListPublicAiTerms = unstable_cache(
+  async (options: ListPublicAiTermsOptions = {}) => {
+    try {
+      const db = await getDb();
+      const locale = options.locale ?? "zh";
+      const conditions = await buildPublicAiTermConditions(locale, options);
+      if (conditions === null) {
+        return [];
+      }
+
+      const orderBy =
+        options.sort === "latest"
+          ? [desc(aiTerms.publishedAt), asc(aiTerms.term)]
+          : options.sort === "heat"
+            ? [desc(aiTerms.heatScore), asc(aiTerms.term)]
+            : options.sort === "quality"
+              ? [desc(aiTerms.qualityScore), asc(aiTerms.term)]
+              : [desc(aiTerms.trending), asc(aiTerms.sortOrder), asc(aiTerms.term)];
+
+      const rows = await db
+        .select()
+        .from(aiTerms)
+        .where(and(...conditions))
+        .orderBy(...orderBy)
+        .limit(clampLimit(options.limit))
+        .offset(normalizeOffset(options.offset));
+
+      const { categoriesByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
+      return rows.map((row) => summaryFromRow(row, categoriesByTerm));
+    } catch {
       return [];
     }
-
-    const orderBy =
-      options.sort === "latest"
-        ? [desc(aiTerms.publishedAt), asc(aiTerms.term)]
-        : options.sort === "heat"
-          ? [desc(aiTerms.heatScore), asc(aiTerms.term)]
-          : options.sort === "quality"
-            ? [desc(aiTerms.qualityScore), asc(aiTerms.term)]
-            : [desc(aiTerms.trending), asc(aiTerms.sortOrder), asc(aiTerms.term)];
-
-    const rows = await db
-      .select()
-      .from(aiTerms)
-      .where(and(...conditions))
-      .orderBy(...orderBy)
-      .limit(clampLimit(options.limit))
-      .offset(normalizeOffset(options.offset));
-
-    const { categoriesByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
-    return rows.map((row) => summaryFromRow(row, categoriesByTerm));
-  } catch {
-    return [];
-  }
-}
+  },
+  ["public-ai-terms-list"],
+  { revalidate: 120, tags: [PUBLIC_AI_TERMS_CACHE_TAG] },
+);
 
 export async function listAdminAiTerms(options: ListAdminAiTermsOptions = {}) {
   const db = await getDb();
@@ -1108,6 +1129,7 @@ export async function saveAiTerm(input: SaveAiTermInput): Promise<SaveAiTermResu
   }
 
   await resolveRelationCandidatesForTerm(termId, input.locale, input.slug);
+  revalidatePublicAiTermsCache();
 
   return { id: termId, slug: input.slug, locale: input.locale, skippedRelations };
 }
@@ -1157,6 +1179,7 @@ export async function updateAiTermAdminFields(input: UpdateAiTermAdminInput) {
 
   if (rows[0]) {
     await resolveRelationCandidatesForTerm(rows[0].id, rows[0].locale, rows[0].slug);
+    revalidatePublicAiTermsCache();
   }
 
   return rows[0] ?? null;
@@ -1213,6 +1236,10 @@ export async function applyAiTermAdminAction(locale: AiTermLocale, slug: string,
       visibility: aiTerms.visibility,
     });
 
+  if (rows[0]) {
+    revalidatePublicAiTermsCache();
+  }
+
   return rows[0] ?? null;
 }
 
@@ -1227,6 +1254,7 @@ export async function deleteAiTerm(locale: AiTermLocale, slug: string) {
   await db.delete(aiTermRelations).where(or(eq(aiTermRelations.termId, existing.id), eq(aiTermRelations.relatedTermId, existing.id)));
   await db.delete(aiTermRelationCandidates).where(eq(aiTermRelationCandidates.termId, existing.id));
   await db.delete(aiTerms).where(eq(aiTerms.id, existing.id));
+  revalidatePublicAiTermsCache();
 
   return existing;
 }

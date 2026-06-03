@@ -1,6 +1,7 @@
 import type { ArticleRecord } from "@/data/articles";
+import type { PublishedArticleListSource } from "@/lib/article-drafts";
 import { getArticleCategories, getArticleTags, normalizeArticleCategory } from "@/lib/article-taxonomy";
-import { getPublicArticles } from "@/lib/public-articles";
+import { getPublicArticleListSource } from "@/lib/public-articles";
 import type { Locale } from "@/lib/site";
 
 export type PublicArticleSort = "popular" | "latest" | "updated";
@@ -45,7 +46,7 @@ function normalizeFilter(value: string) {
   return value.trim().toLowerCase();
 }
 
-function matchesFilters(article: ArticleRecord, input: PublicArticleListInput) {
+function matchesFilters(article: PublishedArticleListSource, input: PublicArticleListInput) {
   const normalizedQuery = normalizeFilter(input.q);
   const articleCategory = normalizeArticleCategory(article.category, input.locale);
   const requestedCategory = input.category ? normalizeArticleCategory(input.category, input.locale) : "";
@@ -58,7 +59,7 @@ function matchesFilters(article: ArticleRecord, input: PublicArticleListInput) {
 }
 
 function compareArticles(sort: PublicArticleSort) {
-  return (a: ArticleRecord, b: ArticleRecord) => {
+  return (a: PublishedArticleListSource, b: PublishedArticleListSource) => {
     if (sort === "latest") {
       return b.publishedAt.localeCompare(a.publishedAt) || (b.viewCount ?? 0) - (a.viewCount ?? 0);
     }
@@ -71,7 +72,7 @@ function compareArticles(sort: PublicArticleSort) {
   };
 }
 
-function toListItem(article: ArticleRecord): PublicArticleListItem {
+function toListItem(article: PublishedArticleListSource): PublicArticleListItem {
   return {
     slug: article.slug,
     locale: article.locale,
@@ -87,7 +88,7 @@ function toListItem(article: ArticleRecord): PublicArticleListItem {
 }
 
 export async function getPublicArticleListPayload(input: PublicArticleListInput): Promise<PublicArticleListPayload> {
-  const articles = await getPublicArticles(input.locale);
+  const articles = await getPublicArticleListSource(input.locale);
   const filteredArticles = articles.filter((article) => matchesFilters(article, input)).sort(compareArticles(input.sort));
   const pagedArticles = filteredArticles.slice(input.offset, input.offset + input.limit).map(toListItem);
 

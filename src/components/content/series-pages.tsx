@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Clock, Route, SearchX } from "lucide-react";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -19,7 +18,6 @@ const copy = {
   updatedAt(value: string) {
     return `更新于 ${value}`;
   },
-  enter: "进入专题",
   emptyTitle: "还没有已发布专题",
   emptyDescription: "可以先进入文章索引阅读单篇内容，等相关主题积累稳定后，再把它们整理成连续路线。",
   backToSeries: "返回专题",
@@ -29,7 +27,6 @@ const copy = {
     return `${value} 分钟`;
   },
   totalMinutes: "预计总时长",
-  read: "阅读",
   detailEmptyTitle: "专题结构已建立",
   detailEmptyDescription: "专题已经创建，但相关文章还在整理或审核中。",
 };
@@ -40,18 +37,6 @@ function seriesPath(slug: string) {
 
 function articlePath(slug: string) {
   return `/articles/${slug}`;
-}
-
-function coverStyle(coverImage: string | null): CSSProperties | undefined {
-  const normalized = coverImage?.trim();
-
-  if (!normalized) {
-    return undefined;
-  }
-
-  return {
-    backgroundImage: `linear-gradient(135deg, rgba(15, 17, 21, 0.14), rgba(20, 17, 10, 0.44)), url(${JSON.stringify(normalized)})`,
-  };
 }
 
 function absoluteMediaUrl(value: string | null) {
@@ -135,24 +120,23 @@ function buildSeriesDetailJsonLd(item: PublicSeriesDetail, totalReadingMinutes: 
   ];
 }
 
-function CoverMark({ coverImage, title }: { coverImage: string | null; title: string }) {
-  const style = coverStyle(coverImage);
+function CoverMark({ coverImage }: { coverImage: string | null }) {
+  const normalized = coverImage?.trim();
 
-  if (style) {
+  if (normalized) {
     return (
-      <div
-        className="aspect-[16/9] w-full rounded-md border border-line bg-surface bg-cover bg-center shadow-sm"
-        style={style}
-        role="img"
-        aria-label={title}
-      />
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-surface">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Series cover is arbitrary R2/external media; project runs images.unoptimized. */}
+        <img src={normalized} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+        <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(15,17,21,0.14),rgba(20,17,10,0.44))]" aria-hidden="true" />
+      </div>
     );
   }
 
   return (
-    <span className="flex h-10 w-10 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-accent">
-      <Route className="h-5 w-5" />
-    </span>
+    <div className="flex aspect-[16/9] w-full items-center justify-center bg-accent/8 text-accent" aria-hidden="true">
+      <Route className="h-8 w-8" />
+    </div>
   );
 }
 
@@ -196,10 +180,10 @@ export function SeriesIndexPage({ seriesList }: { seriesList: PublicSeriesSummar
           {seriesList.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-3">
               {seriesList.map((item) => (
-                <article key={`${item.locale}-${item.slug}`} className="home-popular-card min-w-0 rounded-md border border-line p-5">
-                  <CoverMark coverImage={item.coverImage} title={item.title} />
-                  <div className="min-w-0">
-                    <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted">
+                <article key={`${item.locale}-${item.slug}`} className="home-popular-card relative min-w-0 overflow-hidden rounded-md border border-line">
+                  <CoverMark coverImage={item.coverImage} />
+                  <div className="min-w-0 p-5">
+                    <div className="flex items-center justify-between gap-3 text-sm text-muted">
                       <span className="inline-flex items-center gap-1">
                         <BookOpen className="h-4 w-4" />
                         {pageCopy.articleCount(item.articleCount)}
@@ -207,14 +191,10 @@ export function SeriesIndexPage({ seriesList }: { seriesList: PublicSeriesSummar
                       {item.updatedAt ? <span>{pageCopy.updatedAt(item.updatedAt)}</span> : null}
                     </div>
                     <h3 className="mt-3 break-words text-2xl font-semibold text-foreground [overflow-wrap:anywhere]">
-                      <Link href={seriesPath(item.slug)}>{item.title}</Link>
+                      <Link className="transition-colors after:absolute after:inset-0 hover:text-accent" href={seriesPath(item.slug)}>{item.title}</Link>
                     </h3>
                     <p className="mt-3 break-words leading-7 text-muted [overflow-wrap:anywhere]">{item.description}</p>
                   </div>
-                  <Link className="motion-inline mt-5 inline-flex items-center gap-2 font-semibold text-foreground transition hover:text-accent" href={seriesPath(item.slug)}>
-                    {pageCopy.enter}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
                 </article>
               ))}
             </div>
@@ -240,7 +220,6 @@ export function SeriesDetailContent({ item }: { item: PublicSeriesDetail }) {
   const pageCopy = copy;
   const totalReadingMinutes = item.articles.reduce((total, article) => total + article.readingMinutes, 0);
   const detailJsonLd = buildSeriesDetailJsonLd(item, totalReadingMinutes);
-  const coverImageStyle = coverStyle(item.coverImage);
 
   return (
     <>
@@ -252,7 +231,6 @@ export function SeriesDetailContent({ item }: { item: PublicSeriesDetail }) {
         <section className="site-grid" aria-labelledby="series-detail-title">
           <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 md:py-10">
             <div className="index-surface overflow-hidden rounded-md border border-line px-4 py-7 sm:px-5 md:px-9 md:py-8">
-              {coverImageStyle ? <div className="mb-7 aspect-[16/9] rounded-md border border-line bg-surface bg-cover bg-center shadow-sm sm:aspect-[21/9] md:aspect-[21/8]" style={coverImageStyle} role="img" aria-label={item.title} /> : null}
               <div className="grid gap-6 pl-0 md:grid-cols-[1fr_15rem] md:items-center md:gap-8 md:pl-7">
                 <div className="min-w-0">
                   <Link className="motion-inline inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-foreground" href={pageCopy.currentPath}>
@@ -292,7 +270,7 @@ export function SeriesDetailContent({ item }: { item: PublicSeriesDetail }) {
           {item.articles.length > 0 ? (
             <div className="grid gap-4">
               {item.articles.map((article, index) => (
-                <article key={article.slug} className="home-popular-card grid min-w-0 gap-5 rounded-md border border-line p-5 md:grid-cols-[3rem_1fr_auto] md:items-start md:p-6">
+                <article key={article.slug} className="home-popular-card relative grid min-w-0 gap-5 rounded-md border border-line p-5 md:grid-cols-[3rem_1fr] md:items-start md:p-6">
                   <div className="flex h-9 w-9 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-sm font-semibold text-accent md:self-center">
                     {String(index + 1).padStart(2, "0")}
                   </div>
@@ -304,15 +282,9 @@ export function SeriesDetailContent({ item }: { item: PublicSeriesDetail }) {
                       </span>
                     </div>
                     <h3 className="mt-3 break-words text-2xl font-semibold text-foreground [overflow-wrap:anywhere]">
-                      <Link href={articlePath(article.slug)}>{article.title}</Link>
+                      <Link className="transition-colors after:absolute after:inset-0 hover:text-accent" href={articlePath(article.slug)}>{article.title}</Link>
                     </h3>
                     <p className="mt-3 line-clamp-3 max-w-3xl break-words leading-7 text-muted [overflow-wrap:anywhere]">{article.summary}</p>
-                  </div>
-                  <div className="md:pt-3">
-                    <Link className="motion-inline inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-accent focus-visible:text-accent" href={articlePath(article.slug)}>
-                      {pageCopy.read}
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
                   </div>
                 </article>
               ))}

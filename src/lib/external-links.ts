@@ -1,7 +1,14 @@
+import { revalidateTag, unstable_cache } from "next/cache";
 import { and, asc, eq } from "drizzle-orm";
 import type { Locale } from "@/lib/site";
 import { getDb } from "@/db/client";
 import { externalLinks } from "@/db/schema";
+
+const PUBLIC_EXTERNAL_LINKS_CACHE_TAG = "public-external-links";
+
+function revalidatePublicExternalLinksCache() {
+  revalidateTag(PUBLIC_EXTERNAL_LINKS_CACHE_TAG, { expire: 0 });
+}
 
 export type ExternalLinkPosition = "home" | "article_footer" | "profile" | "donate" | "site_footer";
 
@@ -35,22 +42,30 @@ function now() {
 }
 
 export async function listExternalLinks(position: ExternalLinkPosition, locale: Locale = "zh") {
-  try {
-    const db = await getDb();
-
-    return await db
-      .select({
-        title: externalLinks.title,
-        description: externalLinks.description,
-        url: externalLinks.url,
-      })
-      .from(externalLinks)
-      .where(and(eq(externalLinks.locale, locale), eq(externalLinks.position, position), eq(externalLinks.isActive, true)))
-      .orderBy(asc(externalLinks.sortOrder), asc(externalLinks.title));
-  } catch {
-    return [] satisfies PublicExternalLink[];
-  }
+  return cachedListExternalLinks(position, locale);
 }
+
+const cachedListExternalLinks = unstable_cache(
+  async (position: ExternalLinkPosition, locale: Locale = "zh") => {
+    try {
+      const db = await getDb();
+
+      return await db
+        .select({
+          title: externalLinks.title,
+          description: externalLinks.description,
+          url: externalLinks.url,
+        })
+        .from(externalLinks)
+        .where(and(eq(externalLinks.locale, locale), eq(externalLinks.position, position), eq(externalLinks.isActive, true)))
+        .orderBy(asc(externalLinks.sortOrder), asc(externalLinks.title));
+    } catch {
+      return [] satisfies PublicExternalLink[];
+    }
+  },
+  ["public-external-links"],
+  { revalidate: 300, tags: [PUBLIC_EXTERNAL_LINKS_CACHE_TAG] },
+);
 
 export async function listAdminExternalLinks() {
   const db = await getDb();
@@ -89,6 +104,8 @@ export async function createExternalLink(input: ExternalLinkInput) {
     updatedAt: timestamp,
   });
 
+  revalidatePublicExternalLinksCache();
+
   return { id };
 }
 
@@ -109,12 +126,23 @@ export async function updateExternalLink(id: string, input: ExternalLinkInput) {
     .where(eq(externalLinks.id, id))
     .returning({ id: externalLinks.id });
 
-  return result[0] ?? null;
+  const updated = result[0] ?? null;
+
+  if (updated) {
+    revalidatePublicExternalLinksCache();
+  }
+
+  return updated;
 }
 
 export async function deleteExternalLink(id: string) {
   const db = await getDb();
   const result = await db.delete(externalLinks).where(eq(externalLinks.id, id)).returning({ id: externalLinks.id });
+  const deleted = result[0] ?? null;
 
-  return result[0] ?? null;
+  if (deleted) {
+    revalidatePublicExternalLinksCache();
+  }
+
+  return deleted;
 }

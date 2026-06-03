@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Clock, RefreshCw } from "lucide-react";
+import { CalendarDays, Clock, RefreshCw } from "lucide-react";
 import type { ArticleRecord } from "@/data/articles";
 import { getArticleHref, getCategoryHref, normalizeArticleCategory } from "@/lib/article-taxonomy";
 
@@ -13,10 +13,10 @@ export function ArticleSummaryCard({ article, hot = false }: { article: ArticleS
   const category = normalizeArticleCategory(article.category, "zh");
 
   return (
-    <article className="article-index-card index-surface grid gap-4 rounded-md border border-line p-5 md:grid-cols-[1fr_auto] md:items-center md:p-6 md:pl-10">
-      <div className="relative z-10 min-w-0">
+    <article className="article-index-card index-surface relative grid gap-4 rounded-md border border-line p-5 md:p-6 md:pl-10">
+      <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-semibold text-muted">
-          <Link className="vein-link px-2 py-1 text-accent hover:text-foreground" href={getCategoryHref(category)}>
+          <Link className="vein-link relative z-10 px-2 py-1 text-accent hover:text-foreground" href={getCategoryHref(category)}>
             {category}
           </Link>
           <span className="inline-flex items-center gap-1">
@@ -38,16 +38,10 @@ export function ArticleSummaryCard({ article, hot = false }: { article: ArticleS
           ) : null}
         </div>
         <h2 className="mt-3 text-xl font-semibold text-foreground">
-          <Link href={articleHref}>{article.title}</Link>
+          <Link className="transition-colors after:absolute after:inset-0 hover:text-accent" href={articleHref}>{article.title}</Link>
         </h2>
-        <Link className="mt-2 block line-clamp-2 max-w-3xl leading-7 text-muted transition hover:text-foreground" href={articleHref}>
-          {article.summary}
-        </Link>
+        <p className="mt-2 line-clamp-2 max-w-3xl leading-7 text-muted">{article.summary}</p>
       </div>
-      <Link className="motion-inline relative z-10 inline-flex items-center gap-2 text-sm font-semibold text-foreground transition hover:text-accent md:justify-self-end" href={articleHref}>
-        阅读文章
-        <ArrowRight className="h-4 w-4" />
-      </Link>
     </article>
   );
 }

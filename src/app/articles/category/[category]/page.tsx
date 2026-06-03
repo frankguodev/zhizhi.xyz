@@ -5,7 +5,7 @@ import { ArticleSummaryCard } from "@/components/content/article-summary-card";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { decodeTaxonomySegment, encodeTaxonomySegment, normalizeArticleCategory } from "@/lib/article-taxonomy";
-import { getPublicArticles } from "@/lib/public-articles";
+import { getPublicArticleListSource } from "@/lib/public-articles";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 export default async function ArticleCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
   const categoryName = normalizeArticleCategory(decodeTaxonomySegment(category), "zh");
-  const articles = await getPublicArticles("zh");
+  const articles = await getPublicArticleListSource("zh");
   const matchedArticles = articles.filter((article) => normalizeArticleCategory(article.category, "zh") === categoryName);
 
   if (matchedArticles.length === 0) {

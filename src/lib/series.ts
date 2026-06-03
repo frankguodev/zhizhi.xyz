@@ -1,3 +1,4 @@
+import { revalidateTag, unstable_cache } from "next/cache";
 import { and, asc, count, eq, ne } from "drizzle-orm";
 import type { ArticleRecord } from "@/data/articles";
 import { getDb } from "@/db/client";
@@ -105,79 +106,101 @@ async function getPublishedSeriesArticles(seriesId: string) {
     .orderBy(asc(seriesArticles.sortOrder), asc(articles.publishedAt));
 }
 
-export async function listPublicSeries(locale: ArticleRecord["locale"] = "zh") {
-  try {
-    const db = await getDb();
-    const rows = await db
-      .select({
-        slug: series.slug,
-        locale: series.locale,
-        title: series.title,
-        description: series.description,
-        coverImage: series.coverImage,
-        updatedAt: series.updatedAt,
-        articleCount: count(articles.id),
-      })
-      .from(series)
-      .innerJoin(seriesArticles, eq(seriesArticles.seriesId, series.id))
-      .innerJoin(articles, eq(seriesArticles.articleId, articles.id))
-      .where(and(eq(series.locale, locale), eq(series.status, "published"), eq(articles.status, "published"), ne(articles.visibility, "hidden")))
-      .groupBy(series.id, series.slug, series.locale, series.title, series.description, series.coverImage, series.updatedAt, series.sortOrder)
-      .orderBy(asc(series.sortOrder), asc(series.title));
+const PUBLIC_SERIES_CACHE_TAG = "public-series";
 
-    return rows.map((row) => ({
-      slug: row.slug,
-      locale: row.locale,
-      title: row.title,
-      description: row.description,
-      coverImage: row.coverImage,
-      articleCount: row.articleCount,
-      updatedAt: dateString(row.updatedAt),
-    })) satisfies PublicSeriesSummary[];
-  } catch {
-    return [];
-  }
+export async function listPublicSeries(locale: ArticleRecord["locale"] = "zh") {
+  return cachedPublicSeries(locale);
+}
+
+const cachedPublicSeries = unstable_cache(
+  async (locale: ArticleRecord["locale"] = "zh") => {
+    try {
+      const db = await getDb();
+      const rows = await db
+        .select({
+          slug: series.slug,
+          locale: series.locale,
+          title: series.title,
+          description: series.description,
+          coverImage: series.coverImage,
+          updatedAt: series.updatedAt,
+          articleCount: count(articles.id),
+        })
+        .from(series)
+        .innerJoin(seriesArticles, eq(seriesArticles.seriesId, series.id))
+        .innerJoin(articles, eq(seriesArticles.articleId, articles.id))
+        .where(and(eq(series.locale, locale), eq(series.status, "published"), eq(articles.status, "published"), ne(articles.visibility, "hidden")))
+        .groupBy(series.id, series.slug, series.locale, series.title, series.description, series.coverImage, series.updatedAt, series.sortOrder)
+        .orderBy(asc(series.sortOrder), asc(series.title));
+
+      return rows.map((row) => ({
+        slug: row.slug,
+        locale: row.locale,
+        title: row.title,
+        description: row.description,
+        coverImage: row.coverImage,
+        articleCount: row.articleCount,
+        updatedAt: dateString(row.updatedAt),
+      })) satisfies PublicSeriesSummary[];
+    } catch {
+      return [];
+    }
+  },
+  [PUBLIC_SERIES_CACHE_TAG],
+  { revalidate: 300, tags: [PUBLIC_SERIES_CACHE_TAG] },
+);
+
+function revalidatePublicSeriesCache() {
+  revalidateTag(PUBLIC_SERIES_CACHE_TAG, { expire: 0 });
 }
 
 export async function getPublicSeries(slug: string, locale: ArticleRecord["locale"] = "zh") {
-  try {
-    const db = await getDb();
-    const rows = await db
-      .select({
-        id: series.id,
-        slug: series.slug,
-        locale: series.locale,
-        title: series.title,
-        description: series.description,
-        coverImage: series.coverImage,
-        updatedAt: series.updatedAt,
-      })
-      .from(series)
-      .where(and(eq(series.locale, locale), eq(series.slug, slug), eq(series.status, "published")))
-      .limit(1);
+  return cachedPublicSeriesDetail(slug, locale);
+}
 
-    const row = rows[0];
+const cachedPublicSeriesDetail = unstable_cache(
+  async (slug: string, locale: ArticleRecord["locale"] = "zh") => {
+    try {
+      const db = await getDb();
+      const rows = await db
+        .select({
+          id: series.id,
+          slug: series.slug,
+          locale: series.locale,
+          title: series.title,
+          description: series.description,
+          coverImage: series.coverImage,
+          updatedAt: series.updatedAt,
+        })
+        .from(series)
+        .where(and(eq(series.locale, locale), eq(series.slug, slug), eq(series.status, "published")))
+        .limit(1);
 
-    if (!row) {
+      const row = rows[0];
+
+      if (!row) {
+        return null;
+      }
+
+      const articleRows = await getPublishedSeriesArticles(row.id);
+
+      return {
+        slug: row.slug,
+        locale: row.locale,
+        title: row.title,
+        description: row.description,
+        coverImage: row.coverImage,
+        articleCount: articleRows.length,
+        updatedAt: dateString(row.updatedAt),
+        articles: articleRows,
+      } satisfies PublicSeriesDetail;
+    } catch {
       return null;
     }
-
-    const articleRows = await getPublishedSeriesArticles(row.id);
-
-    return {
-      slug: row.slug,
-      locale: row.locale,
-      title: row.title,
-      description: row.description,
-      coverImage: row.coverImage,
-      articleCount: articleRows.length,
-      updatedAt: dateString(row.updatedAt),
-      articles: articleRows,
-    } satisfies PublicSeriesDetail;
-  } catch {
-    return null;
-  }
-}
+  },
+  ["public-series-detail"],
+  { revalidate: 300, tags: [PUBLIC_SERIES_CACHE_TAG] },
+);
 
 async function getSeriesArticleIds(seriesId: string) {
   const db = await getDb();
@@ -298,6 +321,7 @@ export async function createSeries(input: AdminSeriesInput) {
   });
 
   await replaceSeriesArticles(id, input.articleIds);
+  revalidatePublicSeriesCache();
 
   return { id };
 }
@@ -326,12 +350,18 @@ export async function updateSeries(id: string, input: AdminSeriesInput) {
   }
 
   await replaceSeriesArticles(id, input.articleIds);
+  revalidatePublicSeriesCache();
   return result[0];
 }
 
 export async function deleteSeries(id: string) {
   const db = await getDb();
   const result = await db.delete(series).where(eq(series.id, id)).returning({ id: series.id });
+  const deleted = result[0] ?? null;
 
-  return result[0] ?? null;
+  if (deleted) {
+    revalidatePublicSeriesCache();
+  }
+
+  return deleted;
 }

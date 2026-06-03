@@ -52,10 +52,26 @@ function formatSize(size: number) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
-function markdownWithAlt(media: UploadedMediaItem, altText: string) {
+function markdownWithAlt(media: UploadedMediaItem, altText: string, dimensions: { height: number; width: number } | null) {
   const fallbackAlt = media.markdown.match(/^!\[([^\]]*)\]/)?.[1] ?? "";
   const alt = (altText.trim() || fallbackAlt).replaceAll("]", "\\]");
-  return `![${alt}](${media.url})`;
+  const title = dimensions ? ` "${dimensions.width}x${dimensions.height}"` : "";
+  return `![${alt}](${media.url}${title})`;
+}
+
+async function readImageDimensions(file: File): Promise<{ height: number; width: number } | null> {
+  if (typeof createImageBitmap !== "function") {
+    return null;
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const dimensions = { height: bitmap.height, width: bitmap.width };
+    bitmap.close();
+    return dimensions;
+  } catch {
+    return null;
+  }
 }
 
 function uploadFailureMessage(response: Response, payload: UploadResponse | null) {
@@ -150,10 +166,11 @@ export function MediaUploadPanel({
         throw new Error(uploadFailureMessage(response, payload));
       }
 
+      const dimensions = await readImageDimensions(file);
       const media = {
         ...payload.media,
         alt: altText.trim(),
-        markdown: markdownWithAlt(payload.media, altText),
+        markdown: markdownWithAlt(payload.media, altText, dimensions),
       };
       setMarkdown(media.markdown);
       setMessage(insertOnUpload ? `已上传 ${formatSize(payload.media.size)}，可插入 Markdown。` : `已上传 ${formatSize(payload.media.size)}，可使用“${applyLabel}”。`);

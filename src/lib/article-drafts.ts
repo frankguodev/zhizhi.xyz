@@ -1,8 +1,15 @@
+import { revalidateTag } from "next/cache";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { ArticleRecord } from "@/data/articles";
 import { getDb } from "@/db/client";
 import { articleLikes, articleTags, articleViews, articles, categories, seriesArticles, tags } from "@/db/schema";
 import { normalizeArticleCategory } from "@/lib/article-taxonomy";
+
+export const PUBLIC_ARTICLES_CACHE_TAG = "public-articles";
+
+export function revalidatePublicArticlesCache() {
+  revalidateTag(PUBLIC_ARTICLES_CACHE_TAG, { expire: 0 });
+}
 
 function now() {
   return new Date();
@@ -500,7 +507,9 @@ export async function saveArticleDraft(article: ArticleRecord) {
 }
 
 export async function updatePublishedArticle(article: ArticleRecord) {
-  return saveArticleWithStatus(article, "published");
+  const result = await saveArticleWithStatus(article, "published");
+  revalidatePublicArticlesCache();
+  return result;
 }
 
 async function getArticleByStatus(locale: ArticleRecord["locale"], slug: string, status: "draft" | "published") {
@@ -582,7 +591,13 @@ export async function publishArticleDraft(locale: ArticleRecord["locale"], slug:
     .where(and(eq(articles.locale, locale), eq(articles.slug, slug), eq(articles.status, "draft")))
     .returning({ id: articles.id, slug: articles.slug, locale: articles.locale });
 
-  return result[0] ?? null;
+  const published = result[0] ?? null;
+
+  if (published) {
+    revalidatePublicArticlesCache();
+  }
+
+  return published;
 }
 
 export async function listArticleDrafts() {
@@ -605,6 +620,73 @@ export async function listArticleDrafts() {
     .where(and(eq(articles.status, "draft")))
     .orderBy(desc(articles.updatedAt))
     .limit(50);
+}
+
+export type PublishedArticleListSource = {
+  slug: string;
+  locale: ArticleRecord["locale"];
+  title: string;
+  summary: string;
+  category: string;
+  tags: string[];
+  visibility: ArticleRecord["visibility"];
+  readingMinutes: number;
+  viewCount: number;
+  publishedAt: string;
+  updatedAt: string;
+};
+
+// 列表专用精简查询：只取列表卡片所需字段（不含正文 content 与重 SEO 字段），
+// 并用一次聚合查询补齐 tags，避免 listPublishedArticles 的「每篇一次 tag 查询」N+1。
+export async function listPublishedArticleListItems(locale: ArticleRecord["locale"] = "zh"): Promise<PublishedArticleListSource[]> {
+  const db = await getDb();
+  const rows = await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      locale: articles.locale,
+      title: articles.title,
+      summary: articles.summary,
+      visibility: articles.visibility,
+      readingMinutes: articles.readingMinutes,
+      viewCount: articles.viewCount,
+      publishedAt: articles.publishedAt,
+      updatedAt: articles.updatedAt,
+      category: categories.name,
+    })
+    .from(articles)
+    .leftJoin(categories, eq(articles.categoryId, categories.id))
+    .where(and(eq(articles.locale, locale), eq(articles.status, "published")))
+    .orderBy(desc(articles.publishedAt), desc(articles.updatedAt))
+    .limit(100);
+
+  const tagRows = await db
+    .select({ articleId: articleTags.articleId, name: tags.name })
+    .from(articleTags)
+    .innerJoin(tags, eq(articleTags.tagId, tags.id))
+    .innerJoin(articles, eq(articleTags.articleId, articles.id))
+    .where(and(eq(articles.locale, locale), eq(articles.status, "published")));
+
+  const tagsByArticle = new Map<string, string[]>();
+  for (const tagRow of tagRows) {
+    const list = tagsByArticle.get(tagRow.articleId) ?? [];
+    list.push(tagRow.name);
+    tagsByArticle.set(tagRow.articleId, list);
+  }
+
+  return rows.map((row) => ({
+    slug: row.slug,
+    locale: row.locale,
+    title: row.title,
+    summary: row.summary,
+    category: normalizeArticleCategory(row.category, row.locale),
+    tags: tagsByArticle.get(row.id) ?? [],
+    visibility: row.visibility,
+    readingMinutes: row.readingMinutes,
+    viewCount: row.viewCount ?? 0,
+    publishedAt: dateString(row.publishedAt),
+    updatedAt: dateString(row.updatedAt),
+  }));
 }
 
 export async function listPublishedArticles(locale: ArticleRecord["locale"] = "zh") {
@@ -711,6 +793,8 @@ export async function archivePublishedArticle(locale: ArticleRecord["locale"], s
     })
     .where(eq(articles.id, article.id));
 
+  revalidatePublicArticlesCache();
+
   return article;
 }
 
@@ -744,6 +828,8 @@ export async function restoreArchivedArticle(locale: ArticleRecord["locale"], sl
       updatedAt: timestamp,
     })
     .where(eq(articles.id, article.id));
+
+  revalidatePublicArticlesCache();
 
   return {
     ...article,
@@ -779,6 +865,8 @@ export async function deletePublishedArticle(locale: ArticleRecord["locale"], sl
   await db.delete(articleLikes).where(and(eq(articleLikes.locale, locale), eq(articleLikes.articleSlug, slug)));
   await db.delete(articleViews).where(and(eq(articleViews.locale, locale), eq(articleViews.articleSlug, slug)));
   await db.delete(articles).where(eq(articles.id, article.id));
+
+  revalidatePublicArticlesCache();
 
   return article;
 }

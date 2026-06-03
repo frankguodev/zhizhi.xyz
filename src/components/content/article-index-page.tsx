@@ -6,11 +6,12 @@ import { ArticleInfiniteList } from "@/components/content/article-infinite-list"
 import { ArticleSearchInput } from "@/components/content/article-search-input";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
-import type { ArticleRecord } from "@/data/articles";
 import { getArticleCategories, normalizeArticleCategory } from "@/lib/article-taxonomy";
-import { getPublicArticles } from "@/lib/public-articles";
-import type { PublicArticleSort } from "@/lib/public-article-list";
+import { getPublicArticleListSource } from "@/lib/public-articles";
+import { getPublicArticleListPayload, type PublicArticleListItem, type PublicArticleSort } from "@/lib/public-article-list";
 import { siteConfig, type Locale } from "@/lib/site";
+
+const PAGE_SIZE = 20;
 
 // locale 参数保留供数据层使用（查询 zh 文章）
 
@@ -53,6 +54,8 @@ const copy = {
   emptyDescription: "换一个关键词，或者清空分类后再看一眼。",
   loadedLabel: "已展示 {count} / {total} 篇，继续向下滚动加载更多",
   loadMoreLabel: "加载更多",
+  loadingLabel: "加载中…",
+  loadErrorLabel: "加载失败，请点击重试",
   completeLabel: "已经展示全部文章",
 };
 
@@ -64,25 +67,11 @@ function firstParam(value: string | string[] | undefined) {
   return value ?? "";
 }
 
-function normalizeFilter(value: string) {
-  return value.trim().toLowerCase();
-}
-
 function normalizeSort(value: string): PublicArticleSort {
   return value === "latest" ? "latest" : "popular";
 }
 
-function compareArticles(sort: PublicArticleSort) {
-  return (a: ArticleRecord, b: ArticleRecord) => {
-    if (sort === "latest") {
-      return b.publishedAt.localeCompare(a.publishedAt) || (b.viewCount ?? 0) - (a.viewCount ?? 0);
-    }
-
-    return (b.viewCount ?? 0) - (a.viewCount ?? 0) || b.publishedAt.localeCompare(a.publishedAt);
-  };
-}
-
-function buildItemListJsonLd(articles: ArticleRecord[]) {
+function buildItemListJsonLd(articles: PublicArticleListItem[]) {
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -103,32 +92,30 @@ function buildItemListJsonLd(articles: ArticleRecord[]) {
 
 export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPageProps) {
   const pageCopy = copy;
-  const articles = await getPublicArticles(locale);
+  const listSource = await getPublicArticleListSource(locale);
   const query = firstParam(searchParams.q).trim().slice(0, 80);
   const rawSelectedCategory = firstParam(searchParams.category).trim().slice(0, 80);
   const selectedCategory = rawSelectedCategory ? normalizeArticleCategory(rawSelectedCategory, locale) : "";
   const sort = normalizeSort(firstParam(searchParams.sort));
-  const normalizedQuery = normalizeFilter(query);
-  const categories = getArticleCategories(articles, locale);
-  const filteredArticles = articles
-    .filter((article) => {
-      const articleCategory = normalizeArticleCategory(article.category, locale);
-      const matchesQuery =
-        !normalizedQuery ||
-        [article.title, article.summary, articleCategory].some((value) => normalizeFilter(value).includes(normalizedQuery));
-      const matchesCategory = !selectedCategory || articleCategory === selectedCategory;
-
-      return matchesQuery && matchesCategory;
-    })
-    .sort(compareArticles(sort));
+  const categories = getArticleCategories(listSource, locale);
+  const firstPage = await getPublicArticleListPayload({
+    locale,
+    sort,
+    q: query,
+    category: selectedCategory,
+    tag: "",
+    limit: PAGE_SIZE,
+    offset: 0,
+  });
+  const filteredTotal = firstPage.pagination.total;
   const hasFilters = Boolean(query || selectedCategory || sort !== "popular");
   const filterKey = `${query}:${selectedCategory}:${sort}`;
   const sortOptions = [
     { label: pageCopy.sortPopular, value: "popular" },
     { label: pageCopy.sortLatest, value: "latest" },
   ];
-  const noArticles = articles.length === 0;
-  const listJsonLd = buildItemListJsonLd(filteredArticles);
+  const noArticles = listSource.length === 0;
+  const listJsonLd = buildItemListJsonLd(firstPage.articles);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -150,7 +137,7 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
                 </div>
                 <aside className="article-note-rail rounded-md border border-line p-5" aria-label={pageCopy.readableArticles}>
                   <LibraryBig className="h-7 w-7 text-accent" />
-                  <p className="mt-4 text-3xl font-semibold text-foreground">{articles.length}</p>
+                  <p className="mt-4 text-3xl font-semibold text-foreground">{listSource.length}</p>
                   <p className="mt-1 text-sm font-semibold text-muted">{pageCopy.readableArticles}</p>
                   <p className="mt-4 text-sm leading-6 text-muted">{pageCopy.facetSummary(categories.length)}</p>
                 </aside>
@@ -213,20 +200,26 @@ export async function ArticleIndexPage({ locale, searchParams }: ArticleIndexPag
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
             <p>
               {pageCopy.resultPrefix}{" "}
-              <span className="font-semibold text-foreground">{filteredArticles.length}</span>
+              <span className="font-semibold text-foreground">{filteredTotal}</span>
               {" "}{pageCopy.resultSuffix}
             </p>
           </div>
 
           <div className="mt-5 grid gap-5">
             <ArticleInfiniteList
-              key={`${filterKey}:${filteredArticles.map((article) => article.slug).join("|")}`}
-              articles={filteredArticles}
+              key={filterKey}
+              initialArticles={firstPage.articles}
+              total={filteredTotal}
               sort={sort}
+              query={query}
+              category={selectedCategory}
+              pageSize={PAGE_SIZE}
               emptyTitle={noArticles ? pageCopy.noArticlesTitle : pageCopy.emptyTitle}
               emptyDescription={noArticles ? pageCopy.noArticlesDescription : pageCopy.emptyDescription}
               loadedLabel={pageCopy.loadedLabel}
               loadMoreLabel={pageCopy.loadMoreLabel}
+              loadingLabel={pageCopy.loadingLabel}
+              errorLabel={pageCopy.loadErrorLabel}
               completeLabel={pageCopy.completeLabel}
             />
           </div>

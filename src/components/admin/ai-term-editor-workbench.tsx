@@ -2,10 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Archive, CheckCircle2, Eye, Loader2, RotateCcw, Save, ScanSearch, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Archive, CheckCircle2, Eye, Link2, Loader2, RotateCcw, Save, ScanSearch, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
+import {
+  buildAiTermCanonicalUrl,
+  joinMarkdown,
+  splitMarkdown,
+  upsertAiTermCanonicalUrl,
+  upsertAiTermDiagramAndShareImages,
+} from "@/components/admin/ai-term-markdown-frontmatter";
 import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import { useUnsavedChangesGuard } from "@/components/admin/use-unsaved-changes-guard";
 import { useMarkdownBackup } from "@/components/admin/use-markdown-backup";
@@ -55,59 +62,6 @@ function mediaKeyFromUrl(url: string) {
   return url.startsWith("/media/") ? url.slice("/media/".length) : url;
 }
 
-function splitMarkdown(markdown: string) {
-  const normalized = markdown.replace(/\r\n/g, "\n");
-  const match = normalized.match(/^---\n([\s\S]*?)\n---\n?/);
-
-  if (!match) {
-    return { hasFrontmatter: false, frontmatter: "", content: normalized };
-  }
-
-  return {
-    hasFrontmatter: true,
-    frontmatter: match[1],
-    content: normalized.slice(match[0].length),
-  };
-}
-
-function joinMarkdown(frontmatter: string, content: string) {
-  const cleanFrontmatter = frontmatter.trim();
-  const normalizedContent = content.replace(/^\n+/, "");
-  return cleanFrontmatter ? `---\n${cleanFrontmatter}\n---\n\n${normalizedContent}` : normalizedContent;
-}
-
-function upsertYamlScalar(source: string, key: string, value: string) {
-  const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  const line = `  ${key}: "${escaped}"`;
-  const pattern = new RegExp(`(^|\\n)\\s{2}${key}:.*(?=\\n|$)`);
-
-  if (pattern.test(source)) {
-    return source.replace(pattern, (match, prefix: string) => `${prefix}${line}`);
-  }
-
-  return `${source.replace(/\s+$/g, "")}\n${line}`;
-}
-
-function upsertDiagramFrontmatter(markdown: string, image: string, imageAlt: string) {
-  const parts = splitMarkdown(markdown);
-  const diagramBlock = parts.frontmatter.match(/(^|\n)diagram:\n((?:  .*(?:\n|$))*)/);
-  let nextFrontmatter = parts.frontmatter;
-
-  if (diagramBlock) {
-    const block = diagramBlock[0].replace(/^\n/, "");
-    let nextBlock = upsertYamlScalar(block, "image", image);
-    nextBlock = upsertYamlScalar(nextBlock, "image_alt", imageAlt);
-    nextFrontmatter = nextFrontmatter.replace(block, nextBlock);
-  } else {
-    const diagram = `diagram:\n  image: "${image.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"\n  image_alt: "${imageAlt.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
-    nextFrontmatter = nextFrontmatter.includes("\nsource:")
-      ? nextFrontmatter.replace(/\nsource:/, `\n${diagram}\n\nsource:`)
-      : `${nextFrontmatter.trim()}\n\n${diagram}`;
-  }
-
-  return parts.hasFrontmatter ? joinMarkdown(nextFrontmatter, parts.content) : markdown;
-}
-
 function countLines(value: string) {
   return value ? value.split(/\r?\n/).length : 0;
 }
@@ -126,6 +80,7 @@ function qualityTone(level: "error" | "warning" | "suggestion") {
 
 export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEditorData }) {
   const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [data, setData] = useState(initialData);
   const [markdown, setMarkdown] = useState(initialData.markdown);
   const [editorMode, setEditorMode] = useState<EditorMode>("full");
@@ -303,9 +258,41 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
   }
 
   function applyDiagramUpload(media: UploadedDiagramMedia) {
-    setMarkdown((value) => upsertDiagramFrontmatter(value, media.url, media.alt ?? ""));
+    setMarkdown((value) => upsertAiTermDiagramAndShareImages(value, media.url, media.alt ?? ""));
     setDiagramPreview({ url: media.url, alt: media.alt ?? "" });
-    setSaveState({ status: "idle", message: "词条图解已写入 Frontmatter，保存后生效。" });
+    setSaveState({ status: "idle", message: "词条图解、Open Graph 和 Twitter 分享图已写入 Frontmatter，保存后生效。" });
+  }
+
+  function generateCanonicalUrl() {
+    const canonicalUrl = buildAiTermCanonicalUrl(data.aiTerm.slug);
+
+    if (!canonicalUrl) {
+      setSaveState({ status: "error", message: "生成 canonical_url 前，词条需要有有效 slug。" });
+      return;
+    }
+
+    setMarkdown((value) => upsertAiTermCanonicalUrl(value, canonicalUrl));
+    setSaveState({ status: "idle", message: `已生成 canonical_url：${canonicalUrl}` });
+  }
+
+  function insertMarkdownAtCursor(snippet: string) {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      updateEditorValue(`${editorValue}${editorValue.endsWith("\n") ? "" : "\n\n"}${snippet}`);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const nextEditorValue = `${editorValue.slice(0, start)}${snippet}${editorValue.slice(end)}`;
+    updateEditorValue(nextEditorValue);
+    setSaveState({ status: "idle", message: "图片 Markdown 已按光标位置插入正文，保存前请检查预览。" });
+
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + snippet.length, start + snippet.length);
+    });
   }
 
   async function deleteDiagramFromR2() {
@@ -332,10 +319,10 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
         throw new Error(adminApiErrorMessage(payload, "图片删除失败。"));
       }
 
-      setMarkdown((value) => upsertDiagramFrontmatter(value, "", ""));
+      setMarkdown((value) => upsertAiTermDiagramAndShareImages(value, "", ""));
       setDiagramPreview(null);
       setConfirmDeleteDiagram(false);
-      setSaveState({ status: "idle", message: "词条图解已从 R2 删除，Frontmatter 已清空，请保存以同步数据库。" });
+      setSaveState({ status: "idle", message: "词条图解已从 R2 删除，Frontmatter 中图解和分享图字段已清空，请保存以同步数据库。" });
     } catch (error) {
       setSaveState({ status: "error", message: error instanceof Error ? error.message : "图片删除失败。" });
       setConfirmDeleteDiagram(false);
@@ -451,6 +438,10 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
                 {saveState.status === "saving" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 保存
               </button>
+              <button type="button" onClick={generateCanonicalUrl} disabled={busy} className="admin-btn admin-btn-secondary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
+                <Link2 className="h-4 w-4" />
+                生成网页 URL
+              </button>
               <button type="button" onClick={() => requestAction("publish")} disabled={busy} className="admin-btn admin-btn-primary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
                 <CheckCircle2 className="h-4 w-4" />
                 发布
@@ -483,6 +474,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
             ) : null}
 
             <textarea
+              ref={textareaRef}
               className="mt-5 min-h-[640px] w-full resize-y border border-line bg-background p-4 font-mono text-sm leading-6 outline-none focus:border-accent"
               value={editorValue}
               onChange={(event) => updateEditorValue(event.target.value)}
@@ -517,7 +509,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
               <MediaUploadPanel
                 altPlaceholder="例如：MCP 连接 AI 应用、工具和数据源的图解"
                 applyLabel="设为图解"
-                description="上传后会写入 Frontmatter 的 diagram.image，不会插入正文。"
+                description="上传后会写入 diagram.image、open_graph.image 和 twitter.image，不会插入正文。"
                 insertOnUpload={false}
                 onUpload={applyDiagramUpload}
                 scope="ai-term"
@@ -526,6 +518,18 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
                 targetSlug={data.aiTerm.slug}
                 title="词条图解上传"
               />
+              <div className="mt-3">
+                <MediaUploadPanel
+                  altPlaceholder="例如：词条正文中的概念解释配图"
+                  applyLabel="插入正文"
+                  description="上传后会按当前光标位置插入 Markdown 图片语法，适合正文配图。"
+                  onInsertMarkdown={insertMarkdownAtCursor}
+                  scope="ai-term"
+                  targetLocale={data.aiTerm.locale}
+                  targetSlug={data.aiTerm.slug}
+                  title="正文图片上传"
+                />
+              </div>
             </div>
 
             {saveState.message ? (

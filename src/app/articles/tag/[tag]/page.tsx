@@ -5,7 +5,7 @@ import { ArticleSummaryCard } from "@/components/content/article-summary-card";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { decodeTaxonomySegment } from "@/lib/article-taxonomy";
-import { getPublicArticles } from "@/lib/public-articles";
+import { getPublicArticleListSource } from "@/lib/public-articles";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ tag: stri
 export default async function ArticleTagPage({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params;
   const tagName = decodeTaxonomySegment(tag);
-  const articles = await getPublicArticles("zh");
+  const articles = await getPublicArticleListSource("zh");
   const matchedArticles = articles.filter((article) => article.tags.includes(tagName));
 
   if (matchedArticles.length === 0) {

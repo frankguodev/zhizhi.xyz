@@ -2,7 +2,7 @@
 
 import { Download, ImageIcon, Loader2, Maximize2, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-type ImageOutputFormat = "jpeg" | "png" | "webp";
+import { encodeImage, fitWithin, formatMimeTypes, type ImageOutputFormat } from "./image-codec";
 
 type SourceImage = {
   file: File;
@@ -19,6 +19,7 @@ type ProcessedImage = {
   fileName: string;
   format: ImageOutputFormat;
   height: number;
+  lossless: boolean;
   maxHeight: number | null;
   maxWidth: number | null;
   method: "canvas" | "wasm";
@@ -26,11 +27,16 @@ type ProcessedImage = {
   quality: number;
   size: number;
   sourceId: string;
+  targetBytes: number | null;
   width: number;
 };
 
 type ImageToolCopy = {
+  avifHint: string;
+  byQuality: string;
+  byTarget: string;
   clear: string;
+  compressBy: string;
   convert: string;
   convertAll: string;
   done: string;
@@ -44,6 +50,8 @@ type ImageToolCopy = {
   input: string;
   limitHint: (limit: string) => string;
   localOnly: string;
+  lossless: string;
+  losslessHint: string;
   maxHeight: string;
   maxWidth: string;
   noImage: string;
@@ -61,9 +69,14 @@ type ImageToolCopy = {
   source: string;
   stale: string;
   target: string;
+  targetBatch: (met: number, total: number) => string;
+  targetMet: (size: string) => string;
+  targetMissed: (size: string) => string;
   targetSize: string;
+  targetSizeKb: string;
   title: string;
   tooLarge: (limit: string) => string;
+  tooManyPixels: (limit: string) => string;
   transparentWarning: string;
   unsupported: string;
   wasm: string;
@@ -71,7 +84,11 @@ type ImageToolCopy = {
 };
 
 const copy: ImageToolCopy = {
+    avifHint: "AVIF 体积更小，但编码较慢，且仅 Safari 16+ 等较新浏览器支持。",
+    byQuality: "按质量",
+    byTarget: "按目标体积",
     clear: "清空",
+    compressBy: "压缩方式",
     convert: "开始处理",
     convertAll: "全部处理",
     done: "已完成",
@@ -85,6 +102,8 @@ const copy: ImageToolCopy = {
     input: "原图",
     limitHint: (limit) => `支持 JPG、PNG、WebP，单张不超过 ${limit}。`,
     localOnly: "图片只在当前浏览器本地处理，不会上传服务器。",
+    lossless: "WebP 无损（图标 / 线框图更合适）",
+    losslessHint: "无损模式忽略质量与目标体积设置。",
     maxHeight: "最大高度",
     maxWidth: "最大宽度",
     noImage: "选择一张 JPG、PNG 或 WebP 图片后开始处理。",
@@ -102,9 +121,14 @@ const copy: ImageToolCopy = {
     source: "原始大小",
     stale: "参数已更改，当前结果不是最新设置，请重新处理。",
     target: "输出大小",
+    targetBatch: (met, total) => `${met} / ${total} 张达到目标体积`,
+    targetMet: (size) => `已压到 ${size}，满足目标体积。`,
+    targetMissed: (size) => `已尽力压到 ${size}，仍超过目标，建议调小最大宽度或放宽目标体积。`,
     targetSize: "预计尺寸",
+    targetSizeKb: "目标体积 (KB)",
     title: "图片压缩 / 转换",
     tooLarge: (limit) => `图片不能超过 ${limit}，请先选择更小的图片。`,
+    tooManyPixels: (limit) => `图片像素过多（超过 ${limit}），请先缩小尺寸再处理。`,
     transparentWarning: "转 JPG 会铺白透明背景；需要保留透明背景请选择 PNG 或 WebP。",
     unsupported: "当前浏览器无法读取这张图片，请换一张 JPG、PNG 或 WebP。",
     wasm: "优先使用 jSquash / Squoosh WASM 编码器。",
@@ -112,27 +136,28 @@ const copy: ImageToolCopy = {
 };
 
 const formatLabels: Record<ImageOutputFormat, string> = {
+  avif: "AVIF",
   jpeg: "JPG",
   png: "PNG",
   webp: "WebP",
 };
 
-const formatMimeTypes: Record<ImageOutputFormat, string> = {
-  jpeg: "image/jpeg",
-  png: "image/png",
-  webp: "image/webp",
-};
-
 const formatExtensions: Record<ImageOutputFormat, string> = {
+  avif: "avif",
   jpeg: "jpg",
   png: "png",
   webp: "webp",
 };
 
 const maxImageFileBytes = 30 * 1024 * 1024;
+const maxImagePixels = 40 * 1000 * 1000;
+const minTargetQuality = 35;
+const maxTargetQuality = 95;
+const maxTargetAttempts = 6;
 
 type ImageProcessOptions = {
   format: ImageOutputFormat;
+  lossless: boolean;
   maxHeight: number | null;
   maxWidth: number | null;
   quality: number;
@@ -164,6 +189,9 @@ export function ImageTool() {
   const [processedImages, setProcessedImages] = useState<ProcessedImage[]>([]);
   const [format, setFormat] = useState<ImageOutputFormat>("webp");
   const [quality, setQuality] = useState(78);
+  const [compressMode, setCompressMode] = useState<"quality" | "target">("quality");
+  const [targetKb, setTargetKb] = useState("100");
+  const [webpLossless, setWebpLossless] = useState(false);
   const [maxWidth, setMaxWidth] = useState("1600");
   const [maxHeight, setMaxHeight] = useState("");
   const [busy, setBusy] = useState(false);
@@ -173,6 +201,9 @@ export function ImageTool() {
 
   const parsedMaxWidth = parseDimension(maxWidth);
   const parsedMaxHeight = parseDimension(maxHeight);
+  const parsedTargetBytes = parseTargetBytes(targetKb);
+  const losslessActive = format === "webp" && webpLossless;
+  const targetModeActive = compressMode === "target" && format !== "png" && parsedTargetBytes !== null && !losslessActive;
   const sourceImage = sourceImages.find((item) => item.id === activeSourceId) ?? sourceImages[0] ?? null;
   const processedImage = sourceImage ? (processedImages.find((item) => item.sourceId === sourceImage.id) ?? null) : null;
   const processedCount = sourceImages.filter((item) => processedImages.some((processed) => processed.sourceId === item.id)).length;
@@ -214,9 +245,14 @@ export function ImageTool() {
   const isResultStale = Boolean(
     processedImage
       && (processedImage.format !== format
-        || processedImage.quality !== quality
         || processedImage.maxWidth !== parsedMaxWidth
-        || processedImage.maxHeight !== parsedMaxHeight),
+        || processedImage.maxHeight !== parsedMaxHeight
+        || processedImage.lossless !== losslessActive
+        || (losslessActive
+          ? false
+          : targetModeActive
+            ? processedImage.targetBytes !== parsedTargetBytes
+            : processedImage.targetBytes !== null || processedImage.quality !== quality)),
   );
 
   async function chooseFiles(fileList: FileList | File[] | null) {
@@ -236,6 +272,7 @@ export function ImageTool() {
       const loadedImages: SourceImage[] = [];
       let skippedCount = 0;
       let tooLargeCount = 0;
+      let tooManyPixelsCount = 0;
       for (const file of files) {
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
           skippedCount += 1;
@@ -247,7 +284,13 @@ export function ImageTool() {
           continue;
         }
         try {
-          const bitmap = await createImageBitmap(file);
+          const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+          if (bitmap.width * bitmap.height > maxImagePixels) {
+            bitmap.close();
+            skippedCount += 1;
+            tooManyPixelsCount += 1;
+            continue;
+          }
           const previewUrl = URL.createObjectURL(file);
           newPreviewUrls.add(previewUrl);
           loadedImages.push({
@@ -264,8 +307,14 @@ export function ImageTool() {
         }
       }
 
+      const skipNote = tooLargeCount > 0
+        ? labels.tooLarge(formatBytes(maxImageFileBytes))
+        : tooManyPixelsCount > 0
+          ? labels.tooManyPixels(formatMegapixels(maxImagePixels))
+          : "";
+
       if (loadedImages.length === 0) {
-        setMessage(tooLargeCount > 0 ? labels.tooLarge(formatBytes(maxImageFileBytes)) : labels.unsupported);
+        setMessage(skipNote || labels.unsupported);
         setMessageTone("error");
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
@@ -281,7 +330,7 @@ export function ImageTool() {
       setSourceImages(loadedImages);
       setActiveSourceId(loadedImages[0].id);
       setProcessedImages([]);
-      setMessage(`${labels.selectedImages(loadedImages.length)}${skippedCount > 0 ? ` · ${labels.tooLarge(formatBytes(maxImageFileBytes))}` : ""}`);
+      setMessage(`${labels.selectedImages(loadedImages.length)}${skipNote ? ` · ${skipNote}` : ""}`);
       setMessageTone(skippedCount > 0 ? "error" : "muted");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -310,14 +359,20 @@ export function ImageTool() {
     try {
       const options = {
         format,
+        lossless: losslessActive,
         maxHeight: parsedMaxHeight,
         maxWidth: parsedMaxWidth,
         quality,
       };
-      const { fallbackMessage, processed } = await processSourceImage(sourceImage, options);
+      const { fallbackMessage, met, processed } = await produceProcessed(sourceImage, options);
       storeProcessedImage(processed);
-      setMessage(`${labels.ready} ${processed.method === "wasm" ? labels.wasm : labels.fallback}${fallbackMessage}`);
-      setMessageTone("success");
+      if (targetModeActive) {
+        setMessage(met ? labels.targetMet(formatBytes(processed.size)) : labels.targetMissed(formatBytes(processed.size)));
+        setMessageTone(met ? "success" : "error");
+      } else {
+        setMessage(`${labels.ready} ${processed.method === "wasm" ? labels.wasm : labels.fallback}${fallbackMessage}`);
+        setMessageTone("success");
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : labels.unsupported);
       setMessageTone("error");
@@ -335,6 +390,7 @@ export function ImageTool() {
     setMessageTone("muted");
     const options = {
       format,
+      lossless: losslessActive,
       maxHeight: parsedMaxHeight,
       maxWidth: parsedMaxWidth,
       quality,
@@ -342,14 +398,22 @@ export function ImageTool() {
 
     try {
       let lastFallbackMessage = "";
+      let metCount = 0;
       for (const [index, image] of sourceImages.entries()) {
         setActiveSourceId(image.id);
         setMessage(labels.processingBatch(index + 1, sourceImages.length));
-        const { fallbackMessage, processed } = await processSourceImage(image, options);
+        const { fallbackMessage, met, processed } = await produceProcessed(image, options);
         lastFallbackMessage = fallbackMessage;
+        if (met) {
+          metCount += 1;
+        }
         storeProcessedImage(processed);
       }
-      setMessage(`${labels.processedCount(sourceImages.length, sourceImages.length)} ${lastFallbackMessage || labels.ready}`);
+      setMessage(
+        targetModeActive
+          ? `${labels.processedCount(sourceImages.length, sourceImages.length)} · ${labels.targetBatch(metCount, sourceImages.length)}`
+          : `${labels.processedCount(sourceImages.length, sourceImages.length)} ${lastFallbackMessage || labels.ready}`,
+      );
       setMessageTone("success");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : labels.unsupported);
@@ -374,6 +438,42 @@ export function ImageTool() {
     setMaxHeight("");
   }
 
+  async function produceProcessed(image: SourceImage, options: ImageProcessOptions) {
+    if (targetModeActive && parsedTargetBytes) {
+      const result = await processToTargetSize(image, options, parsedTargetBytes);
+      result.processed.targetBytes = parsedTargetBytes;
+      return result;
+    }
+    const { fallbackMessage, processed } = await processSourceImage(image, options);
+    return { fallbackMessage, met: true, processed };
+  }
+
+  async function processToTargetSize(image: SourceImage, baseOptions: ImageProcessOptions, targetBytes: number) {
+    let lo = minTargetQuality;
+    let hi = maxTargetQuality;
+    const attempts: Array<{ fallbackMessage: string; processed: ProcessedImage }> = [];
+    for (let i = 0; i < maxTargetAttempts && lo <= hi; i += 1) {
+      const mid = Math.round((lo + hi) / 2);
+      const attempt = await processSourceImage(image, { ...baseOptions, quality: mid });
+      attempts.push(attempt);
+      if (attempt.processed.size <= targetBytes) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    const meeting = attempts.filter((item) => item.processed.size <= targetBytes);
+    const winner = meeting.length > 0
+      ? meeting.reduce((best, item) => (item.processed.size > best.processed.size ? item : best))
+      : attempts.reduce((best, item) => (item.processed.size < best.processed.size ? item : best));
+    for (const item of attempts) {
+      if (item !== winner) {
+        URL.revokeObjectURL(item.processed.previewUrl);
+      }
+    }
+    return { fallbackMessage: winner.fallbackMessage, met: winner.processed.size <= targetBytes, processed: winner.processed };
+  }
+
   async function processSourceImage(image: SourceImage, options: ImageProcessOptions) {
     let result: ImageProcessResult;
     let fallbackMessage = "";
@@ -395,6 +495,7 @@ export function ImageTool() {
         fileName,
         format: options.format,
         height: result.height,
+        lossless: options.lossless,
         maxHeight: options.maxHeight,
         maxWidth: options.maxWidth,
         method: result.method,
@@ -402,6 +503,7 @@ export function ImageTool() {
         quality: options.quality,
         size: blob.size,
         sourceId: image.id,
+        targetBytes: null,
         width: result.width,
       } satisfies ProcessedImage,
     };
@@ -468,6 +570,7 @@ export function ImageTool() {
             fileType: file.type,
             format: options.format,
             id,
+            lossless: options.lossless,
             maxHeight: options.maxHeight,
             maxWidth: options.maxWidth,
             quality: options.quality,
@@ -626,7 +729,7 @@ export function ImageTool() {
             <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
               {labels.format}
               <select className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70" value={format} disabled={busy} onChange={(event) => setFormat(event.target.value as ImageOutputFormat)}>
-                {(["webp", "jpeg", "png"] as const).map((item) => (
+                {(["webp", "avif", "jpeg", "png"] as const).map((item) => (
                   <option key={item} value={item}>{formatLabels[item]}</option>
                 ))}
               </select>
@@ -651,12 +754,49 @@ export function ImageTool() {
           </div>
 
           <div className="mt-4 rounded-md bg-accent/8 p-3">
-            <div className="flex items-center justify-between gap-3 text-xs font-semibold text-muted">
-              <span>{labels.quality}</span>
-              <span>{quality}</span>
-            </div>
-            <input className="mt-2 w-full accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" type="range" min="35" max="95" step="1" value={quality} disabled={format === "png" || busy} onChange={(event) => setQuality(Number(event.target.value))} />
-            <p className="mt-2 text-xs font-semibold leading-5 text-muted">{format === "jpeg" ? labels.transparentWarning : labels.fallback}</p>
+            {format === "webp" ? (
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted">
+                <input type="checkbox" className="accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" checked={webpLossless} disabled={busy} onChange={(event) => setWebpLossless(event.target.checked)} />
+                {labels.lossless}
+              </label>
+            ) : null}
+            {losslessActive ? (
+              <p className="mt-2 text-xs font-semibold leading-5 text-muted">{labels.losslessHint}</p>
+            ) : (
+              <>
+                <div className={`flex items-center justify-between gap-3 text-xs font-semibold text-muted${format === "webp" ? " mt-3" : ""}`}>
+                  <span>{labels.compressBy}</span>
+                  <div className="inline-flex overflow-hidden rounded-md border border-line">
+                    {(["quality", "target"] as const).map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        disabled={busy || format === "png"}
+                        onClick={() => setCompressMode(item)}
+                        className={`px-2.5 py-1 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${compressMode === item ? "bg-accent text-white" : "bg-surface text-muted hover:bg-accent/8"}`}
+                      >
+                        {item === "quality" ? labels.byQuality : labels.byTarget}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {compressMode === "target" && format !== "png" ? (
+                  <label className="mt-3 grid gap-1.5 text-xs font-semibold text-muted">
+                    {labels.targetSizeKb}
+                    <input className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70" inputMode="numeric" value={targetKb} disabled={busy} onChange={(event) => setTargetKb(cleanDimensionInput(event.target.value))} placeholder="100" />
+                  </label>
+                ) : (
+                  <>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-xs font-semibold text-muted">
+                      <span>{labels.quality}</span>
+                      <span>{quality}</span>
+                    </div>
+                    <input className="mt-2 w-full accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-60" type="range" min="35" max="95" step="1" value={quality} disabled={format === "png" || busy} onChange={(event) => setQuality(Number(event.target.value))} />
+                  </>
+                )}
+              </>
+            )}
+            <p className="mt-2 text-xs font-semibold leading-5 text-muted">{format === "jpeg" ? labels.transparentWarning : format === "avif" ? labels.avifHint : labels.fallback}</p>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -704,7 +844,7 @@ export function ImageTool() {
                 <div className="grid gap-2 rounded-md bg-surface/80 p-3 text-xs font-semibold text-muted sm:grid-cols-2">
                 <Stat label={labels.target} value={`${formatBytes(processedImage.size)} · ${processedImage.width} x ${processedImage.height}`} />
                 <Stat label={labels.ratio} value={stats ? `${stats.ratio}% (${formatSignedBytes(stats.saved)})` : "-"} />
-                <Stat label={labels.format} value={`${formatLabels[processedImage.format]} · ${processedImage.method === "wasm" ? "WASM" : "Canvas"} · ${processedImage.execution === "worker" ? "Worker" : "Main"}`} />
+                <Stat label={labels.format} value={`${formatLabels[processedImage.format]}${processedImage.lossless ? " · 无损" : ""} · ${processedImage.method === "wasm" ? "WASM" : "Canvas"} · ${processedImage.execution === "worker" ? "Worker" : "Main"}`} />
                 <Stat label={labels.download} value={processedImage.fileName} />
                 </div>
               ) : null}
@@ -732,7 +872,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 async function processImageInMainThread(file: File, options: ImageProcessOptions): Promise<ImageProcessResult> {
   const rendered = await renderImageData(file, options);
-  const encoded = await encodeImage(rendered.imageData, options.format, options.quality);
+  const encoded = await encodeImage(rendered.imageData, options.format, options.quality, options.lossless, encodeWithCanvas);
   return {
     buffer: encoded.buffer,
     execution: "main",
@@ -743,13 +883,13 @@ async function processImageInMainThread(file: File, options: ImageProcessOptions
 }
 
 async function renderImageData(file: File, options: { format: ImageOutputFormat; maxHeight: number | null; maxWidth: number | null }) {
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   try {
     const size = fitWithin(bitmap.width, bitmap.height, options.maxWidth, options.maxHeight);
     const canvas = document.createElement("canvas");
     canvas.width = size.width;
     canvas.height = size.height;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
+    const context = canvas.getContext("2d");
     if (!context) {
       throw new Error("Canvas is not available.");
     }
@@ -768,44 +908,7 @@ async function renderImageData(file: File, options: { format: ImageOutputFormat;
   }
 }
 
-async function encodeImage(imageData: ImageData, format: ImageOutputFormat, quality: number): Promise<{ buffer: ArrayBuffer; method: "canvas" | "wasm" }> {
-  try {
-    if (format === "jpeg") {
-      const { encode } = await import("@jsquash/jpeg");
-      return {
-        buffer: await encode(imageData, {
-          optimize_coding: true,
-          progressive: true,
-          quality,
-        }),
-        method: "wasm",
-      };
-    }
-    if (format === "webp") {
-      const { encode } = await import("@jsquash/webp");
-      return {
-        buffer: await encode(imageData, {
-          alpha_quality: 100,
-          method: 4,
-          quality,
-        }),
-        method: "wasm",
-      };
-    }
-    const { encode } = await import("@jsquash/png");
-    return {
-      buffer: await encode(imageData),
-      method: "wasm",
-    };
-  } catch {
-    return {
-      buffer: await encodeWithCanvas(imageData, format, quality),
-      method: "canvas",
-    };
-  }
-}
-
-function encodeWithCanvas(imageData: ImageData, format: ImageOutputFormat, quality: number) {
+function encodeWithCanvas(imageData: ImageData, format: ImageOutputFormat, quality: number, lossless: boolean) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
     const canvas = document.createElement("canvas");
     canvas.width = imageData.width;
@@ -825,19 +928,9 @@ function encodeWithCanvas(imageData: ImageData, format: ImageOutputFormat, quali
         resolve(await blob.arrayBuffer());
       },
       formatMimeTypes[format],
-      format === "png" ? undefined : quality / 100,
+      format === "png" ? undefined : lossless ? 1 : quality / 100,
     );
   });
-}
-
-function fitWithin(width: number, height: number, maxWidth: number | null, maxHeight: number | null) {
-  const widthRatio = maxWidth && maxWidth > 0 ? maxWidth / width : 1;
-  const heightRatio = maxHeight && maxHeight > 0 ? maxHeight / height : 1;
-  const scale = Math.min(1, widthRatio, heightRatio);
-  return {
-    height: Math.max(1, Math.round(height * scale)),
-    width: Math.max(1, Math.round(width * scale)),
-  };
 }
 
 function parseDimension(value: string) {
@@ -847,6 +940,11 @@ function parseDimension(value: string) {
 
 function cleanDimensionInput(value: string) {
   return value.replace(/[^\d]/g, "").slice(0, 5);
+}
+
+function parseTargetBytes(value: string) {
+  const kb = Number(value.trim());
+  return Number.isFinite(kb) && kb > 0 ? Math.round(kb * 1024) : null;
 }
 
 function clearObjectUrls(urls: Set<string>) {
@@ -977,4 +1075,8 @@ function formatBytes(bytes: number) {
 function formatSignedBytes(bytes: number) {
   const prefix = bytes >= 0 ? "-" : "+";
   return `${prefix}${formatBytes(Math.abs(bytes))}`;
+}
+
+function formatMegapixels(pixels: number) {
+  return `${Math.round(pixels / 1_000_000)}MP`;
 }

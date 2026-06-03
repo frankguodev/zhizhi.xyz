@@ -132,7 +132,7 @@ export function decodeTaxonomySegment(value: string) {
   }
 }
 
-export function getArticleCategories(articles: ArticleRecord[], locale: Locale = articles[0]?.locale ?? "zh") {
+export function getArticleCategories(articles: ReadonlyArray<Pick<ArticleRecord, "category" | "locale">>, locale: Locale = articles[0]?.locale ?? "zh") {
   const standardNames = standardArticleCategoryLabels[locale];
   const extraCategories = Array.from(
     new Set(
@@ -145,7 +145,7 @@ export function getArticleCategories(articles: ArticleRecord[], locale: Locale =
   return [...standardNames, ...extraCategories];
 }
 
-export function getArticleTags(articles: ArticleRecord[]) {
+export function getArticleTags(articles: ReadonlyArray<Pick<ArticleRecord, "tags">>) {
   return Array.from(new Set(articles.flatMap((article) => article.tags))).sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 }
 

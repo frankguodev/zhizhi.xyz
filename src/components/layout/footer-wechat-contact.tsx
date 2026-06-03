@@ -86,8 +86,8 @@ export function FooterWechatContact() {
             </button>
           </div>
 
-          <div className="mt-3 rounded-md border border-line bg-surface/40 p-3">
-            <Image src="/ower_wx.jpg" alt={copy.title} width={320} height={320} className="mx-auto h-auto w-full rounded-md" />
+          <div className="mt-3 rounded-md bg-surface/40 p-3">
+            <Image src="/ower_wx.webp" alt={copy.title} width={320} height={320} className="mx-auto h-auto w-full rounded-md" />
           </div>
 
           <p className="mt-3 text-center text-sm font-medium text-muted">{copy.note}</p>
