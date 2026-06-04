@@ -92,10 +92,10 @@ export default async function AiTermDetailRoute({ params }: AiTermDetailRoutePro
     notFound();
   }
 
-  const { blocks, fable, referencesHtml } = await parseAiTermMarkdown(term.contentMd, "zh", {
+  const { blocks, fable, referencesHtml, beginnerNotesHtml } = await parseAiTermMarkdown(term.contentMd, "zh", {
     stripLeadingTitle: true,
     stripSummary: true,
-    stripBeginnerNotes: aiTermHasBeginnerNotes(term.beginnerNotes),
+    extractBeginnerNotes: aiTermHasBeginnerNotes(term.beginnerNotes),
     stripRelations: term.relations.length > 0,
     extractReferences: true,
   });
@@ -104,7 +104,7 @@ export default async function AiTermDetailRoute({ params }: AiTermDetailRoutePro
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
-      <AiTermDetailPage blocks={blocks} fable={fable} locale="zh" referencesHtml={referencesHtml} term={term} />
+      <AiTermDetailPage blocks={blocks} beginnerNotesHtml={beginnerNotesHtml} fable={fable} locale="zh" referencesHtml={referencesHtml} term={term} />
     </>
   );
 }

@@ -49,6 +49,7 @@ export function getSampleInput(tab: ToolTab) {
     text: "知识\n工具\n知识\n\n知之",
     time: "",
     uuid: "10",
+    watermark: "",
     wechatQr: "",
   }[tab];
 }

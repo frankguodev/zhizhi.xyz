@@ -155,52 +155,56 @@ function revalidatePublicSeriesCache() {
 }
 
 export async function getPublicSeries(slug: string, locale: ArticleRecord["locale"] = "zh") {
-  return cachedPublicSeriesDetail(slug, locale);
+  // 不信任缓存的「未命中」：专题刚发布时可能在副本同步/标签失效生效前被负缓存（null），
+  // 导致列表已展示但详情 404。命中（非 null）走缓存，未命中回源实查一次兜底。
+  const cached = await cachedPublicSeriesDetail(slug, locale);
+  return cached ?? runGetPublicSeries(slug, locale);
 }
 
-const cachedPublicSeriesDetail = unstable_cache(
-  async (slug: string, locale: ArticleRecord["locale"] = "zh") => {
-    try {
-      const db = await getDb();
-      const rows = await db
-        .select({
-          id: series.id,
-          slug: series.slug,
-          locale: series.locale,
-          title: series.title,
-          description: series.description,
-          coverImage: series.coverImage,
-          updatedAt: series.updatedAt,
-        })
-        .from(series)
-        .where(and(eq(series.locale, locale), eq(series.slug, slug), eq(series.status, "published")))
-        .limit(1);
+async function runGetPublicSeries(slug: string, locale: ArticleRecord["locale"] = "zh") {
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({
+        id: series.id,
+        slug: series.slug,
+        locale: series.locale,
+        title: series.title,
+        description: series.description,
+        coverImage: series.coverImage,
+        updatedAt: series.updatedAt,
+      })
+      .from(series)
+      .where(and(eq(series.locale, locale), eq(series.slug, slug), eq(series.status, "published")))
+      .limit(1);
 
-      const row = rows[0];
+    const row = rows[0];
 
-      if (!row) {
-        return null;
-      }
-
-      const articleRows = await getPublishedSeriesArticles(row.id);
-
-      return {
-        slug: row.slug,
-        locale: row.locale,
-        title: row.title,
-        description: row.description,
-        coverImage: row.coverImage,
-        articleCount: articleRows.length,
-        updatedAt: dateString(row.updatedAt),
-        articles: articleRows,
-      } satisfies PublicSeriesDetail;
-    } catch {
+    if (!row) {
       return null;
     }
-  },
-  ["public-series-detail"],
-  { revalidate: 300, tags: [PUBLIC_SERIES_CACHE_TAG] },
-);
+
+    const articleRows = await getPublishedSeriesArticles(row.id);
+
+    return {
+      slug: row.slug,
+      locale: row.locale,
+      title: row.title,
+      description: row.description,
+      coverImage: row.coverImage,
+      articleCount: articleRows.length,
+      updatedAt: dateString(row.updatedAt),
+      articles: articleRows,
+    } satisfies PublicSeriesDetail;
+  } catch {
+    return null;
+  }
+}
+
+const cachedPublicSeriesDetail = unstable_cache(runGetPublicSeries, ["public-series-detail"], {
+  revalidate: 300,
+  tags: [PUBLIC_SERIES_CACHE_TAG],
+});
 
 async function getSeriesArticleIds(seriesId: string) {
   const db = await getDb();

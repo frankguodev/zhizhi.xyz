@@ -26,6 +26,7 @@ type AiTermDetailLike = Pick<
 
 type AiTermDetailPageProps = {
   blocks: ArticleContentBlock[];
+  beginnerNotesHtml?: string | null;
   fable?: AiTermFableBlock | null;
   locale: Locale;
   referencesHtml?: string | null;
@@ -82,7 +83,7 @@ function relationHref(relation: AiTermRelationSummary) {
   return `/ai-terms/${relation.slug}`;
 }
 
-export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }: AiTermDetailPageProps) {
+export function AiTermDetailPage({ blocks, beginnerNotesHtml, fable, locale, referencesHtml, term }: AiTermDetailPageProps) {
   const pageCopy = copy;
   const currentPath = `${pageCopy.currentPathPrefix}/${term.slug}`;
   const listHref = pageCopy.currentPathPrefix;
@@ -131,17 +132,29 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
                 </section>
               ) : null}
 
-              {fable ? (
-                <section className="rounded-md border border-line bg-[color-mix(in_srgb,var(--accent)_5%,var(--paper))] p-4 shadow-[var(--shadow-quiet)] md:p-6" aria-labelledby="ai-term-fable">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-accent" />
-                    <p className="text-xs font-semibold uppercase text-accent">{pageCopy.fable}</p>
-                  </div>
-                  <h2 id="ai-term-fable" data-toc-exclude className="mt-2 scroll-mt-24 break-words text-2xl font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
-                    {fable.title}
+              {beginnerNotesHtml ? (
+                <section aria-labelledby="ai-term-quick">
+                  <h2 id="ai-term-quick" className="ai-term-section-heading scroll-mt-24 text-2xl font-bold leading-tight text-foreground">
+                    快速理解
                   </h2>
-                  <div className="article-prose mt-4" dangerouslySetInnerHTML={{ __html: fable.html }} />
+                  <div className="article-prose mt-4" dangerouslySetInnerHTML={{ __html: beginnerNotesHtml }} />
                 </section>
+              ) : null}
+
+              {fable ? (
+                <details className="group overflow-hidden rounded-md border border-line bg-[color-mix(in_srgb,var(--accent)_5%,var(--paper))] shadow-[var(--shadow-quiet)]">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 p-4 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 md:p-6">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-accent/28 bg-accent/8 text-accent">
+                      <Sparkles className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold text-accent">{pageCopy.fable}</span>
+                      <span className="mt-0.5 block break-words font-semibold leading-6 text-foreground [overflow-wrap:anywhere]">{fable.title}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted transition-transform group-open:rotate-90" />
+                  </summary>
+                  <div className="article-prose mx-4 border-t border-line/70 pb-4 pt-4 md:mx-6 md:pb-6" dangerouslySetInnerHTML={{ __html: fable.html }} />
+                </details>
               ) : null}
 
               <div className="ai-term-prose min-w-0">

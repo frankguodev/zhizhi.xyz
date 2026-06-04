@@ -2,6 +2,7 @@
 
 import { Download, ImageIcon, Loader2, QrCode, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { clampInt, mediaPrefKeys, readMediaPrefs, writeMediaPrefs } from "./media-preferences";
 
 type UploadedImage = {
   file: File;
@@ -32,7 +33,6 @@ type WechatQrCopy = {
   generate: string;
   generated: string;
   inputHint: string;
-  localOnly: string;
   output: string;
   outputPlaceholder: string;
   outputSize: string;
@@ -60,7 +60,6 @@ const copy: WechatQrCopy = {
     generate: "生成二维码",
     generated: "已生成，请用微信扫一扫测试一次。",
     inputHint: "支持 JPG、PNG、WebP，单张不超过 20 MB。",
-    localOnly: "图片只在当前浏览器本地合成，不会上传服务器。",
     output: "合成结果",
     outputPlaceholder: "上传微信二维码和头像后，一键生成中间带头像的扫一扫图片。",
     outputSize: "输出尺寸",
@@ -77,6 +76,24 @@ const copy: WechatQrCopy = {
 };
 
 const maxImageFileBytes = 20 * 1024 * 1024;
+
+type WechatQrPrefs = {
+  avatarSize: number;
+  borderSize: number;
+  padding: number;
+  outputSize: number;
+  avatarShape: AvatarShape;
+};
+
+function parseWechatQrPrefs(raw: Record<string, unknown>): WechatQrPrefs {
+  return {
+    avatarSize: clampInt(raw.avatarSize, 12, 28, 20),
+    borderSize: clampInt(raw.borderSize, 1, 8, 3),
+    padding: clampInt(raw.padding, 0, 10, 4),
+    outputSize: clampInt(raw.outputSize, 512, 1600, 1024),
+    avatarShape: raw.avatarShape === "rounded" ? "rounded" : "circle",
+  };
+}
 
 export function WechatQrTool() {
   const labels = copy;
@@ -95,6 +112,31 @@ export function WechatQrTool() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(labels.outputPlaceholder);
   const [messageTone, setMessageTone] = useState<"error" | "muted" | "success">("muted");
+  const [prefsHydrated, setPrefsHydrated] = useState(false);
+
+  // 挂载后从本地恢复上次配置（延后到 setTimeout，避免 SSR 首屏水合不一致与 effect 内同步 setState）。
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const stored = readMediaPrefs(mediaPrefKeys.wechatQr, parseWechatQrPrefs);
+      if (stored) {
+        setAvatarSize(stored.avatarSize);
+        setBorderSize(stored.borderSize);
+        setPadding(stored.padding);
+        setOutputSize(stored.outputSize);
+        setAvatarShape(stored.avatarShape);
+      }
+      setPrefsHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  // 配置变更后自动写回本地（仅存配置，不存上传的图片）。
+  useEffect(() => {
+    if (!prefsHydrated) {
+      return;
+    }
+    writeMediaPrefs(mediaPrefKeys.wechatQr, { avatarSize, borderSize, padding, outputSize, avatarShape } satisfies WechatQrPrefs);
+  }, [prefsHydrated, avatarSize, borderSize, padding, outputSize, avatarShape]);
 
   const canGenerate = Boolean(qrImage && avatarImage && !busy);
   const outputSummary = useMemo(() => {
@@ -247,7 +289,6 @@ export function WechatQrTool() {
             />
           </div>
           <p className="mt-3 text-xs font-semibold leading-5 text-muted">{labels.inputHint}</p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-accent">{labels.localOnly}</p>
         </section>
 
         <section className="rounded-md border border-line bg-paper/72 p-4 shadow-[var(--shadow-quiet)]">

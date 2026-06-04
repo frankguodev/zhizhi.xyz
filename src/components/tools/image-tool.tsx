@@ -3,15 +3,19 @@
 import { Download, ImageIcon, Loader2, Maximize2, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { encodeImage, fitWithin, formatMimeTypes, type ImageOutputFormat } from "./image-codec";
-
-type SourceImage = {
-  file: File;
-  height: number;
-  id: string;
-  name: string;
-  previewUrl: string;
-  width: number;
-};
+import {
+  clearObjectUrls,
+  createZipBlob,
+  downloadBlob,
+  downloadBlobUrl,
+  formatBytes,
+  formatDateForFileName,
+  formatMegapixels,
+  loadSourceImages,
+  stripExtension,
+  type SourceImage,
+} from "./image-source";
+import { clampInt, mediaPrefKeys, readMediaPrefs, writeMediaPrefs } from "./media-preferences";
 
 type ProcessedImage = {
   blob: Blob;
@@ -49,7 +53,6 @@ type ImageToolCopy = {
   format: string;
   input: string;
   limitHint: (limit: string) => string;
-  localOnly: string;
   lossless: string;
   losslessHint: string;
   maxHeight: string;
@@ -64,6 +67,7 @@ type ImageToolCopy = {
   quality: string;
   ratio: string;
   ready: string;
+  removeImage: string;
   select: string;
   selectedImages: (count: number) => string;
   source: string;
@@ -95,13 +99,12 @@ const copy: ImageToolCopy = {
     download: "下载图片",
     downloadAll: "打包下载",
     downloadZipReady: "ZIP 已生成，开始下载。",
-    drop: "拖拽图片到这里，或点击选择文件",
+    drop: "把图片拖到这里，或点击上传（支持多张）",
     dropActive: "松开后读取这张图片",
     fallback: "WASM 不可用时会自动回退到浏览器原生导出。",
     format: "输出格式",
     input: "原图",
-    limitHint: (limit) => `支持 JPG、PNG、WebP，单张不超过 ${limit}。`,
-    localOnly: "图片只在当前浏览器本地处理，不会上传服务器。",
+    limitHint: (limit) => `支持 JPG、PNG、WebP，可一次导入多张批量处理，单张不超过 ${limit}。`,
     lossless: "WebP 无损（图标 / 线框图更合适）",
     losslessHint: "无损模式忽略质量与目标体积设置。",
     maxHeight: "最大高度",
@@ -116,6 +119,7 @@ const copy: ImageToolCopy = {
     quality: "质量",
     ratio: "压缩率",
     ready: "图片已处理完成。",
+    removeImage: "移除这张图片",
     select: "选择图片",
     selectedImages: (count) => `已选择 ${count} 张图片`,
     source: "原始大小",
@@ -148,6 +152,30 @@ const formatExtensions: Record<ImageOutputFormat, string> = {
   png: "png",
   webp: "webp",
 };
+
+const imageOutputFormats: ImageOutputFormat[] = ["avif", "jpeg", "png", "webp"];
+
+type ImagePrefs = {
+  format: ImageOutputFormat;
+  quality: number;
+  compressMode: "quality" | "target";
+  targetKb: string;
+  webpLossless: boolean;
+  maxWidth: string;
+  maxHeight: string;
+};
+
+function parseImagePrefs(raw: Record<string, unknown>): ImagePrefs {
+  return {
+    format: imageOutputFormats.includes(raw.format as ImageOutputFormat) ? (raw.format as ImageOutputFormat) : "webp",
+    quality: clampInt(raw.quality, 35, 95, 78),
+    compressMode: raw.compressMode === "target" ? "target" : "quality",
+    targetKb: typeof raw.targetKb === "string" ? raw.targetKb : "100",
+    webpLossless: typeof raw.webpLossless === "boolean" ? raw.webpLossless : false,
+    maxWidth: typeof raw.maxWidth === "string" ? raw.maxWidth : "1600",
+    maxHeight: typeof raw.maxHeight === "string" ? raw.maxHeight : "",
+  };
+}
 
 const maxImageFileBytes = 30 * 1024 * 1024;
 const maxImagePixels = 40 * 1000 * 1000;
@@ -198,6 +226,33 @@ export function ImageTool() {
   const [dragActive, setDragActive] = useState(false);
   const [message, setMessage] = useState(labels.noImage);
   const [messageTone, setMessageTone] = useState<"error" | "muted" | "success">("muted");
+  const [prefsHydrated, setPrefsHydrated] = useState(false);
+
+  // 挂载后从本地恢复上次配置（延后到 setTimeout，避免 SSR 首屏水合不一致与 effect 内同步 setState）。
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const stored = readMediaPrefs(mediaPrefKeys.image, parseImagePrefs);
+      if (stored) {
+        setFormat(stored.format);
+        setQuality(stored.quality);
+        setCompressMode(stored.compressMode);
+        setTargetKb(stored.targetKb);
+        setWebpLossless(stored.webpLossless);
+        setMaxWidth(stored.maxWidth);
+        setMaxHeight(stored.maxHeight);
+      }
+      setPrefsHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  // 配置变更后自动写回本地（仅存配置，不存图片）。
+  useEffect(() => {
+    if (!prefsHydrated) {
+      return;
+    }
+    writeMediaPrefs(mediaPrefKeys.image, { format, quality, compressMode, targetKb, webpLossless, maxWidth, maxHeight } satisfies ImagePrefs);
+  }, [prefsHydrated, format, quality, compressMode, targetKb, webpLossless, maxWidth, maxHeight]);
 
   const parsedMaxWidth = parseDimension(maxWidth);
   const parsedMaxHeight = parseDimension(maxHeight);
@@ -267,53 +322,20 @@ export function ImageTool() {
 
     setBusy(true);
     setMessageTone("muted");
-    const newPreviewUrls = new Set<string>();
     try {
-      const loadedImages: SourceImage[] = [];
-      let skippedCount = 0;
-      let tooLargeCount = 0;
-      let tooManyPixelsCount = 0;
-      for (const file of files) {
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-          skippedCount += 1;
-          continue;
-        }
-        if (file.size > maxImageFileBytes) {
-          skippedCount += 1;
-          tooLargeCount += 1;
-          continue;
-        }
-        try {
-          const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-          if (bitmap.width * bitmap.height > maxImagePixels) {
-            bitmap.close();
-            skippedCount += 1;
-            tooManyPixelsCount += 1;
-            continue;
-          }
-          const previewUrl = URL.createObjectURL(file);
-          newPreviewUrls.add(previewUrl);
-          loadedImages.push({
-            file,
-            height: bitmap.height,
-            id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-            name: file.name,
-            previewUrl,
-            width: bitmap.width,
-          });
-          bitmap.close();
-        } catch {
-          skippedCount += 1;
-        }
-      }
+      const { images: loadedImages, previewUrls: newPreviewUrls, skipped, tooLarge, tooManyPixels } = await loadSourceImages(files, {
+        maxBytes: maxImageFileBytes,
+        maxPixels: maxImagePixels,
+      });
 
-      const skipNote = tooLargeCount > 0
+      const skipNote = tooLarge > 0
         ? labels.tooLarge(formatBytes(maxImageFileBytes))
-        : tooManyPixelsCount > 0
+        : tooManyPixels > 0
           ? labels.tooManyPixels(formatMegapixels(maxImagePixels))
           : "";
 
       if (loadedImages.length === 0) {
+        clearObjectUrls(newPreviewUrls);
         setMessage(skipNote || labels.unsupported);
         setMessageTone("error");
         if (fileInputRef.current) {
@@ -331,12 +353,11 @@ export function ImageTool() {
       setActiveSourceId(loadedImages[0].id);
       setProcessedImages([]);
       setMessage(`${labels.selectedImages(loadedImages.length)}${skipNote ? ` · ${skipNote}` : ""}`);
-      setMessageTone(skippedCount > 0 ? "error" : "muted");
+      setMessageTone(skipped > 0 ? "error" : "muted");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch {
-      clearObjectUrls(newPreviewUrls);
       setMessage(labels.unsupported);
       setMessageTone("error");
       if (fileInputRef.current) {
@@ -430,6 +451,28 @@ export function ImageTool() {
     setActiveSourceId(null);
     setProcessedImages([]);
     setMessage(labels.noImage);
+    setMessageTone("muted");
+  }
+
+  function removeSourceImage(id: string) {
+    const target = sourceImages.find((item) => item.id === id);
+    if (target) {
+      URL.revokeObjectURL(target.previewUrl);
+      sourcePreviewUrlsRef.current.delete(target.previewUrl);
+    }
+    const processed = processedImages.find((item) => item.sourceId === id);
+    if (processed) {
+      URL.revokeObjectURL(processed.previewUrl);
+      processedPreviewUrlsRef.current.delete(processed.previewUrl);
+    }
+
+    const remaining = sourceImages.filter((item) => item.id !== id);
+    setSourceImages(remaining);
+    setProcessedImages((current) => current.filter((item) => item.sourceId !== id));
+    if (activeSourceId === id) {
+      setActiveSourceId(remaining[0]?.id ?? null);
+    }
+    setMessage(remaining.length === 0 ? labels.noImage : labels.selectedImages(remaining.length));
     setMessageTone("muted");
   }
 
@@ -611,12 +654,7 @@ export function ImageTool() {
           })),
         ),
       );
-      const previewUrl = URL.createObjectURL(zipBlob);
-      try {
-        downloadBlobUrl(previewUrl, `images-${formatDateForFileName(new Date())}.zip`);
-      } finally {
-        window.setTimeout(() => URL.revokeObjectURL(previewUrl), 1000);
-      }
+      downloadBlob(zipBlob, `images-${formatDateForFileName(new Date())}.zip`);
       setMessage(labels.downloadZipReady);
       setMessageTone("success");
     } catch (error) {
@@ -634,7 +672,6 @@ export function ImageTool() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-foreground">{labels.input}</h3>
-              <p className="mt-1 text-xs font-semibold leading-5 text-muted">{labels.localOnly}</p>
               <p className="mt-1 text-xs font-semibold leading-5 text-muted">{labels.limitHint(formatBytes(maxImageFileBytes))}</p>
             </div>
             <button className="admin-btn admin-btn-secondary inline-flex h-9 items-center gap-2 rounded-md px-3 text-xs font-semibold" type="button" disabled={busy} onClick={() => fileInputRef.current?.click()}>
@@ -707,16 +744,34 @@ export function ImageTool() {
                 const itemProcessed = processedImages.some((item) => item.sourceId === image.id);
                 const active = image.id === sourceImage?.id;
                 return (
-                  <button
+                  <div
                     key={image.id}
-                    className={`flex min-w-0 items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-xs font-semibold transition ${active ? "bg-accent/10 text-foreground" : "text-muted hover:bg-surface"}`}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setActiveSourceId(image.id)}
+                    className={`flex min-w-0 items-center gap-2 rounded-md p-1 transition ${active ? "bg-accent/10" : "hover:bg-surface"}`}
                   >
-                    <span className="min-w-0 truncate">{image.name}</span>
-                    <span className={itemProcessed ? "text-accent" : "text-muted"}>{itemProcessed ? labels.done : `${image.width} x ${image.height}`}</span>
-                  </button>
+                    <button
+                      className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-md text-left transition disabled:cursor-not-allowed"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setActiveSourceId(image.id)}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- 本地对象 URL 缩略图。 */}
+                      <img src={image.previewUrl} alt={image.name} className="h-10 w-10 shrink-0 rounded border border-line object-cover" />
+                      <span className="grid min-w-0 flex-1">
+                        <span className={`min-w-0 truncate text-xs font-semibold ${active ? "text-foreground" : "text-muted"}`}>{image.name}</span>
+                        <span className={`text-[0.7rem] font-semibold ${itemProcessed ? "text-accent" : "text-muted"}`}>{itemProcessed ? labels.done : `${image.width} x ${image.height}`}</span>
+                      </span>
+                    </button>
+                    <button
+                      className="mr-1 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition hover:bg-surface hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                      type="button"
+                      disabled={busy}
+                      aria-label={labels.removeImage}
+                      title={labels.removeImage}
+                      onClick={() => removeSourceImage(image.id)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -947,136 +1002,11 @@ function parseTargetBytes(value: string) {
   return Number.isFinite(kb) && kb > 0 ? Math.round(kb * 1024) : null;
 }
 
-function clearObjectUrls(urls: Set<string>) {
-  for (const url of urls) {
-    URL.revokeObjectURL(url);
-  }
-  urls.clear();
-}
-
 function downloadProcessedImage(image: ProcessedImage) {
   downloadBlobUrl(image.previewUrl, image.fileName);
-}
-
-function downloadBlobUrl(url: string, fileName: string) {
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-}
-
-async function createZipBlob(files: Array<{ data: Uint8Array; name: string }>) {
-  const encoder = new TextEncoder();
-  const parts: Uint8Array[] = [];
-  const centralDirectoryParts: Uint8Array[] = [];
-  let offset = 0;
-
-  for (const [index, file] of files.entries()) {
-    const fileNameBytes = encoder.encode(uniqueZipFileName(file.name, index));
-    const crc = crc32(file.data);
-    const localHeader = new Uint8Array(30 + fileNameBytes.length);
-    const localView = new DataView(localHeader.buffer);
-    localView.setUint32(0, 0x04034b50, true);
-    localView.setUint16(4, 20, true);
-    localView.setUint16(6, 0x0800, true);
-    localView.setUint16(8, 0, true);
-    localView.setUint16(10, 0, true);
-    localView.setUint16(12, 0, true);
-    localView.setUint32(14, crc, true);
-    localView.setUint32(18, file.data.byteLength, true);
-    localView.setUint32(22, file.data.byteLength, true);
-    localView.setUint16(26, fileNameBytes.length, true);
-    localHeader.set(fileNameBytes, 30);
-    parts.push(localHeader, file.data);
-
-    const centralHeader = new Uint8Array(46 + fileNameBytes.length);
-    const centralView = new DataView(centralHeader.buffer);
-    centralView.setUint32(0, 0x02014b50, true);
-    centralView.setUint16(4, 20, true);
-    centralView.setUint16(6, 20, true);
-    centralView.setUint16(8, 0x0800, true);
-    centralView.setUint16(10, 0, true);
-    centralView.setUint16(12, 0, true);
-    centralView.setUint16(14, 0, true);
-    centralView.setUint32(16, crc, true);
-    centralView.setUint32(20, file.data.byteLength, true);
-    centralView.setUint32(24, file.data.byteLength, true);
-    centralView.setUint16(28, fileNameBytes.length, true);
-    centralView.setUint32(42, offset, true);
-    centralHeader.set(fileNameBytes, 46);
-    centralDirectoryParts.push(centralHeader);
-    offset += localHeader.byteLength + file.data.byteLength;
-  }
-
-  const centralDirectorySize = centralDirectoryParts.reduce((sum, item) => sum + item.byteLength, 0);
-  const endRecord = new Uint8Array(22);
-  const endView = new DataView(endRecord.buffer);
-  endView.setUint32(0, 0x06054b50, true);
-  endView.setUint16(8, files.length, true);
-  endView.setUint16(10, files.length, true);
-  endView.setUint32(12, centralDirectorySize, true);
-  endView.setUint32(16, offset, true);
-
-  return new Blob([concatUint8Arrays([...parts, ...centralDirectoryParts, endRecord])], { type: "application/zip" });
-}
-
-function uniqueZipFileName(fileName: string, index: number) {
-  const normalized = fileName.replace(/[\\/:*?"<>|]/g, "-") || `image-${index + 1}`;
-  if (index === 0) {
-    return normalized;
-  }
-  const dotIndex = normalized.lastIndexOf(".");
-  if (dotIndex <= 0) {
-    return `${normalized}-${index + 1}`;
-  }
-  return `${normalized.slice(0, dotIndex)}-${index + 1}${normalized.slice(dotIndex)}`;
-}
-
-function crc32(data: Uint8Array) {
-  let crc = 0xffffffff;
-  for (const byte of data) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function concatUint8Arrays(chunks: Uint8Array[]) {
-  const length = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0);
-  const result = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return result;
-}
-
-function formatDateForFileName(date: Date) {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
-  return `${date.getFullYear()}${month}${day}-${hour}${minute}`;
-}
-
-function stripExtension(name: string) {
-  return name.replace(/\.[^.]+$/, "") || "image";
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function formatSignedBytes(bytes: number) {
   const prefix = bytes >= 0 ? "-" : "+";
   return `${prefix}${formatBytes(Math.abs(bytes))}`;
-}
-
-function formatMegapixels(pixels: number) {
-  return `${Math.round(pixels / 1_000_000)}MP`;
 }

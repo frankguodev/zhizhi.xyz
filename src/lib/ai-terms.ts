@@ -867,7 +867,11 @@ const cachedGetPublicAiTerm = unstable_cache(runGetPublicAiTerm, ["public-ai-ter
 });
 
 export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
-  return cachedGetPublicAiTerm(locale, slug);
+  // 不信任缓存的「未命中」：词条刚发布时，详情页可能在 D1 副本同步 / 标签失效生效前被访问
+  // （或被列表页 <Link> 预取触发），查到 null 会被 unstable_cache 负缓存最多 120s，
+  // 表现为「列表已展示但详情 404」。命中（非 null）走缓存，未命中则回源实查一次兜底。
+  const cached = await cachedGetPublicAiTerm(locale, slug);
+  return cached ?? runGetPublicAiTerm(locale, slug);
 }
 
 export async function getAdminAiTerm(locale: AiTermLocale, slug: string) {

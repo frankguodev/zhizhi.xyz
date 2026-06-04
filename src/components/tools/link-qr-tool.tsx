@@ -3,6 +3,7 @@
 import { Check, ChevronDown, Download, Link2, Loader2, QrCode, RefreshCw, X } from "lucide-react";
 import QRCode from "qrcode";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { clampInt, mediaPrefKeys, readMediaPrefs, writeMediaPrefs } from "./media-preferences";
 
 type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 
@@ -26,7 +27,6 @@ type LinkQrCopy = {
   inputLabel: string;
   inputPlaceholder: string;
   invalidUrl: string;
-  localOnly: string;
   margin: string;
   output: string;
   outputPlaceholder: string;
@@ -49,7 +49,6 @@ const copy: LinkQrCopy = {
     inputLabel: "链接地址",
     inputPlaceholder: "https://zhizhi.xyz",
     invalidUrl: "请输入有效链接。没有协议时会自动补全 https://。",
-    localOnly: "二维码在当前浏览器本地生成，不会上传服务器。",
     margin: "留白",
     output: "生成结果",
     outputPlaceholder: "输入链接后点击生成，结果会显示在这里。",
@@ -68,6 +67,33 @@ const errorCorrectionOptions: Array<{ label: string; value: ErrorCorrectionLevel
 
 const colorSwatches = ["#171920", "#d9b861", "#c59b4a", "#2b2b2a", "#ffffff", "#f7f4ec", "#e6e0d3", "#8f8069"] as const;
 
+const errorCorrectionLevels: ErrorCorrectionLevel[] = ["L", "M", "Q", "H"];
+const hexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+type LinkQrPrefs = {
+  input: string;
+  size: number;
+  margin: number;
+  errorCorrection: ErrorCorrectionLevel;
+  darkColor: string;
+  lightColor: string;
+};
+
+function parseColor(value: unknown, fallback: string): string {
+  return typeof value === "string" && hexColorPattern.test(value) ? value : fallback;
+}
+
+function parseLinkQrPrefs(raw: Record<string, unknown>): LinkQrPrefs {
+  return {
+    input: typeof raw.input === "string" ? raw.input : "https://zhizhi.xyz",
+    size: clampInt(raw.size, 384, 1600, 1024),
+    margin: clampInt(raw.margin, 0, 8, 4),
+    errorCorrection: errorCorrectionLevels.includes(raw.errorCorrection as ErrorCorrectionLevel) ? (raw.errorCorrection as ErrorCorrectionLevel) : "M",
+    darkColor: parseColor(raw.darkColor, "#171920"),
+    lightColor: parseColor(raw.lightColor, "#ffffff"),
+  };
+}
+
 export function LinkQrTool() {
   const labels = copy;
   const [input, setInput] = useState("https://zhizhi.xyz");
@@ -81,6 +107,32 @@ export function LinkQrTool() {
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState(labels.outputPlaceholder);
   const [messageTone, setMessageTone] = useState<"error" | "muted" | "success">("muted");
+  const [prefsHydrated, setPrefsHydrated] = useState(false);
+
+  // 挂载后从本地恢复上次配置与链接（延后到 setTimeout，避免 SSR 首屏水合不一致与 effect 内同步 setState）。
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const stored = readMediaPrefs(mediaPrefKeys.linkQr, parseLinkQrPrefs);
+      if (stored) {
+        setInput(stored.input);
+        setSize(stored.size);
+        setMargin(stored.margin);
+        setErrorCorrection(stored.errorCorrection);
+        setDarkColor(stored.darkColor);
+        setLightColor(stored.lightColor);
+      }
+      setPrefsHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  // 配置 / 链接变更后自动写回本地。
+  useEffect(() => {
+    if (!prefsHydrated) {
+      return;
+    }
+    writeMediaPrefs(mediaPrefKeys.linkQr, { input, size, margin, errorCorrection, darkColor, lightColor } satisfies LinkQrPrefs);
+  }, [prefsHydrated, input, size, margin, errorCorrection, darkColor, lightColor]);
 
   async function generateQr() {
     const normalizedUrl = normalizeUrlInput(input);
@@ -164,7 +216,6 @@ export function LinkQrTool() {
             </span>
             <div>
               <h3 className="text-sm font-semibold text-foreground">{labels.title}</h3>
-              <p className="mt-1 text-xs font-semibold leading-5 text-accent">{labels.localOnly}</p>
             </div>
           </div>
 

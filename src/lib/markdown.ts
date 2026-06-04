@@ -28,8 +28,8 @@ export type AiTermBodyDedup = {
   stripLeadingTitle?: boolean;
   /** 剥离「一句话概念」段落（已在 hero 展示）。 */
   stripSummary?: boolean;
-  /** 剥离「快速理解」段落（已由快速理解卡片承载）。 */
-  stripBeginnerNotes?: boolean;
+  /** 抽取「快速理解」段落，单独渲染在「一图看懂」与正文主体之间。 */
+  extractBeginnerNotes?: boolean;
   /** 剥离「相关概念」段落（已由相关概念卡片承载）。 */
   stripRelations?: boolean;
   /** 抽取「参考资料」段落，折叠进来源与校验卡片。 */
@@ -54,7 +54,7 @@ export function buildAiTermBodyDedup(term: { beginnerNotes?: unknown; relations?
   return {
     stripLeadingTitle: true,
     stripSummary: true,
-    stripBeginnerNotes: hasBeginnerNotesContent(term.beginnerNotes),
+    extractBeginnerNotes: hasBeginnerNotesContent(term.beginnerNotes),
     stripRelations: Array.isArray(term.relations) && term.relations.length > 0,
     extractReferences: true,
   };
@@ -77,12 +77,17 @@ function normalizeHeading(value: string) {
     .toLowerCase();
 }
 
-function applyAiTermDedup(body: string, locale: Locale, dedup: AiTermBodyDedup): { body: string; referencesMarkdown: string | null } {
+function applyAiTermDedup(
+  body: string,
+  locale: Locale,
+  dedup: AiTermBodyDedup,
+): { body: string; referencesMarkdown: string | null; beginnerNotesMarkdown: string | null } {
   const headings = dedupHeadings[locale];
   const lines = body.split(/\r?\n/);
   const out: string[] = [];
   let referenceLines: string[] | null = null;
-  let mode: "keep" | "strip" | "references" = "keep";
+  let beginnerNotesLines: string[] | null = null;
+  let mode: "keep" | "strip" | "references" | "beginnerNotes" = "keep";
   let leadingTitleStripped = false;
 
   const matchesHeading = (title: string, set: string[]) => set.some((entry) => normalizeHeading(entry) === normalizeHeading(title));
@@ -107,8 +112,9 @@ function applyAiTermDedup(body: string, locale: Locale, dedup: AiTermBodyDedup):
         mode = "strip";
         continue;
       }
-      if (dedup.stripBeginnerNotes && matchesHeading(title, headings.beginnerNotes)) {
-        mode = "strip";
+      if (dedup.extractBeginnerNotes && matchesHeading(title, headings.beginnerNotes)) {
+        mode = "beginnerNotes";
+        beginnerNotesLines = beginnerNotesLines ?? [];
         continue;
       }
       if (dedup.stripRelations && matchesHeading(title, headings.relations)) {
@@ -130,13 +136,17 @@ function applyAiTermDedup(body: string, locale: Locale, dedup: AiTermBodyDedup):
       out.push(line);
     } else if (mode === "references" && referenceLines) {
       referenceLines.push(line);
+    } else if (mode === "beginnerNotes" && beginnerNotesLines) {
+      beginnerNotesLines.push(line);
     }
   }
 
   const referencesMarkdown = referenceLines && referenceLines.join("\n").trim() ? referenceLines.join("\n").trim() : null;
+  const beginnerNotesMarkdown = beginnerNotesLines && beginnerNotesLines.join("\n").trim() ? beginnerNotesLines.join("\n").trim() : null;
   return {
     body: out.join("\n").replace(/\n{3,}/g, "\n\n").trim(),
     referencesMarkdown,
+    beginnerNotesMarkdown,
   };
 }
 
@@ -367,7 +377,7 @@ export async function parseAiTermMarkdown(
   markdown: string,
   locale: Locale = "zh",
   dedup: AiTermBodyDedup = {},
-): Promise<{ blocks: ArticleContentBlock[]; fable: AiTermFableBlock | null; referencesHtml: string | null }> {
+): Promise<{ blocks: ArticleContentBlock[]; fable: AiTermFableBlock | null; referencesHtml: string | null; beginnerNotesHtml: string | null }> {
   const lines = markdown.split(/\r?\n/);
   const withoutFable: string[] = [];
   let fable: AiTermFableBlock | null = null;
@@ -404,8 +414,9 @@ export async function parseAiTermMarkdown(
 
   let body = withoutFable.join("\n");
   let referencesHtml: string | null = null;
+  let beginnerNotesHtml: string | null = null;
   const hasDedup = Boolean(
-    dedup.stripLeadingTitle || dedup.stripSummary || dedup.stripBeginnerNotes || dedup.stripRelations || dedup.extractReferences,
+    dedup.stripLeadingTitle || dedup.stripSummary || dedup.extractBeginnerNotes || dedup.stripRelations || dedup.extractReferences,
   );
 
   if (hasDedup) {
@@ -414,12 +425,16 @@ export async function parseAiTermMarkdown(
     if (result.referencesMarkdown) {
       referencesHtml = await markdownToHtml(result.referencesMarkdown);
     }
+    if (result.beginnerNotesMarkdown) {
+      beginnerNotesHtml = await markdownToHtml(result.beginnerNotesMarkdown);
+    }
   }
 
   return {
     blocks: await parseLayeredMarkdown(body, locale),
     fable,
     referencesHtml,
+    beginnerNotesHtml,
   };
 }
 

@@ -22,6 +22,7 @@ import {
   Rows3,
   Save,
   Search,
+  Stamp,
   Table2,
   TimerReset,
   Trash2,
@@ -33,6 +34,7 @@ import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
 import { ImageTool } from "./image-tool";
+import { ImageWatermarkTool } from "./image-watermark-tool";
 import { LinkQrTool } from "./link-qr-tool";
 import { WechatQrTool } from "./wechat-qr-tool";
 import { enhanceJsonError, getJsonErrorHighlight, translateJsonErrorReason } from "./tool-json-diagnostics";
@@ -107,6 +109,7 @@ const toolGroupByTab: Record<ToolTab, Exclude<ToolGroup, "all">> = {
   text: "writing",
   time: "dev",
   uuid: "dev",
+  watermark: "media",
   wechatQr: "media",
 };
 
@@ -170,6 +173,7 @@ const tabLabels = [
   { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
   { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
   { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
+  { id: "watermark", label: "水印", description: "给图片添加文字水印，支持单个定位与斜向平铺，可批量处理。", icon: Stamp },
   { id: "linkQr", label: "链接二维码", description: "输入网址后一键生成可下载的二维码 PNG。", icon: QrCode },
   { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
 ] as const;
@@ -189,6 +193,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   text: "text string line dedupe sort trim uppercase lowercase wenben",
   time: "time timestamp unix date utc local seconds milliseconds shijian shijianchuo",
   uuid: "uuid guid random v4 id",
+  watermark: "watermark text tiled diagonal photo picture copyright shuiyin wenzi pingpu banquan tupian",
   wechatQr: "wechat weixin qr qrcode contact friend avatar scan saoyisao erweima touxiang",
 };
 
@@ -277,6 +282,7 @@ export function ToolsWorkbench() {
     text: textOutput,
     time: timeOutput,
     uuid: uuidOutput,
+    watermark: "",
     wechatQr: "",
   });
   const currentInput = getToolValue(activeTab, {
@@ -294,11 +300,11 @@ export function ToolsWorkbench() {
     text: textInput,
     time: timeInput,
     uuid: uuidInput,
+    watermark: "",
     wechatQr: "",
   });
   const activeTabInfo = tabLabels.find((tab) => tab.id === activeTab) ?? tabLabels[0];
   const ActiveIcon = activeTabInfo.icon;
-  const defaultStatusMessage = "所有工具均在浏览器本地运行";
   const expandedWorkspace = isExpandedWorkspaceTool(activeTab);
   const panelSize = getPanelSize(activeTab);
   const filteredTabs = useMemo(() => {
@@ -1233,8 +1239,8 @@ export function ToolsWorkbench() {
               </div>
             </div>
             <div className="grid justify-items-start sm:justify-items-end">
-              <div className="rounded-md border border-[color-mix(in_srgb,var(--accent)_34%,var(--line))] bg-accent/8 px-2.5 py-1.5 text-xs font-semibold text-accent">
-                {defaultStatusMessage}
+              <div className="max-w-full rounded-md border border-[color-mix(in_srgb,var(--accent)_34%,var(--line))] bg-accent/8 px-2.5 py-1.5 text-left text-xs font-semibold leading-5 text-accent">
+                所有工具均在浏览器本地运行，<br className="hidden sm:inline" />您的任何信息都不会上传服务器。
               </div>
             </div>
           </div>
@@ -1326,6 +1332,7 @@ export function ToolsWorkbench() {
           ) : null}
 
           {activeTab === "image" ? <ImageTool /> : null}
+          {activeTab === "watermark" ? <ImageWatermarkTool /> : null}
           {activeTab === "linkQr" ? <LinkQrTool /> : null}
           {activeTab === "wechatQr" ? <WechatQrTool /> : null}
 
@@ -1461,12 +1468,6 @@ export function ToolsWorkbench() {
             type="file"
             onChange={(event) => void importHashFile(event.target.files?.[0] ?? null)}
           />
-
-          <div className="border-t border-line/80 pt-4">
-            <div className="text-xs font-semibold text-muted">
-              当前工具会写入 URL，方便下次打开或分享。
-            </div>
-          </div>
         </div>
       </section>
     </div>
@@ -2825,7 +2826,7 @@ function isExpandedWorkspaceTool(tab: ToolTab) {
 }
 
 function isStandaloneTool(tab: ToolTab) {
-  return tab === "image" || tab === "wechatQr" || tab === "linkQr";
+  return tab === "image" || tab === "watermark" || tab === "wechatQr" || tab === "linkQr";
 }
 
 function getPanelSize(tab: ToolTab): EditorPanelSize {
