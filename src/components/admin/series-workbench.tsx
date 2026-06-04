@@ -6,6 +6,7 @@ import { useState } from "react";
 import { handleAdminUnauthorized } from "@/components/admin/admin-api";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { AdminSelect } from "@/components/admin/admin-select";
+import { MediaUploadPanel } from "@/components/admin/media-upload-panel";
 import type { AdminSeriesArticleChoice, AdminSeriesItem, SeriesStatus } from "@/lib/series";
 import type { Locale } from "@/lib/site";
 
@@ -378,16 +379,34 @@ export function SeriesWorkbench({
               />
             </label>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-foreground">封面图 URL</span>
-              <input
-                className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-                value={form.coverImage}
-                onChange={(event) => setForm((value) => ({ ...value, coverImage: event.target.value }))}
-                maxLength={500}
-                placeholder="/media/articles/..."
+            <div className="grid gap-2">
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-foreground">封面图 URL</span>
+                <input
+                  className="h-11 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
+                  value={form.coverImage}
+                  onChange={(event) => setForm((value) => ({ ...value, coverImage: event.target.value }))}
+                  maxLength={500}
+                  placeholder="/media/series/..."
+                />
+              </label>
+              <MediaUploadPanel
+                scope="series"
+                insertOnUpload={false}
+                applyLabel="用作封面"
+                title="上传封面图"
+                description="上传后自动填入上方封面图地址。支持 JPG、PNG、WebP、GIF，单张不超过 5MB。"
+                altPlaceholder="封面图说明（可选）"
+                onUpload={(media) => setForm((value) => ({ ...value, coverImage: media.url }))}
               />
-            </label>
+              {form.coverImage ? (
+                <div className="flex items-center gap-3 border border-line bg-surface/40 p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={form.coverImage} alt="" className="h-16 w-28 shrink-0 border border-line object-cover" loading="lazy" />
+                  <span className="min-w-0 break-all font-mono text-xs text-muted">{form.coverImage}</span>
+                </div>
+              ) : null}
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2">

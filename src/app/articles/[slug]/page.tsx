@@ -34,7 +34,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   }
 
   const tocItems = buildArticleToc(payload.content.blocks);
-  const origin = getRequestOrigin(await headers());
 
-  return <ArticleDetailPage article={payload.article} blocks={payload.content.blocks} tocItems={tocItems} navigation={payload.navigation} externalLinks={payload.externalLinks} locale="zh" origin={origin} />;
+  return <ArticleDetailPage article={payload.article} blocks={payload.content.blocks} tocItems={tocItems} navigation={payload.navigation} externalLinks={payload.externalLinks} locale="zh" />;
 }

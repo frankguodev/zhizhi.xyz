@@ -6,27 +6,6 @@ import { siteConfig } from "@/lib/site";
 
 const description = "用普通人能读懂的方式整理 AI 术语、概念、工具和新兴说法。";
 
-export const metadata: Metadata = {
-  title: "AI 词条",
-  description,
-  alternates: {
-    canonical: "/ai-terms",
-  },
-  openGraph: {
-    title: `AI 词条｜${siteConfig.name}`,
-    description,
-    url: "/ai-terms",
-    siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
-    locale: "zh_CN",
-    type: "website",
-  },
-  twitter: {
-    card: "summary",
-    title: `AI 词条｜${siteConfig.name}`,
-    description,
-  },
-};
-
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 12;
@@ -43,6 +22,32 @@ type AiTermsRouteProps = {
   }>;
 };
 
+export async function generateMetadata({ searchParams }: AiTermsRouteProps): Promise<Metadata> {
+  const params = await searchParams;
+  const page = Math.max(1, Number.parseInt(params?.page ?? "1", 10) || 1);
+  // 分页页自引用 canonical（让深分页可收录）；其余筛选/排序统一去重到 /ai-terms。
+  const canonical = page > 1 ? `/ai-terms?page=${page}` : "/ai-terms";
+  const title = page > 1 ? `AI 词条 - 第 ${page} 页` : "AI 词条";
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: `${title}｜${siteConfig.name}`,
+      description,
+      url: canonical,
+      siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
+      locale: "zh_CN",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: `${title}｜${siteConfig.name}`,
+      description,
+    },
+  };
+}
+
 export default async function AiTermsRoute({ searchParams }: AiTermsRouteProps) {
   const params = await searchParams;
   const query = params?.q?.trim() || undefined;
@@ -57,8 +62,9 @@ export default async function AiTermsRoute({ searchParams }: AiTermsRouteProps) 
     listPublicAiTerms({ ...filter, sort, limit: PAGE_SIZE, offset }),
     countPublicAiTerms(filter),
     listAiTermCategories("zh"),
-    countPublicAiTermsByCategory("zh"),
-    listPublicAiTerms({ locale: "zh", sort: "featured", limit: 14 }),
+    // 分类计数随难度/搜索联动，但不限定 categorySlug（保留全部分类可见）。
+    countPublicAiTermsByCategory({ locale: "zh", q: query, difficulty }),
+    listPublicAiTerms({ locale: "zh", sort: "featured", limit: 10 }),
   ]);
 
   let terms = termsResult;
@@ -80,6 +86,15 @@ export default async function AiTermsRoute({ searchParams }: AiTermsRouteProps) 
   if (popularTerms.length === 0) {
     popularTerms = fallbackAiTermSummaries.map((term) => ({ term: term.term, slug: term.slug }));
   }
+  // 按词条名去重并截断到 8（原先在组件渲染层处理）。
+  const seenPopular = new Set<string>();
+  popularTerms = popularTerms
+    .filter((item) => {
+      if (seenPopular.has(item.term)) return false;
+      seenPopular.add(item.term);
+      return true;
+    })
+    .slice(0, 8);
 
   return (
     <AiTermsPage
@@ -87,7 +102,6 @@ export default async function AiTermsRoute({ searchParams }: AiTermsRouteProps) 
       categoryCounts={categoryCounts}
       categorySlug={categorySlug}
       difficulty={difficulty}
-      locale="zh"
       page={page}
       pageSize={PAGE_SIZE}
       popularTerms={popularTerms}

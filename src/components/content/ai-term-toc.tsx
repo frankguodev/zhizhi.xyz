@@ -19,7 +19,8 @@ export function AiTermToc() {
         return;
       }
 
-      const nodes = Array.from(container.querySelectorAll<HTMLElement>("h2[id]"));
+      // 收正文大节标题和「一图看懂」；寓言故事/相关概念等元区块标题用 data-toc-exclude 排除。
+      const nodes = Array.from(container.querySelectorAll<HTMLElement>("h2[id]:not([data-toc-exclude])"));
       const items = nodes
         .map((node) => ({ id: node.id, text: node.textContent?.trim() ?? "" }))
         .filter((heading) => heading.id && heading.text);

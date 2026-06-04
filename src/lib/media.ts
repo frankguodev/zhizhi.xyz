@@ -17,7 +17,7 @@ export type UploadedMedia = {
   size: number;
 };
 
-export type MediaUploadScope = "article" | "ai-term";
+export type MediaUploadScope = "article" | "ai-term" | "series";
 
 export type UploadImageOptions = {
   locale?: string;
@@ -36,8 +36,12 @@ export function isValidAiTermMediaKey(key: string) {
   );
 }
 
+export function isValidSeriesMediaKey(key: string) {
+  return /^series\/\d{4}\/(0[1-9]|1[0-2])\/[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(key);
+}
+
 export function isValidMediaKey(key: string) {
-  return isValidArticleMediaKey(key) || isValidAiTermMediaKey(key);
+  return isValidArticleMediaKey(key) || isValidAiTermMediaKey(key) || isValidSeriesMediaKey(key);
 }
 
 export async function getMediaBucket() {
@@ -86,7 +90,7 @@ function keyForUpload(scope: MediaUploadScope, extension: string, options: Uploa
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const directory = scope === "ai-term" ? "ai-terms" : "articles";
+  const directory = scope === "ai-term" ? "ai-terms" : scope === "series" ? "series" : "articles";
   return `${directory}/${year}/${month}/${crypto.randomUUID()}.${extension}`;
 }
 

@@ -11,7 +11,7 @@ type MediaUploadPanelProps = {
   insertOnUpload?: boolean;
   onInsertMarkdown?: (markdown: string) => void;
   onUpload?: (media: UploadedMediaItem) => void;
-  scope?: "article" | "ai-term";
+  scope?: "article" | "ai-term" | "series";
   targetLocale?: string;
   targetRole?: "diagram";
   targetSlug?: string;

@@ -1,6 +1,8 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AiTermDetailPage, aiTermHasBeginnerNotes } from "@/components/content/ai-term-detail-page";
+import { isDbAvailable } from "@/db/client";
 import { buildFallbackAiTermDetail } from "@/lib/ai-term-fallback";
 import { getPublicAiTerm } from "@/lib/ai-terms";
 import { buildAiTermJsonLd } from "@/lib/ai-term-structured-data";
@@ -15,6 +17,19 @@ type AiTermDetailRouteProps = {
   }>;
 };
 
+// 请求内去重 generateMetadata 与页面组件的加载；fallback 仅在无 D1（本地调试/未配置）时启用，
+// 生产环境缺词条或 D1 报错时返回 null → 404，避免 demo 内容被收录。
+const loadAiTerm = cache(async (slug: string) => {
+  const real = await getPublicAiTerm("zh", slug);
+  if (real) {
+    return real;
+  }
+  if (!(await isDbAvailable())) {
+    return buildFallbackAiTermDetail("zh", slug);
+  }
+  return null;
+});
+
 function metadataRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
@@ -25,7 +40,7 @@ function metadataString(value: unknown) {
 
 export async function generateMetadata({ params }: AiTermDetailRouteProps): Promise<Metadata> {
   const { slug } = await params;
-  const term = (await getPublicAiTerm("zh", slug)) ?? buildFallbackAiTermDetail("zh", slug);
+  const term = await loadAiTerm(slug);
 
   if (!term) {
     return {};
@@ -71,8 +86,7 @@ export async function generateMetadata({ params }: AiTermDetailRouteProps): Prom
 
 export default async function AiTermDetailRoute({ params }: AiTermDetailRouteProps) {
   const { slug } = await params;
-  const realTerm = await getPublicAiTerm("zh", slug);
-  const term = realTerm ?? buildFallbackAiTermDetail("zh", slug);
+  const term = await loadAiTerm(slug);
 
   if (!term) {
     notFound();

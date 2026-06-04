@@ -173,6 +173,7 @@ structured_data:
 - 同一节的误解正文开头要有变化，优先直接进入具体解释、边界对比或实践判断，不要用统一的纠偏提示语套壳。
 - `## 常见使用场景` 下的每个场景必须使用三级标题，并以阿拉伯数字序号开头，格式为 `### 1. 场景名称`、`### 2. 场景名称`；不要使用“场景一 / 场景二”、无序列表或没有序号的三级标题。
 - `short_concept` 要像定义，适合列表卡片；`short_desc` 要像详情页首屏解释，适合普通读者快速进入。
+- 正文和字段不要套用“AI 世界需要 {{TERM}}……”“不是孤立的流行词……”等万能段落；字段去掉词条名后仍能用于多数词条时必须重写。
 - 不要输出 `tags` 字段；AI 词条标签体系已移除。
 
 # 正文处理规则
@@ -203,24 +204,26 @@ structured_data:
 - `status` 默认 `draft`，除非用户明确要求发布。
 - `visibility` 默认 `public`。
 - `heat_score` 和 `quality_score` 是 0-100 的编辑判断，不要伪装成精确统计。
+- `heat_score`、`quality_score` 要根据词条热度、资料稳定性和页面完成度判断，不要集中使用 84、86、88 这类默认分。
 - `categories` 输出 1-2 个，作为后台归类和前台筛选入口；第一项必须是主分类，第二项仅在词条明显跨领域时作为副分类。
 - `categories` 只能来自 `00-AI词条标准分类.md` 的 12 个标准分类，`slug`、`name`、`description`、`sort_order` 必须与标准分类表一致。
 - 不要新增自由分类，不要输出 `tags` 或 `topic_tags`。
 - `relations` 输出 3-8 个，优先从“相关概念”提取；`relation_type` 只能使用 `related`、`similar`、`opposite`、`upstream`、`downstream`、`ecosystem`。
-- `relations` 可以写候选关联，优先选择未来适合做成站内词条的稳定概念。
+- `relations` 可以写候选关联，优先选择未来适合做成站内词条的稳定概念；不要每篇默认复用同一批大词，`description` 必须说明具体关系。
 - 后台会保存未匹配到已存在词条的 relation 候选；前台只展示已经存在且公开的目标词条。未来目标词条创建后，候选关系会按 slug 自动出现在前台。
 - 如果当前词条库中已经存在与本文高度相关的词条，可以优先放在前面；但不要为了当前展示而删掉重要的未来候选关系。
 - 数组项结构：
   - `categories`：`name`、`slug`、`description`、`sort_order`
   - `relations`：`term`、`slug`、`relation_type`、`description`、`sort_order`
-- `seo.description` 自然说明它是什么、为什么值得了解、适合谁看，不要堆关键词。
+- `seo.description` 自然说明它是什么、为什么值得了解、适合谁看，不要堆关键词，也不要写“本文解释它的本质、使用场景和容易误解的地方”这类站内模板句。
 - `open_graph.image` 和 `twitter.image` 必须保持一致；没有用户提供图片路径时保持空字符串。
 - `diagram.image` 是词条详情页正文开头「一图看懂」模块的图解路径，不等同于社交分享图；线上路径应来自 R2 媒体代理，格式优先为 `/media/ai-terms/{locale}/{slug}/diagram-{uuid}.{ext}`，推荐 WebP。
 - 词条图解建议使用 16:9 画幅，作为正文开头的概念入口图，避免重要文字或图形靠边。
 - `diagram.image_alt` 有图解时必须填写描述性说明；没有真实图解路径时可以填写候选描述，但不要编造图片路径。
-- `diagram.image_alt` 应从词条定义、`short_desc`、正文核心结构或已有图解说明中提炼；不要依赖初稿里的独立图解素材字段。
+- `diagram.image_alt` 应从词条定义、`short_desc`、正文核心结构或已有图解说明中提炼；不要依赖初稿里的独立图解素材字段，也不要使用“核心结构、使用价值和边界提醒”这类万能 alt。
 - `source.human_reviewed` 固定写 `false`，最终仍等待人工审查。
 - `source.last_verified_at` 优先使用初稿中记录的核查日期；没有则留空。
+- `source.source_note` 按来源类型说明核查依据，例如官方文档、规范、论文、产品页或社区讨论；不要只写“基于公开资料整理”。
 - `source.published_at` 默认留空，除非用户明确提供日期。
 - `structured_data.schema_type` 固定为 `DefinedTerm`。
 - 不要输出 `tags`；旧稿里如果出现 tags，应删除。
@@ -244,6 +247,8 @@ structured_data:
 - 不包含已移除的 `tags` 字段。
 - 参考资料链接只能来自输入稿件中已有来源或已核查来源。
 - 内容适合普通用户阅读。
+- `short_desc`、`tagline`、`why_it_matters`、`common_misconception` 是否能看出当前词条特征，而不是站内通用模板。
+- `source.source_note`、`relations.description`、`diagram.image_alt` 是否具体，不是万能说明。
 - `## 容易误解的地方` 是否避免连续套用“更准确的理解是”“实际使用时要这样看”等固定句式；正文是否能直接、自然地解释误解边界。
 - 页面去重后正文主体仍然完整。
 - 如果正文包含寓言故事，必须使用 `:::fable 标题` 到 `:::` 的独立块；没有寓言故事时不要输出空块。
@@ -264,6 +269,7 @@ structured_data:
 - 去掉「一句话概念」「快速理解」「相关概念」「参考资料」后，正文主体是否仍能独立读懂。
 - 如果有寓言故事，是否使用 `:::fable` 独立块且没有替代定义。
 - 正文是否删除了内部生产备注。
+- 是否没有使用“AI 世界需要 {{TERM}}”“不是孤立的流行词”“核心结构、使用价值和边界提醒”等高复用表达。
 - 是否没有编造事实、链接和图片路径。
 
 # 现在开始

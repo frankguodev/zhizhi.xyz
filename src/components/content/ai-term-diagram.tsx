@@ -63,8 +63,9 @@ export function AiTermDiagram({ alt, label, src }: { alt: string; label: string;
           className="block w-full cursor-zoom-in bg-background/45 p-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 sm:p-4"
         >
           <span className="block aspect-video">
+            {/* 正文开头的信息图通常是 LCP 元素：eager + 高优先级加载；aspect-video 已预留空间避免 CLS。 */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={alt} className="mx-auto h-full w-full object-contain" loading="eager" />
+            <img src={src} alt={alt} className="mx-auto h-full w-full object-contain" loading="eager" fetchPriority="high" decoding="async" />
           </span>
         </button>
       </figure>

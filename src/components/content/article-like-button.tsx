@@ -5,39 +5,21 @@ import { useEffect, useState } from "react";
 type ArticleLikeButtonProps = {
   locale: string;
   slug: string;
-  shareTitle: string;
-  shareUrl: string;
 };
 
 const copy = {
   prompt: "觉得这篇文章有帮助？",
   like: "点赞",
   liked: "已点赞",
-  count(count: number) {
-    return `${count} 次点赞`;
-  },
-  loading: "读取点赞状态中",
   failed: "点赞暂时不可用，请稍后再试。",
-  shareTitle: "分享给需要的人",
-  shareText: "如果这篇文章刚好帮你避开一个坑，也可以把它转给同样需要的人。",
-  shareAction: "分享到 X / Twitter",
 };
 
 type LikeState = {
   liked: boolean;
-  count: number;
 };
 
-function buildTwitterShareUrl(title: string, url: string) {
-  const shareUrl = new URL("https://twitter.com/intent/tweet");
-  shareUrl.searchParams.set("text", title);
-  shareUrl.searchParams.set("url", url);
-  return shareUrl.toString();
-}
-
-export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: ArticleLikeButtonProps) {
+export function ArticleLikeButton({ locale, slug }: ArticleLikeButtonProps) {
   const [liked, setLiked] = useState(false);
-  const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -62,7 +44,6 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
 
         const payload = (await response.json()) as LikeState;
         setLiked(Boolean(payload.liked));
-        setCount(Number.isFinite(payload.count) ? payload.count : 0);
       } catch (requestError) {
         if (requestError instanceof DOMException && requestError.name === "AbortError") {
           return;
@@ -101,7 +82,6 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
 
       const payload = (await response.json()) as LikeState;
       setLiked(Boolean(payload.liked));
-      setCount(Number.isFinite(payload.count) ? payload.count : 0);
     } catch {
       setError(copy.failed);
     } finally {
@@ -110,8 +90,6 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
   }
 
   const buttonLabel = liked ? copy.liked : copy.like;
-  const statusText = loading ? copy.loading : copy.count(count);
-  const twitterShareUrl = buildTwitterShareUrl(shareTitle, shareUrl);
 
   return (
     <section className="article-like-panel">
@@ -119,7 +97,6 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-muted">{copy.prompt}</p>
-            <p className="mt-1 text-xs font-semibold text-muted">{statusText}</p>
           </div>
           <button
             type="button"
@@ -134,18 +111,6 @@ export function ArticleLikeButton({ locale, slug, shareTitle, shareUrl }: Articl
           </button>
         </div>
         {error ? <p className="mt-3 text-xs font-semibold text-amber">{error}</p> : null}
-
-        <div className="mt-5 flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-base font-semibold text-foreground">{copy.shareTitle}</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{copy.shareText}</p>
-          </div>
-          <a className="article-share-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border text-sm font-semibold transition" href={twitterShareUrl} target="_blank" rel="noreferrer" aria-label={copy.shareAction}>
-            <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path fill="currentColor" d="M13.9 10.5 21.3 2h-1.8l-6.4 7.4L8 2H2.1l7.8 11.3L2.1 22h1.8l6.8-7.7L16.1 22H22l-8.1-11.5Zm-2.4 2.7-.8-1.1L4.4 3.3h2.8l5 7.1.8 1.1 6.6 9.3h-2.8l-5.3-7.6Z" />
-            </svg>
-          </a>
-        </div>
       </div>
     </section>
   );

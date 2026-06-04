@@ -5,9 +5,9 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { AiTermSummary } from "@/lib/ai-terms";
 import { cn } from "@/lib/utils";
-import { siteConfig, type Locale } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
-// locale 保留在 props 中供数据层（分类查询）使用，UI 文本固定中文
+// UI 文本固定中文；如需英文页面，应在此引入 i18n 而非复用本组件。
 
 type CategoryOption = { name: string; slug: string };
 
@@ -16,7 +16,6 @@ type AiTermsPageProps = {
   categoryCounts?: Record<string, number>;
   categorySlug?: string;
   difficulty?: string;
-  locale: Locale;
   page: number;
   pageSize: number;
   popularTerms: { term: string; slug: string }[];
@@ -45,7 +44,6 @@ type Copy = {
   categoryLabel: string;
   difficultyLabel: string;
   difficulties: { beginner: string; intermediate: string; advanced: string };
-  heat: (value: number) => string;
   trending: string;
   noResults: string;
   noResultsHint: string;
@@ -74,7 +72,6 @@ const copy: Copy = {
   categoryLabel: "分类",
   difficultyLabel: "难度",
   difficulties: { beginner: "入门", intermediate: "进阶", advanced: "高阶" },
-  heat: (value) => `热度 ${Math.max(0, value)}`,
   trending: "趋势",
   noResults: "没有匹配的词条",
   noResultsHint: "可以换个关键词，或清除筛选条件重新浏览。后台发布词条后会自动展示真实数据。",
@@ -145,6 +142,25 @@ function SidebarLink({ active, count, href, label }: { active: boolean; count?: 
   );
 }
 
+// 移动端筛选字段：可见的 ArticleFilterSelect + 无 JS 兜底的 sr-only 原生 select，
+// 选项只在一处定义，避免分类/难度各写两遍且需手动同步。
+function MobileFilterField({ label, name, value, allLabel, options }: { label: string; name: string; value: string; allLabel: string; options: { label: string; value: string }[] }) {
+  return (
+    <div>
+      <span className="mb-1.5 block text-xs font-semibold uppercase text-muted">{label}</span>
+      <span className="relative block">
+        <ArticleFilterSelect name={name} value={value} placeholder={allLabel} options={options} />
+        <select className="sr-only" defaultValue={value} name={name} tabIndex={-1} aria-hidden="true" data-article-filter={name}>
+          <option value="">{allLabel}</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </span>
+    </div>
+  );
+}
+
 function TermCard({ term }: { term: AiTermSummary }) {
   const pageCopy = copy;
   const subtitle = term.fullName ?? (term.termZh && term.termZh !== term.term ? term.termZh : null);
@@ -186,14 +202,8 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
   const offset = (currentPage - 1) * pageSize;
   const hasFilter = Boolean(query || categorySlug || difficulty);
 
-  const popularDeduped: { term: string; slug: string }[] = [];
-  const seenPopular = new Set<string>();
-  for (const item of popularTerms) {
-    if (seenPopular.has(item.term)) continue;
-    seenPopular.add(item.term);
-    popularDeduped.push(item);
-    if (popularDeduped.length >= 8) break;
-  }
+  const categoryOptions = categories.map((c) => ({ label: c.name, value: c.slug }));
+  const difficultyOptions = DIFFICULTY_KEYS.map((key) => ({ label: pageCopy.difficulties[key], value: key }));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -220,6 +230,13 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
 
       <main className="flex-1 bg-background">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+        {/* 分页提示（React 19 会提升到 <head>）：辅助爬虫理解分页序列 */}
+        {currentPage > 1 ? (
+          <link rel="prev" href={`${siteConfig.url}${buildHref(basePath, { q: query, category: categorySlug, difficulty, sort, page: currentPage - 1 })}`} />
+        ) : null}
+        {currentPage < totalPages ? (
+          <link rel="next" href={`${siteConfig.url}${buildHref(basePath, { q: query, category: categorySlug, difficulty, sort, page: currentPage + 1 })}`} />
+        ) : null}
 
         {/* Hero + 搜索 */}
         <section className="site-grid border-b border-line" aria-labelledby="ai-terms-title">
@@ -259,10 +276,10 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
               </div>
             </form>
 
-            {popularDeduped.length > 0 ? (
+            {popularTerms.length > 0 ? (
               <div className="mx-auto mt-4 flex max-w-2xl flex-wrap items-center justify-center gap-2">
                 <span className="text-xs font-semibold uppercase text-muted">{pageCopy.popular}</span>
-                {popularDeduped.map((item) => (
+                {popularTerms.map((item) => (
                   <Link key={item.slug} href={aiTermPath(item.slug)} className="rounded-md border border-line bg-surface/50 px-2.5 py-1 text-sm font-semibold text-muted transition hover:border-accent/30 hover:text-accent">
                     {item.term}
                   </Link>
@@ -277,40 +294,8 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
           <form action={basePath} className="mb-5 grid grid-cols-2 gap-3 lg:hidden">
             {query ? <input type="hidden" name="q" value={query} /> : null}
             {sort !== "featured" ? <input type="hidden" name="sort" value={sort} /> : null}
-            <div>
-              <span className="mb-1.5 block text-xs font-semibold uppercase text-muted">{pageCopy.categoryLabel}</span>
-              <span className="relative block">
-                <ArticleFilterSelect
-                  name="category"
-                  value={categorySlug ?? ""}
-                  placeholder={pageCopy.filterAll}
-                  options={categories.map((c) => ({ label: c.name, value: c.slug }))}
-                />
-                <select className="sr-only" defaultValue={categorySlug ?? ""} name="category" tabIndex={-1} aria-hidden="true" data-article-filter="category">
-                  <option value="">{pageCopy.filterAll}</option>
-                  {categories.map((c) => (
-                    <option key={c.slug} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </span>
-            </div>
-            <div>
-              <span className="mb-1.5 block text-xs font-semibold uppercase text-muted">{pageCopy.difficultyLabel}</span>
-              <span className="relative block">
-                <ArticleFilterSelect
-                  name="difficulty"
-                  value={difficulty ?? ""}
-                  placeholder={pageCopy.filterAll}
-                  options={DIFFICULTY_KEYS.map((key) => ({ label: pageCopy.difficulties[key], value: key }))}
-                />
-                <select className="sr-only" defaultValue={difficulty ?? ""} name="difficulty" tabIndex={-1} aria-hidden="true" data-article-filter="difficulty">
-                  <option value="">{pageCopy.filterAll}</option>
-                  {DIFFICULTY_KEYS.map((key) => (
-                    <option key={key} value={key}>{pageCopy.difficulties[key]}</option>
-                  ))}
-                </select>
-              </span>
-            </div>
+            <MobileFilterField label={pageCopy.categoryLabel} name="category" value={categorySlug ?? ""} allLabel={pageCopy.filterAll} options={categoryOptions} />
+            <MobileFilterField label={pageCopy.difficultyLabel} name="difficulty" value={difficulty ?? ""} allLabel={pageCopy.filterAll} options={difficultyOptions} />
             <div className="col-span-2 flex items-center gap-3">
               <button
                 type="submit"

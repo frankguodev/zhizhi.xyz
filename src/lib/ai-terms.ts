@@ -287,8 +287,35 @@ function publicVisibilityCondition() {
   return and(eq(aiTerms.status, "published"), eq(aiTerms.visibility, "public"))!;
 }
 
+/** 列表/摘要所需的列；避免列表查询 SELECT * 带出 contentMd、metadataJson 等大字段。 */
+const aiTermSummaryColumns = {
+  id: aiTerms.id,
+  locale: aiTerms.locale,
+  term: aiTerms.term,
+  termZh: aiTerms.termZh,
+  fullName: aiTerms.fullName,
+  slug: aiTerms.slug,
+  shortConcept: aiTerms.shortConcept,
+  shortDesc: aiTerms.shortDesc,
+  tagline: aiTerms.tagline,
+  type: aiTerms.type,
+  difficulty: aiTerms.difficulty,
+  heatScore: aiTerms.heatScore,
+  qualityScore: aiTerms.qualityScore,
+  trending: aiTerms.trending,
+  shareImage: aiTerms.shareImage,
+  shareImageAlt: aiTerms.shareImageAlt,
+  diagramImage: aiTerms.diagramImage,
+  diagramImageAlt: aiTerms.diagramImageAlt,
+  publishedAt: aiTerms.publishedAt,
+  lastVerifiedAt: aiTerms.lastVerifiedAt,
+  updatedAt: aiTerms.updatedAt,
+} as const;
+
+type AiTermSummaryRow = Pick<typeof aiTerms.$inferSelect, keyof typeof aiTermSummaryColumns>;
+
 function summaryFromRow(
-  row: typeof aiTerms.$inferSelect,
+  row: AiTermSummaryRow,
   categoriesByTerm: Map<string, AiTermTaxonomyItem[]>,
 ): AiTermSummary {
   return {
@@ -578,13 +605,18 @@ async function adminRelationsForTerm(termId: string) {
   return [...relations, ...candidates].sort((a, b) => a.sortOrder - b.sortOrder || a.slug.localeCompare(b.slug));
 }
 
+/** 公开词条搜索条件：匹配词条名/中文名/全称/短描述。 */
+function publicTermSearchCondition(q: string) {
+  const pattern = `%${q}%`;
+  return or(like(aiTerms.term, pattern), like(aiTerms.termZh, pattern), like(aiTerms.fullName, pattern), like(aiTerms.shortDesc, pattern));
+}
+
 async function buildPublicAiTermConditions(locale: AiTermLocale, options: ListPublicAiTermsOptions): Promise<SQL[] | null> {
   const conditions: SQL[] = [eq(aiTerms.locale, locale), publicVisibilityCondition()];
   const q = options.q?.trim();
 
   if (q) {
-    const pattern = `%${q}%`;
-    const searchCondition = or(like(aiTerms.term, pattern), like(aiTerms.termZh, pattern), like(aiTerms.fullName, pattern), like(aiTerms.shortDesc, pattern));
+    const searchCondition = publicTermSearchCondition(q);
     if (searchCondition) {
       conditions.push(searchCondition);
     }
@@ -605,39 +637,60 @@ async function buildPublicAiTermConditions(locale: AiTermLocale, options: ListPu
   return conditions;
 }
 
-export async function countPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
-  return cachedCountPublicAiTerms(options);
-}
-
-const cachedCountPublicAiTerms = unstable_cache(
-  async (options: ListPublicAiTermsOptions = {}) => {
-    try {
-      const db = await getDb();
-      const locale = options.locale ?? "zh";
-      const conditions = await buildPublicAiTermConditions(locale, options);
-      if (conditions === null) {
-        return 0;
-      }
-      const rows = await db.select({ value: count() }).from(aiTerms).where(and(...conditions));
-      return Number(rows[0]?.value ?? 0);
-    } catch {
-      return 0;
-    }
-  },
-  ["public-ai-terms-count"],
-  { revalidate: 120, tags: [PUBLIC_AI_TERMS_CACHE_TAG] },
-);
-
-/** 各分类下的公开词条数（slug → count），用于列表页分类筛选计数。 */
-export async function countPublicAiTermsByCategory(locale: AiTermLocale = "zh"): Promise<Record<string, number>> {
+async function runCountPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
   try {
     const db = await getDb();
+    const locale = options.locale ?? "zh";
+    const conditions = await buildPublicAiTermConditions(locale, options);
+    if (conditions === null) {
+      return 0;
+    }
+    const rows = await db.select({ value: count() }).from(aiTerms).where(and(...conditions));
+    return Number(rows[0]?.value ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+const cachedCountPublicAiTerms = unstable_cache(runCountPublicAiTerms, ["public-ai-terms-count"], {
+  revalidate: 120,
+  tags: [PUBLIC_AI_TERMS_CACHE_TAG],
+});
+
+// 带搜索词时绕过缓存：每个搜索词都会生成独立缓存条目，命中率低且膨胀缓存。
+export async function countPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
+  return options.q?.trim() ? runCountPublicAiTerms(options) : cachedCountPublicAiTerms(options);
+}
+
+/** 分类计数选项：随当前难度/搜索词联动，但不受 categorySlug 限制（保留全部分类可见）。 */
+export type CountAiTermsByCategoryOptions = {
+  locale?: AiTermLocale;
+  q?: string;
+  difficulty?: AiTermDifficulty;
+};
+
+async function runCountPublicAiTermsByCategory(options: CountAiTermsByCategoryOptions = {}): Promise<Record<string, number>> {
+  try {
+    const db = await getDb();
+    const locale = options.locale ?? "zh";
+    const conditions: SQL[] = [eq(aiTerms.locale, locale), publicVisibilityCondition()];
+    const q = options.q?.trim();
+    if (q) {
+      const searchCondition = publicTermSearchCondition(q);
+      if (searchCondition) {
+        conditions.push(searchCondition);
+      }
+    }
+    if (options.difficulty) {
+      conditions.push(eq(aiTerms.difficulty, options.difficulty));
+    }
+
     const rows = await db
       .select({ slug: aiTermCategories.slug, value: count(aiTermCategoryRelations.termId) })
       .from(aiTermCategoryRelations)
       .innerJoin(aiTerms, eq(aiTermCategoryRelations.termId, aiTerms.id))
       .innerJoin(aiTermCategories, eq(aiTermCategoryRelations.categoryId, aiTermCategories.id))
-      .where(and(eq(aiTerms.locale, locale), publicVisibilityCondition()))
+      .where(and(...conditions))
       .groupBy(aiTermCategories.slug);
 
     const counts: Record<string, number> = {};
@@ -650,46 +703,58 @@ export async function countPublicAiTermsByCategory(locale: AiTermLocale = "zh"):
   }
 }
 
-export async function listPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
-  return cachedListPublicAiTerms(options);
+const cachedCountPublicAiTermsByCategory = unstable_cache(runCountPublicAiTermsByCategory, ["public-ai-terms-category-counts"], {
+  revalidate: 120,
+  tags: [PUBLIC_AI_TERMS_CACHE_TAG],
+});
+
+/** 各分类下的公开词条数（slug → count），随难度/搜索联动；带搜索词时绕过缓存。 */
+export async function countPublicAiTermsByCategory(options: CountAiTermsByCategoryOptions = {}): Promise<Record<string, number>> {
+  return options.q?.trim() ? runCountPublicAiTermsByCategory(options) : cachedCountPublicAiTermsByCategory(options);
 }
 
-const cachedListPublicAiTerms = unstable_cache(
-  async (options: ListPublicAiTermsOptions = {}) => {
-    try {
-      const db = await getDb();
-      const locale = options.locale ?? "zh";
-      const conditions = await buildPublicAiTermConditions(locale, options);
-      if (conditions === null) {
-        return [];
-      }
-
-      const orderBy =
-        options.sort === "latest"
-          ? [desc(aiTerms.publishedAt), asc(aiTerms.term)]
-          : options.sort === "heat"
-            ? [desc(aiTerms.heatScore), asc(aiTerms.term)]
-            : options.sort === "quality"
-              ? [desc(aiTerms.qualityScore), asc(aiTerms.term)]
-              : [desc(aiTerms.trending), asc(aiTerms.sortOrder), asc(aiTerms.term)];
-
-      const rows = await db
-        .select()
-        .from(aiTerms)
-        .where(and(...conditions))
-        .orderBy(...orderBy)
-        .limit(clampLimit(options.limit))
-        .offset(normalizeOffset(options.offset));
-
-      const { categoriesByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
-      return rows.map((row) => summaryFromRow(row, categoriesByTerm));
-    } catch {
+async function runListPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
+  try {
+    const db = await getDb();
+    const locale = options.locale ?? "zh";
+    const conditions = await buildPublicAiTermConditions(locale, options);
+    if (conditions === null) {
       return [];
     }
-  },
-  ["public-ai-terms-list"],
-  { revalidate: 120, tags: [PUBLIC_AI_TERMS_CACHE_TAG] },
-);
+
+    const orderBy =
+      options.sort === "latest"
+        ? [desc(aiTerms.publishedAt), asc(aiTerms.term)]
+        : options.sort === "heat"
+          ? [desc(aiTerms.heatScore), asc(aiTerms.term)]
+          : options.sort === "quality"
+            ? [desc(aiTerms.qualityScore), asc(aiTerms.term)]
+            : [desc(aiTerms.trending), asc(aiTerms.sortOrder), asc(aiTerms.term)];
+
+    const rows = await db
+      .select(aiTermSummaryColumns)
+      .from(aiTerms)
+      .where(and(...conditions))
+      .orderBy(...orderBy)
+      .limit(clampLimit(options.limit))
+      .offset(normalizeOffset(options.offset));
+
+    const { categoriesByTerm } = await taxonomyForTermIds(rows.map((row) => row.id));
+    return rows.map((row) => summaryFromRow(row, categoriesByTerm));
+  } catch {
+    return [];
+  }
+}
+
+const cachedListPublicAiTerms = unstable_cache(runListPublicAiTerms, ["public-ai-terms-list"], {
+  revalidate: 120,
+  tags: [PUBLIC_AI_TERMS_CACHE_TAG],
+});
+
+// 带搜索词时绕过缓存，理由同 countPublicAiTerms。
+export async function listPublicAiTerms(options: ListPublicAiTermsOptions = {}) {
+  return options.q?.trim() ? runListPublicAiTerms(options) : cachedListPublicAiTerms(options);
+}
 
 export async function listAdminAiTerms(options: ListAdminAiTermsOptions = {}) {
   const db = await getDb();
@@ -739,7 +804,7 @@ export async function listAdminAiTerms(options: ListAdminAiTermsOptions = {}) {
   })) satisfies AdminAiTermItem[];
 }
 
-export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
+async function runGetPublicAiTerm(locale: AiTermLocale, slug: string) {
   try {
     const db = await getDb();
     const rows = await db
@@ -791,6 +856,18 @@ export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
   } catch {
     return null;
   }
+}
+
+// 缓存详情查询：详情页 force-dynamic 但数据按词条缓存（与列表页同方案），
+// 同时让单次请求内 generateMetadata 与页面组件的两次调用复用同一结果。
+// 注意：经由 unstable_cache 序列化后，Date 字段会变成 ISO 字符串（AiTermDetail 类型已兼容）。
+const cachedGetPublicAiTerm = unstable_cache(runGetPublicAiTerm, ["public-ai-term-detail"], {
+  revalidate: 120,
+  tags: [PUBLIC_AI_TERMS_CACHE_TAG],
+});
+
+export async function getPublicAiTerm(locale: AiTermLocale, slug: string) {
+  return cachedGetPublicAiTerm(locale, slug);
 }
 
 export async function getAdminAiTerm(locale: AiTermLocale, slug: string) {
@@ -940,6 +1017,8 @@ export async function mergeAiTermTaxonomy(_kind: AiTermTaxonomyKind, sourceId: s
   await db.delete(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.categoryId, sourceId));
   await db.delete(aiTermCategories).where(eq(aiTermCategories.id, sourceId));
   revalidateAiTermCategoriesCache();
+  // 合并改变了各分类词条数，需失效列表页分类计数缓存
+  revalidatePublicAiTermsCache();
   return { merged: sourceRows.length, deleted: true };
 }
 

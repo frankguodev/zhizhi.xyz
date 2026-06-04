@@ -13,7 +13,6 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { getCategoryHref, normalizeArticleCategory } from "@/lib/article-taxonomy";
 import type { PublicExternalLink } from "@/lib/external-links";
 import type { PublicArticleDetail, PublicArticleNavigationItem } from "@/lib/public-article-detail";
-import { absoluteUrl } from "@/lib/request-origin";
 import type { Locale } from "@/lib/site";
 
 type ArticleDetailPageProps = {
@@ -26,7 +25,6 @@ type ArticleDetailPageProps = {
   };
   externalLinks: PublicExternalLink[];
   locale: Locale;
-  origin: string;
 };
 
 const copy = {
@@ -84,10 +82,9 @@ function ArticleAdjacentNavigation({ navigation }: Pick<ArticleDetailPageProps, 
   );
 }
 
-export function ArticleDetailPage({ article, blocks, tocItems, navigation, externalLinks, locale, origin }: ArticleDetailPageProps) {
+export function ArticleDetailPage({ article, blocks, tocItems, navigation, externalLinks, locale }: ArticleDetailPageProps) {
   const pageCopy = copy;
   const currentPath = `${pageCopy.currentPathPrefix}/${article.slug}`;
-  const shareUrl = absoluteUrl(currentPath, origin);
   const category = normalizeArticleCategory(article.category, locale);
   const categoryHref = getCategoryHref(category);
 
@@ -135,7 +132,7 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
                   <div className="min-w-0">
                     <ArticleReader blocks={blocks} defaultMode={article.defaultReadingMode} locale={locale} supportsReadingMode={article.supportsReadingMode} />
                     <div className="mt-10 rounded-md bg-surface/58 px-4 py-5 sm:px-5">
-                      <ArticleLikeButton locale={locale} slug={article.slug} shareTitle={article.title} shareUrl={shareUrl} />
+                      <ArticleLikeButton locale={locale} slug={article.slug} />
                       <AnonymousFeedbackForm locale={locale} pageUrl={currentPath} articleSlug={article.slug} articleTitle={article.title} />
                     </div>
                   </div>

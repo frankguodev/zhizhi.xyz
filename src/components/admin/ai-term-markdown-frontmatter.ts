@@ -89,15 +89,15 @@ export function upsertAiTermDiagramAndShareImages(markdown: string, image: strin
     return markdown;
   }
 
+  // image 为空表示删除场景，需一并清空 image_alt；上传时若未填写 alt（imageAlt 为空），
+  // 只更新 image，保留 frontmatter 中已有的 image_alt，避免被空值覆盖。
+  const clearing = image.trim() === "";
+  const includeAlt = clearing || imageAlt.trim() !== "";
+  const imageValues: Record<string, string> = includeAlt ? { image, image_alt: imageAlt } : { image };
+
   let nextFrontmatter = parts.frontmatter;
-  nextFrontmatter = upsertYamlSection(nextFrontmatter, "diagram", {
-    image,
-    image_alt: imageAlt,
-  });
-  nextFrontmatter = upsertYamlSection(nextFrontmatter, "open_graph", {
-    image,
-    image_alt: imageAlt,
-  });
+  nextFrontmatter = upsertYamlSection(nextFrontmatter, "diagram", imageValues);
+  nextFrontmatter = upsertYamlSection(nextFrontmatter, "open_graph", imageValues);
   nextFrontmatter = upsertYamlSection(nextFrontmatter, "twitter", {
     image,
   });

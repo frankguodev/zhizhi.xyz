@@ -11,24 +11,17 @@ import type { AiTermDetail, AiTermRelationSummary } from "@/lib/ai-terms";
 import type { AiTermFableBlock } from "@/lib/markdown";
 import type { Locale } from "@/lib/site";
 
+// 仅列出本组件实际读取的字段（路由传入的是完整 AiTermDetail，多余字段被忽略）。
 type AiTermDetailLike = Pick<
   AiTermDetail,
-  | "aiAssisted"
   | "beginnerNotes"
-  | "contentMd"
   | "diagramImage"
   | "diagramImageAlt"
-  | "fullName"
-  | "humanReviewed"
-  | "lastVerifiedAt"
   | "relations"
   | "shortConcept"
   | "shortDesc"
   | "slug"
-  | "sourceNote"
   | "term"
-  | "termZh"
-  | "updatedAt"
 >;
 
 type AiTermDetailPageProps = {
@@ -42,20 +35,13 @@ type AiTermDetailPageProps = {
 const beginnerNoteKeys = ["plain_explanation", "analogy", "why_it_matters", "common_misconception"] as const;
 
 const copy = {
-  aiAssisted: "AI 辅助整理",
   currentPathPrefix: "/ai-terms",
   diagram: "词条解释信息图",
   fable: "寓言故事",
   home: "首页",
-  humanReviewed: "人工审核",
-  quick: "快速理解",
   references: "参考资料",
   related: "相关概念",
-  source: "来源与校验",
-  summary: "一句话理解",
   terms: "AI 词条",
-  updated: "最近校验",
-  verifiedFallback: "最近更新",
   notes: {
     plain_explanation: "普通解释",
     analogy: "类比理解",
@@ -151,7 +137,7 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
                     <Sparkles className="h-4 w-4 text-accent" />
                     <p className="text-xs font-semibold uppercase text-accent">{pageCopy.fable}</p>
                   </div>
-                  <h2 id="ai-term-fable" className="mt-2 break-words text-2xl font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
+                  <h2 id="ai-term-fable" data-toc-exclude className="mt-2 scroll-mt-24 break-words text-2xl font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
                     {fable.title}
                   </h2>
                   <div className="article-prose mt-4" dangerouslySetInnerHTML={{ __html: fable.html }} />
@@ -166,7 +152,7 @@ export function AiTermDetailPage({ blocks, fable, locale, referencesHtml, term }
                 <section aria-labelledby="ai-term-related">
                   <div className="flex items-center gap-2">
                     <Link2 className="h-4 w-4 text-accent" />
-                    <h2 id="ai-term-related" className="scroll-mt-24 text-sm font-semibold text-foreground">
+                    <h2 id="ai-term-related" data-toc-exclude className="scroll-mt-24 text-sm font-semibold text-foreground">
                       {pageCopy.related}
                     </h2>
                   </div>
