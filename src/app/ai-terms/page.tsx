@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AiTermsPage } from "@/components/content/ai-terms-page";
 import { fallbackAiTermCategories, fallbackAiTermSummaries } from "@/lib/ai-term-fallback";
 import { countPublicAiTerms, countPublicAiTermsByCategory, listAiTermCategories, listPublicAiTerms, type AiTermDifficulty } from "@/lib/ai-terms";
-import { siteConfig } from "@/lib/site";
+import { defaultShareImage, siteConfig } from "@/lib/site";
 
 const description = "用普通人能读懂的方式整理 AI 术语、概念、工具和新兴说法。";
 
@@ -39,11 +39,13 @@ export async function generateMetadata({ searchParams }: AiTermsRouteProps): Pro
       siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
       locale: "zh_CN",
       type: "website",
+      images: [defaultShareImage],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: `${title}｜${siteConfig.name}`,
       description,
+      images: [defaultShareImage.url],
     },
   };
 }

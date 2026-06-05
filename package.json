@@ -39,6 +39,8 @@
     "ai-term:check": "node scripts/ai-term-check.mjs",
     "ai-term:sources:index": "node scripts/ai-term-sources-index.mjs",
     "ai-term:push:prod": "node scripts/ai-term-push-prod.mjs",
+    "media:migrate:diagrams": "node scripts/migrate-ai-term-diagrams.mjs",
+    "media:migrate:diagrams:apply": "node scripts/migrate-ai-term-diagrams.mjs --apply",
     "remote:stop": "node scripts/remote-stop.mjs",
     "test:public-api": "node scripts/test-public-api.mjs",
     "test:admin-regression": "node scripts/test-admin-regression.mjs",

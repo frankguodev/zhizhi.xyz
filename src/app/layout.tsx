@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
 import { CookieNotice } from "@/components/layout/cookie-notice";
 import { ThemeScript } from "@/components/layout/theme-script";
-import { siteConfig } from "@/lib/site";
+import { defaultShareImage, siteConfig } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -44,6 +44,13 @@ export const metadata: Metadata = {
     siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
     locale: "zh_CN",
     type: "website",
+    images: [defaultShareImage],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteConfig.name} | ${siteConfig.nameEn}`,
+    description: siteConfig.description,
+    images: [defaultShareImage.url],
   },
 };
 

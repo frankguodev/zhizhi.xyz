@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ArticleIndexPage } from "@/components/content/article-index-page";
-import { siteConfig } from "@/lib/site";
+import { defaultShareImage, siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +17,13 @@ export const metadata: Metadata = {
     siteName: `${siteConfig.name} ${siteConfig.nameEn}`,
     locale: "zh_CN",
     type: "website",
+    images: [defaultShareImage],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "文章",
     description: "知之的高质量知识文章，支持完整阅读、关键词搜索、分类筛选和热门/最新排序。",
+    images: [defaultShareImage.url],
   },
 };
 

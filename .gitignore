@@ -17,6 +17,7 @@ HISTORY.md
 /.claude
 /comic
 /summery
+/tmp
 
 # testing
 /coverage

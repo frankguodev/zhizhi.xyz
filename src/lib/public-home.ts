@@ -7,10 +7,6 @@ import { getPublicArticleListSource } from "@/lib/public-articles";
 import { listPublicSeries, type PublicSeriesSummary } from "@/lib/series";
 import type { Locale } from "@/lib/site";
 
-const focusTopicsByLocale: Record<Locale, string[]> = {
-  zh: ["AI 探索与应用", "项目开发实践"]
-};
-
 export type PublicHomeArticle = Pick<
   ArticleRecord,
   "slug" | "locale" | "title" | "summary" | "category" | "readingMinutes" | "viewCount" | "publishedAt" | "updatedAt"
@@ -25,7 +21,6 @@ export type PublicHomePayload = {
     seriesCount: number;
     aiTermCount: number;
   };
-  focusTopics: string[];
   latestArticles: PublicHomeArticle[];
   featuredSeries: PublicSeriesSummary[];
   aiTerms: PublicHomeAiTerm[];
@@ -62,16 +57,15 @@ export async function getPublicHomePayload(locale: Locale): Promise<PublicHomePa
     listExternalLinks("home", locale),
     getPublicArticleListSource(locale),
     listPublicSeries(locale),
-    listPublicAiTerms({ locale, sort: "latest", limit: 9 }),
+    listPublicAiTerms({ locale, sort: "latest", limit: 6 }),
     countPublicAiTerms({ locale }),
   ]);
-  const focusTopics = focusTopicsByLocale[locale];
   const latestArticles = articles
     .slice()
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-    .slice(0, 6)
+    .slice(0, 3)
     .map(toHomeArticle);
-  const aiTerms = aiTermList.slice(0, 9).map(toHomeAiTerm);
+  const aiTerms = aiTermList.slice(0, 6).map(toHomeAiTerm);
 
   return {
     locale,
@@ -80,7 +74,6 @@ export async function getPublicHomePayload(locale: Locale): Promise<PublicHomePa
       seriesCount: seriesList.length,
       aiTermCount,
     },
-    focusTopics,
     latestArticles,
     featuredSeries: seriesList.slice(0, 3),
     aiTerms,

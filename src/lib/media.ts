@@ -17,7 +17,7 @@ export type UploadedMedia = {
   size: number;
 };
 
-export type MediaUploadScope = "article" | "ai-term" | "series";
+export type MediaUploadScope = "article" | "ai-term" | "series" | "tool";
 
 export type UploadImageOptions = {
   locale?: string;
@@ -31,7 +31,9 @@ export function isValidArticleMediaKey(key: string) {
 
 export function isValidAiTermMediaKey(key: string) {
   return (
-    /^ai-terms\/\d{4}\/(0[1-9]|1[0-2])\/[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(key) ||
+    // \u7edf\u4e00\u8def\u5f84\uff1a\u6240\u6709\u8bcd\u6761\u56fe\uff08\u542b\u300c\u4e00\u56fe\u770b\u61c2\u300d\u56fe\u89e3\uff0c\u6587\u4ef6\u540d\u5e26 diagram- \u524d\u7f00\uff09\u90fd\u6309 ai-terms/\u5e74/\u6708 \u5b58\u653e\u3002
+    /^ai-terms\/\d{4}\/(0[1-9]|1[0-2])\/(diagram-)?[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(key) ||
+    // legacy\uff1a\u5386\u53f2\u6309 locale/slug \u5b58\u653e\u7684\u56fe\u89e3\uff0c\u4fdd\u7559\u4ee5\u517c\u5bb9\u5b58\u91cf\uff08\u53d6\u56fe + \u5220\u9664\uff09\uff1b\u65b0\u4e0a\u4f20\u4e0d\u518d\u751f\u6210\u6b64\u8def\u5f84\u3002
     /^ai-terms\/(zh|en)\/[a-z0-9\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,119}\/diagram-[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(key)
   );
 }
@@ -40,8 +42,12 @@ export function isValidSeriesMediaKey(key: string) {
   return /^series\/\d{4}\/(0[1-9]|1[0-2])\/[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(key);
 }
 
+export function isValidToolMediaKey(key: string) {
+  return /^tools\/\d{4}\/(0[1-9]|1[0-2])\/[a-f0-9-]{36}\.(jpg|png|webp|gif)$/.test(key);
+}
+
 export function isValidMediaKey(key: string) {
-  return isValidArticleMediaKey(key) || isValidAiTermMediaKey(key) || isValidSeriesMediaKey(key);
+  return isValidArticleMediaKey(key) || isValidAiTermMediaKey(key) || isValidSeriesMediaKey(key) || isValidToolMediaKey(key);
 }
 
 export async function getMediaBucket() {
@@ -66,32 +72,16 @@ function extensionFor(file: File) {
   return extensionByContentType[file.type] ?? "bin";
 }
 
-function normalizeMediaSlug(value: string | undefined) {
-  const normalized = value
-    ?.toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fa5-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return normalized || null;
-}
-
 function keyForUpload(scope: MediaUploadScope, extension: string, options: UploadImageOptions = {}) {
-  if (scope === "ai-term" && options.role === "diagram") {
-    const locale = options.locale === "zh" ? "zh" : null;
-    const slug = normalizeMediaSlug(options.slug);
-
-    if (locale && slug) {
-      return `ai-terms/${locale}/${slug}/diagram-${crypto.randomUUID()}.${extension}`;
-    }
-  }
-
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const directory = scope === "ai-term" ? "ai-terms" : scope === "series" ? "series" : "articles";
-  return `${directory}/${year}/${month}/${crypto.randomUUID()}.${extension}`;
+  const directory =
+    scope === "ai-term" ? "ai-terms" : scope === "series" ? "series" : scope === "tool" ? "tools" : "articles";
+  // 词条「一图看懂」图解保留 diagram- 前缀便于辨认，但和其它词条图一样统一放在 ai-terms/年/月 下，
+  // 不再为每个词条建 locale/slug 子目录（避免 R2 前缀膨胀）。
+  const prefix = scope === "ai-term" && options.role === "diagram" ? "diagram-" : "";
+  return `${directory}/${year}/${month}/${prefix}${crypto.randomUUID()}.${extension}`;
 }
 
 export function validateImageFile(file: File) {

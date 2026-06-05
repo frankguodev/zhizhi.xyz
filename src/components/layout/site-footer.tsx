@@ -14,11 +14,12 @@ const primaryLinks = [
   { href: "/about", label: "关于" },
 ];
 
-const legalLinks = [
+const siteInfoLinks = [
   { href: "/privacy", label: "隐私政策" },
   { href: "/terms", label: "使用条款" },
   { href: "/disclaimer", label: "免责声明" },
   { href: "/cookies", label: "Cookie 说明" },
+  { href: "/changelog", label: "更新日志" },
 ];
 
 export async function SiteFooter() {
@@ -87,9 +88,9 @@ export async function SiteFooter() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-accent">合规声明</p>
+            <p className="text-sm font-semibold text-accent">站点信息</p>
             <nav className="mt-4 grid gap-2 text-sm font-semibold text-muted">
-              {legalLinks.map((item) => (
+              {siteInfoLinks.map((item) => (
                 <Link key={item.href} className="inline-flex items-center transition hover:text-accent" href={item.href}>
                   <span>{item.label}</span>
                 </Link>

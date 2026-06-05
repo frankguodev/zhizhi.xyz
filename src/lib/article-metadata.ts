@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ArticleRecord } from "@/data/articles";
 import { absoluteUrl } from "@/lib/request-origin";
-import { siteConfig } from "@/lib/site";
+import { defaultShareImage, siteConfig } from "@/lib/site";
 
 function cleanString(value: string | undefined) {
   const normalized = value?.trim();
@@ -56,7 +56,7 @@ export function buildArticleMetadata(article: ArticleRecord, origin: string = si
     : uniqueStrings([article.primaryTopic, article.category, ...article.tags]);
   const ogTitle = cleanString(article.ogTitle) ?? title;
   const ogDescription = cleanString(article.ogDescription) ?? description;
-  const ogImage = cleanString(article.ogImage) ?? cleanString(article.coverImage);
+  const ogImage = cleanString(article.ogImage) ?? cleanString(article.coverImage) ?? defaultShareImage.url;
   const ogImages = imageMetadata(ogImage, cleanString(article.ogImageAlt) ?? cleanString(article.coverImageAlt), origin);
   const twitterTitle = cleanString(article.twitterTitle) ?? ogTitle;
   const twitterDescription = cleanString(article.twitterDescription) ?? ogDescription;

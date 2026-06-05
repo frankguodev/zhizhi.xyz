@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Clock, Milestone, SearchX } from "lucide-react";
+import { ArrowRight, CalendarDays, Clock, Hammer, Milestone, SearchX, Sparkles } from "lucide-react";
 import { ExternalLinkList } from "@/components/content/external-link-list";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -12,6 +12,20 @@ const difficultyLabels: Record<PublicHomeAiTerm["difficulty"], string> = {
   advanced: "高级",
 };
 
+// 专注方向：与关于页 `src/app/about/page.tsx` 的关注方向保持一致。
+const focusAreas = [
+  {
+    icon: Sparkles,
+    title: "AI 探索与应用",
+    description: "AI 工具、AI 编程、Agent、Skill、Codex、Claude 等等。",
+  },
+  {
+    icon: Hammer,
+    title: "项目开发实践",
+    description: "把产品、工程、部署和迭代里的具体问题整理成可复用经验。",
+  },
+];
+
 type HomePageProps = {
   payload: PublicHomePayload;
 };
@@ -20,11 +34,14 @@ const copy = {
   currentPath: "/",
   articlesHref: "/articles",
   aiTermsHref: "/ai-terms",
+  seriesIndexHref: "/series",
   heroTitle: "分享有用、有趣的东西",
+  heroSubtitle: siteConfig.tagline,
   startReading: "文章阅读",
   aiTermsNav: "AI 词条",
   knowledgeBase: "个人知识库",
   liveUpdates: "持续更新",
+  focusEyebrow: "专注方向",
   contentOverview: "内容概览",
   publicArticles: "公开文章",
   seriesRoutes: "专题路线",
@@ -76,6 +93,14 @@ function buildHomeJsonLd() {
       "@type": "Person",
       name: siteConfig.name,
     },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${siteConfig.url}/articles?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
@@ -91,12 +116,13 @@ export function HomePage({ payload }: HomePageProps) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }} />
 
         <section className="site-grid border-b border-line" aria-labelledby="home-hero-title">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-9 pt-[4.5rem] sm:px-6 md:grid-cols-[0.92fr_1.08fr] md:items-start md:pb-14 md:pt-28 lg:pb-16 lg:pt-32">
+          <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-9 pt-12 sm:px-6 md:grid-cols-[0.92fr_1.08fr] md:items-center md:pb-14 md:pt-[4.67rem] lg:pb-16 lg:pt-[5.33rem]">
             <div className="flex min-w-0 flex-col justify-center">
               <h1 id="home-hero-title" className="max-w-3xl text-[2rem] font-semibold leading-tight text-foreground sm:text-5xl md:text-6xl">
                 {pageCopy.heroTitle}
               </h1>
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <p className="mt-4 max-w-xl text-base leading-7 text-muted sm:text-lg">{pageCopy.heroSubtitle}</p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link className="hero-action hero-primary-action inline-flex h-11 w-full items-center justify-center gap-2 rounded-md px-5 text-sm font-semibold shadow-sm transition sm:w-auto" href={pageCopy.articlesHref}>
                   {pageCopy.startReading}
                   <ArrowRight className="h-4 w-4" />
@@ -136,6 +162,24 @@ export function HomePage({ payload }: HomePageProps) {
                     <p className="text-2xl font-semibold text-foreground">{payload.stats.aiTermCount}</p>
                     <p className="mt-1 text-xs font-semibold text-muted">{pageCopy.aiTermsStat}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="relative z-10 mt-6 border-t border-line pt-5">
+                <p className="text-sm font-semibold text-muted">{pageCopy.focusEyebrow}</p>
+                <div className="mt-3 grid gap-3.5">
+                  {focusAreas.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.title}>
+                        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+                          <Icon className="h-4 w-4 shrink-0" />
+                          {item.title}
+                        </p>
+                        <p className="mt-1 break-words text-xs leading-6 text-muted [overflow-wrap:anywhere]">{item.description}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </aside>
@@ -183,11 +227,9 @@ export function HomePage({ payload }: HomePageProps) {
           <section aria-labelledby="home-aiterms-title">
             <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 id="home-aiterms-title" className="eyebrow text-accent">
-                    {pageCopy.aiTermsEyebrow}
-                  </h2>
-                </div>
+                <h2 id="home-aiterms-title" className="eyebrow text-accent">
+                  {pageCopy.aiTermsEyebrow}
+                </h2>
                 <Link className="motion-inline inline-flex items-center gap-2 text-sm font-semibold text-foreground" href={pageCopy.aiTermsHref}>
                   {pageCopy.viewAllAiTerms}
                   <ArrowRight className="h-4 w-4" />
@@ -214,10 +256,14 @@ export function HomePage({ payload }: HomePageProps) {
 
         <section aria-labelledby="home-series-title">
           <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-10">
-            <div>
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <h2 id="home-series-title" className="eyebrow text-accent">
                 {pageCopy.seriesEyebrow}
               </h2>
+              <Link className="motion-inline inline-flex items-center gap-2 text-sm font-semibold text-foreground" href={pageCopy.seriesIndexHref}>
+                {pageCopy.viewAllSeries}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
 
             {payload.featuredSeries.length > 0 ? (

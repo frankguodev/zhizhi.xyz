@@ -74,7 +74,8 @@ export async function POST(request: Request) {
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
   const scopeValue = formData?.get("scope");
-  const scope: MediaUploadScope = scopeValue === "ai-term" ? "ai-term" : scopeValue === "series" ? "series" : "article";
+  const scope: MediaUploadScope =
+    scopeValue === "ai-term" ? "ai-term" : scopeValue === "series" ? "series" : scopeValue === "tool" ? "tool" : "article";
   const localeValue = formData?.get("locale");
   const slugValue = formData?.get("slug");
   const roleValue = formData?.get("role");

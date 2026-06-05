@@ -1,4 +1,4 @@
-import { siteConfig } from "@/lib/site";
+import { defaultShareImage, siteConfig } from "@/lib/site";
 
 export type LegalPageKey = "privacy" | "terms" | "disclaimer" | "cookies";
 
@@ -37,6 +37,7 @@ export function legalPageMetadata(key: LegalPageKey) {
       url: `${siteConfig.url}${canonicalPath}`,
       type: "website",
       locale: "zh_CN",
+      images: [defaultShareImage],
     },
   };
 }

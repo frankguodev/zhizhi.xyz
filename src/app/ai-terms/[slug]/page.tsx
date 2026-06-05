@@ -7,7 +7,7 @@ import { buildFallbackAiTermDetail } from "@/lib/ai-term-fallback";
 import { getPublicAiTerm } from "@/lib/ai-terms";
 import { buildAiTermJsonLd } from "@/lib/ai-term-structured-data";
 import { parseAiTermMarkdown } from "@/lib/markdown";
-import { siteConfig } from "@/lib/site";
+import { defaultShareImage, siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: AiTermDetailRouteProps): Prom
   const twitterTitle = metadataString(twitter.title) || title;
   const twitterDescription = metadataString(twitter.description) || description;
   const url = term.canonicalUrl || `/ai-terms/${term.slug}`;
-  const shareImage = metadataString(openGraph.image) || term.shareImage || undefined;
+  const shareImage = metadataString(openGraph.image) || term.shareImage || defaultShareImage.url;
   const shareImageAlt = metadataString(openGraph.image_alt) || term.shareImageAlt || undefined;
   const twitterImage = metadataString(twitter.image) || shareImage;
   const twitterCard = metadataString(twitter.card) === "summary" ? "summary" : "summary_large_image";
