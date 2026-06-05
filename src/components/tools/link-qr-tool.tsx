@@ -6,10 +6,18 @@ import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } f
 import { clampInt, mediaPrefKeys, readMediaPrefs, writeMediaPrefs } from "./media-preferences";
 
 type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
+type QrOutputFormat = "png" | "webp" | "jpeg";
+
+const qrOutputFormats: QrOutputFormat[] = ["png", "webp", "jpeg"];
+const qrFormatMimes: Record<QrOutputFormat, string> = { png: "image/png", webp: "image/webp", jpeg: "image/jpeg" };
+const qrFormatExtensions: Record<QrOutputFormat, string> = { png: "png", webp: "webp", jpeg: "jpg" };
+const qrFormatLabels: Record<QrOutputFormat, string> = { png: "PNG", webp: "WebP", jpeg: "JPG" };
+const qrFormatQuality = 0.92;
 
 type GeneratedLinkQr = {
   dataUrl: string;
   fileName: string;
+  formatLabel: string;
   normalizedUrl: string;
   size: number;
 };
@@ -22,6 +30,7 @@ type LinkQrCopy = {
   dark: string;
   download: string;
   errorCorrection: string;
+  format: string;
   generate: string;
   generated: string;
   inputLabel: string;
@@ -42,8 +51,9 @@ const copy: LinkQrCopy = {
     copied: "已复制",
     copyLink: "复制链接",
     dark: "二维码颜色",
-    download: "下载 PNG",
+    download: "下载",
     errorCorrection: "纠错等级",
+    format: "输出格式",
     generate: "生成二维码",
     generated: "二维码已生成。",
     inputLabel: "链接地址",
@@ -77,6 +87,7 @@ type LinkQrPrefs = {
   errorCorrection: ErrorCorrectionLevel;
   darkColor: string;
   lightColor: string;
+  format: QrOutputFormat;
 };
 
 function parseColor(value: unknown, fallback: string): string {
@@ -91,6 +102,7 @@ function parseLinkQrPrefs(raw: Record<string, unknown>): LinkQrPrefs {
     errorCorrection: errorCorrectionLevels.includes(raw.errorCorrection as ErrorCorrectionLevel) ? (raw.errorCorrection as ErrorCorrectionLevel) : "M",
     darkColor: parseColor(raw.darkColor, "#171920"),
     lightColor: parseColor(raw.lightColor, "#ffffff"),
+    format: qrOutputFormats.includes(raw.format as QrOutputFormat) ? (raw.format as QrOutputFormat) : "png",
   };
 }
 
@@ -102,6 +114,7 @@ export function LinkQrTool() {
   const [errorCorrection, setErrorCorrection] = useState<ErrorCorrectionLevel>("M");
   const [darkColor, setDarkColor] = useState("#171920");
   const [lightColor, setLightColor] = useState("#ffffff");
+  const [format, setFormat] = useState<QrOutputFormat>("png");
   const [generatedQr, setGeneratedQr] = useState<GeneratedLinkQr | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -120,6 +133,7 @@ export function LinkQrTool() {
         setErrorCorrection(stored.errorCorrection);
         setDarkColor(stored.darkColor);
         setLightColor(stored.lightColor);
+        setFormat(stored.format);
       }
       setPrefsHydrated(true);
     }, 0);
@@ -131,8 +145,8 @@ export function LinkQrTool() {
     if (!prefsHydrated) {
       return;
     }
-    writeMediaPrefs(mediaPrefKeys.linkQr, { input, size, margin, errorCorrection, darkColor, lightColor } satisfies LinkQrPrefs);
-  }, [prefsHydrated, input, size, margin, errorCorrection, darkColor, lightColor]);
+    writeMediaPrefs(mediaPrefKeys.linkQr, { input, size, margin, errorCorrection, darkColor, lightColor, format } satisfies LinkQrPrefs);
+  }, [prefsHydrated, input, size, margin, errorCorrection, darkColor, lightColor, format]);
 
   async function generateQr() {
     const normalizedUrl = normalizeUrlInput(input);
@@ -157,10 +171,13 @@ export function LinkQrTool() {
         margin,
         scale: 8,
         width: size,
+        type: qrFormatMimes[format] as "image/png" | "image/jpeg" | "image/webp",
+        rendererOpts: format === "png" ? undefined : { quality: qrFormatQuality },
       });
       setGeneratedQr({
         dataUrl,
-        fileName: buildOutputFileName(normalizedUrl),
+        fileName: buildOutputFileName(normalizedUrl, qrFormatExtensions[format]),
+        formatLabel: qrFormatLabels[format],
         normalizedUrl,
         size,
       });
@@ -257,6 +274,23 @@ export function LinkQrTool() {
             </div>
           </div>
 
+          <div className="grid gap-1.5 text-xs font-semibold text-muted">
+            <span>{labels.format}</span>
+            <div className="grid grid-cols-3 rounded-md bg-accent/8 p-1">
+              {qrOutputFormats.map((item) => (
+                <button
+                  key={item}
+                  className={`h-8 rounded text-xs font-semibold transition ${format === item ? "bg-paper text-accent shadow-[var(--shadow-quiet)]" : "text-muted hover:text-accent"}`}
+                  type="button"
+                  aria-pressed={format === item}
+                  onClick={() => setFormat(item)}
+                >
+                  {qrFormatLabels[item]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <p className="rounded-md bg-accent/8 px-3 py-2 text-xs font-semibold leading-5 text-muted">{labels.quietZoneHint}</p>
 
           <div className="flex flex-wrap gap-2">
@@ -283,7 +317,7 @@ export function LinkQrTool() {
       <section className="rounded-md border border-line bg-paper/72 p-4 shadow-[var(--shadow-quiet)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground">{labels.output}</h3>
-          {generatedQr ? <span className="text-xs font-semibold text-muted">{generatedQr.size} x {generatedQr.size} PNG</span> : null}
+          {generatedQr ? <span className="text-xs font-semibold text-muted">{generatedQr.size} x {generatedQr.size} {generatedQr.formatLabel}</span> : null}
         </div>
         <div className="mt-4 flex aspect-square items-center justify-center rounded-md border border-line bg-surface/70 p-4">
           {busy ? (
@@ -477,13 +511,13 @@ function normalizeUrlInput(input: string) {
   }
 }
 
-function buildOutputFileName(urlText: string) {
+function buildOutputFileName(urlText: string, extension: string) {
   try {
     const url = new URL(urlText);
     const host = url.hostname.replace(/^www\./, "").replace(/[^\w.-]+/g, "-") || "link";
-    return `${host}-qr.png`;
+    return `${host}-qr.${extension}`;
   } catch {
-    return "link-qr.png";
+    return `link-qr.${extension}`;
   }
 }
 

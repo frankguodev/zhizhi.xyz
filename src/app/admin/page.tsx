@@ -182,7 +182,7 @@ export default async function AdminDashboardPage() {
           <section className="admin-surface mt-5 border-amber-200 bg-amber-50/70 p-5 text-amber-950" aria-labelledby="admin-dashboard-security-title">
             <p id="admin-dashboard-security-title" className="text-sm font-semibold">后台安全提示</p>
             <ul className="mt-3 space-y-2 text-sm leading-6">
-              <li>后台 session 默认 2 小时有效；如果接口返回 401，前端会跳回后台登录页。</li>
+              <li>后台 session 默认 30 天有效；如果接口返回 401，前端会跳回后台登录页。</li>
               <li>生产环境建议在 `/admin/*` 前再加 Cloudflare Access，形成外层访问控制。</li>
               <li>媒体上传依赖 R2 的 `MEDIA_BUCKET` binding，本地完整验证请使用 Cloudflare preview。</li>
             </ul>

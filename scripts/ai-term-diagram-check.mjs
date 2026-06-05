@@ -84,6 +84,19 @@ function webpDimensions(buffer) {
       height: 1 + buffer.readUIntLE(27, 3),
     };
   }
+  if (type === "VP8 " && buffer.length >= 30) {
+    return {
+      width: buffer.readUInt16LE(26) & 0x3fff,
+      height: buffer.readUInt16LE(28) & 0x3fff,
+    };
+  }
+  if (type === "VP8L" && buffer.length >= 25) {
+    const bits = buffer.readUInt32LE(21);
+    return {
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+    };
+  }
   return null;
 }
 
@@ -111,6 +124,7 @@ async function main() {
   const briefPath = path.join(diagramDir, `${term}_一图看懂brief.md`);
   const promptPath = path.join(diagramDir, `${term}_一图看懂提示词.md`);
   const imagePath = await findImage(term);
+  const optimizedPath = path.join(diagramDir, `${term}_diagram.webp`);
   const errors = [];
   const warnings = [];
 
@@ -132,8 +146,24 @@ async function main() {
       warnings.push(`本地图较大：${Math.round(stats.size / 1024)}KB`);
     }
     console.log(`Image: ${path.relative(workspaceRoot, imagePath)} (${Math.round(stats.size / 1024)}KB${dimensions ? `, ${dimensions.width}x${dimensions.height}` : ""})`);
+    if (!(await pathExists(optimizedPath))) {
+      warnings.push("未找到优化后的 WebP；如需同步生产库，请先运行 ai-term:diagram:optimize。");
+    }
   } else {
     warnings.push("未找到本地图；如果只是低成本 brief/prompt 模式，这是允许的。");
+  }
+
+  if (await pathExists(optimizedPath)) {
+    const stats = await fs.stat(optimizedPath);
+    const dimensions = await imageDimensions(optimizedPath);
+    const warning = ratioWarning(dimensions);
+    if (warning) {
+      warnings.push(`优化图 ${warning}`);
+    }
+    if (stats.size > 100 * 1024) {
+      warnings.push(`优化图超过 100KB：${Math.round(stats.size / 1024)}KB`);
+    }
+    console.log(`Optimized: ${path.relative(workspaceRoot, optimizedPath)} (${Math.round(stats.size / 1024)}KB${dimensions ? `, ${dimensions.width}x${dimensions.height}` : ""})`);
   }
 
   console.log(`AI term diagram check: ${term}`);

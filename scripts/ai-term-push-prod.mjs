@@ -2,32 +2,38 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
-import decodeJpeg, { init as initJpegDecode } from "@jsquash/jpeg/decode.js";
-import encodeJpeg, { init as initJpegEncode } from "@jsquash/jpeg/encode.js";
-import decodePng, { init as initPngDecode } from "@jsquash/png/decode.js";
+import { optimizedDiagramPath } from "./lib/ai-term-diagram-image.mjs";
 
 const workspaceRoot = process.cwd();
-const maxJpegBytes = 100 * 1024;
 const defaultBaseUrl = "https://zhizhi.xyz";
-let pngDecoderReady = false;
-let jpegDecoderReady = false;
-let jpegEncoderReady = false;
+const defaultEnvBaseUrls = {
+  prod: defaultBaseUrl,
+  test: "",
+};
 
 function usage() {
   console.log(`Usage:
   npm run ai-term:push:prod -- <TERM>
+  npm run ai-term:push:test -- <TERM>
   npm run ai-term:push:prod -- <TERM> --dry-run
+  node scripts/ai-term-push-prod.mjs --env test <TERM>
 
 Required env:
-  AI_TERM_ADMIN_COOKIE  Production admin Cookie header value.
+  AI_TERM_ADMIN_COOKIE       Admin Cookie header value.
+  AI_TERM_TEST_ADMIN_COOKIE  Optional test admin Cookie header value.
 
 Optional env:
-  AI_TERM_ADMIN_BASE_URL  Defaults to ${defaultBaseUrl}
-  AI_TERM_MAX_JPG_KB      Defaults to 100
+  AI_TERM_ADMIN_BASE_URL       Defaults to ${defaultBaseUrl} for prod.
+  AI_TERM_TEST_ADMIN_BASE_URL  Required for --env test unless AI_TERM_ADMIN_BASE_URL is set.
+  AI_TERM_MAX_WEBP_KB          Defaults to 100
 
 Example:
   $env:AI_TERM_ADMIN_COOKIE='zz_admin_session=...'
-  npm run ai-term:push:prod -- Agent`);
+  npm run ai-term:push:prod -- Agent
+
+  $env:AI_TERM_TEST_ADMIN_BASE_URL='https://zhizhi-test.example.workers.dev'
+  $env:AI_TERM_TEST_ADMIN_COOKIE='zz_admin_session=...'
+  npm run ai-term:push:test -- Agent`);
 }
 
 function fail(message) {
@@ -39,23 +45,42 @@ function normalizeTermArg(value) {
   return String(value ?? "").trim();
 }
 
-function getRequiredCookie() {
-  const cookie = process.env.AI_TERM_ADMIN_COOKIE?.trim();
+function getTargetEnv(args) {
+  const envIndex = args.findIndex((arg) => arg === "--env");
+  const rawValue = envIndex >= 0 ? args[envIndex + 1] : "";
+  const value = String(rawValue || process.env.AI_TERM_SYNC_ENV || "prod").trim().toLowerCase();
+  if (value !== "prod" && value !== "test") {
+    fail("AI term sync env must be prod or test.");
+  }
+  return value;
+}
+
+function getRequiredCookie(targetEnv) {
+  const cookie =
+    (targetEnv === "test" ? process.env.AI_TERM_TEST_ADMIN_COOKIE?.trim() : "")
+    || process.env.AI_TERM_ADMIN_COOKIE?.trim();
   if (!cookie) {
-    fail("Missing AI_TERM_ADMIN_COOKIE. Copy the production admin Cookie header after logging in.");
+    const name = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_COOKIE or AI_TERM_ADMIN_COOKIE" : "AI_TERM_ADMIN_COOKIE";
+    fail(`Missing ${name}. Copy the ${targetEnv} admin Cookie header after logging in.`);
   }
   return cookie;
 }
 
-function getBaseUrl() {
-  const value = process.env.AI_TERM_ADMIN_BASE_URL?.trim() || defaultBaseUrl;
+function getBaseUrl(targetEnv) {
+  const value =
+    (targetEnv === "test" ? process.env.AI_TERM_TEST_ADMIN_BASE_URL?.trim() : "")
+    || process.env.AI_TERM_ADMIN_BASE_URL?.trim()
+    || defaultEnvBaseUrls[targetEnv];
+  if (!value) {
+    fail("Missing AI_TERM_TEST_ADMIN_BASE_URL for test sync. Set it to your deployed test Worker URL.");
+  }
   return value.replace(/\/+$/, "");
 }
 
 function getMaxBytes() {
-  const kb = Number(process.env.AI_TERM_MAX_JPG_KB || "100");
+  const kb = Number(process.env.AI_TERM_MAX_WEBP_KB || "100");
   if (!Number.isFinite(kb) || kb <= 0) {
-    fail("AI_TERM_MAX_JPG_KB must be a positive number.");
+    fail("AI_TERM_MAX_WEBP_KB must be a positive number.");
   }
   return Math.floor(kb * 1024);
 }
@@ -67,161 +92,6 @@ async function pathExists(filePath) {
   } catch {
     return false;
   }
-}
-
-async function findInputImage(term) {
-  const candidates = [
-    path.join(workspaceRoot, "summery", "aiterms", "diagram", `${term}_diagram.png`),
-    path.join(workspaceRoot, "summery", "aiterms", "diagram", `${term}_diagram.jpg`),
-    path.join(workspaceRoot, "summery", "aiterms", "diagram", `${term}_diagram.jpeg`),
-  ];
-
-  for (const candidate of candidates) {
-    if (await pathExists(candidate)) {
-      return candidate;
-    }
-  }
-
-  fail(`Diagram image not found. Expected one of:\n${candidates.map((item) => `  - ${item}`).join("\n")}`);
-}
-
-async function decodeImage(filePath) {
-  const buffer = await fs.readFile(filePath);
-  const ext = path.extname(filePath).toLowerCase();
-  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
-
-  if (ext === ".png") {
-    if (!pngDecoderReady) {
-      const wasm = await fs.readFile(path.join(workspaceRoot, "node_modules", "@jsquash", "png", "codec", "pkg", "squoosh_png_bg.wasm"));
-      await initPngDecode(wasm);
-      pngDecoderReady = true;
-    }
-    return decodePng(arrayBuffer);
-  }
-
-  if (ext === ".jpg" || ext === ".jpeg") {
-    if (!jpegDecoderReady) {
-      const wasm = await fs.readFile(path.join(workspaceRoot, "node_modules", "@jsquash", "jpeg", "codec", "dec", "mozjpeg_dec.wasm"));
-      await initJpegDecode(await WebAssembly.compile(wasm));
-      jpegDecoderReady = true;
-    }
-    return decodeJpeg(arrayBuffer);
-  }
-
-  fail(`Unsupported diagram image format: ${ext}. Use PNG or JPG.`);
-}
-
-function resizeImageData(source, targetWidth) {
-  const sourceWidth = source.width;
-  const sourceHeight = source.height;
-  if (targetWidth >= sourceWidth) {
-    return source;
-  }
-
-  const targetHeight = Math.round((sourceHeight * targetWidth) / sourceWidth);
-  const sourceData = source.data;
-  const targetData = new Uint8ClampedArray(targetWidth * targetHeight * 4);
-  const xRatio = sourceWidth / targetWidth;
-  const yRatio = sourceHeight / targetHeight;
-
-  for (let y = 0; y < targetHeight; y += 1) {
-    const sy = (y + 0.5) * yRatio - 0.5;
-    const y0 = Math.max(Math.floor(sy), 0);
-    const y1 = Math.min(y0 + 1, sourceHeight - 1);
-    const wy = sy - y0;
-
-    for (let x = 0; x < targetWidth; x += 1) {
-      const sx = (x + 0.5) * xRatio - 0.5;
-      const x0 = Math.max(Math.floor(sx), 0);
-      const x1 = Math.min(x0 + 1, sourceWidth - 1);
-      const wx = sx - x0;
-
-      const targetIndex = (y * targetWidth + x) * 4;
-      const i00 = (y0 * sourceWidth + x0) * 4;
-      const i10 = (y0 * sourceWidth + x1) * 4;
-      const i01 = (y1 * sourceWidth + x0) * 4;
-      const i11 = (y1 * sourceWidth + x1) * 4;
-
-      for (let c = 0; c < 4; c += 1) {
-        const top = sourceData[i00 + c] * (1 - wx) + sourceData[i10 + c] * wx;
-        const bottom = sourceData[i01 + c] * (1 - wx) + sourceData[i11 + c] * wx;
-        targetData[targetIndex + c] = Math.round(top * (1 - wy) + bottom * wy);
-      }
-    }
-  }
-
-  return { data: targetData, width: targetWidth, height: targetHeight };
-}
-
-function flattenAlpha(imageData) {
-  const data = new Uint8ClampedArray(imageData.data);
-  for (let i = 0; i < data.length; i += 4) {
-    const alpha = data[i + 3] / 255;
-    if (alpha < 1) {
-      data[i] = Math.round(data[i] * alpha + 255 * (1 - alpha));
-      data[i + 1] = Math.round(data[i + 1] * alpha + 255 * (1 - alpha));
-      data[i + 2] = Math.round(data[i + 2] * alpha + 255 * (1 - alpha));
-      data[i + 3] = 255;
-    }
-  }
-  return { data, width: imageData.width, height: imageData.height };
-}
-
-async function encodeJpegCandidate(imageData, width, quality) {
-  if (!jpegEncoderReady) {
-    const wasm = await fs.readFile(path.join(workspaceRoot, "node_modules", "@jsquash", "jpeg", "codec", "enc", "mozjpeg_enc.wasm"));
-    await initJpegEncode(await WebAssembly.compile(wasm));
-    jpegEncoderReady = true;
-  }
-
-  const resized = flattenAlpha(resizeImageData(imageData, width));
-  const encoded = await encodeJpeg(resized, {
-    quality,
-    baseline: false,
-    arithmetic: false,
-    progressive: true,
-    optimize_coding: true,
-    smoothing: 0,
-    color_space: 3,
-    quant_table: 3,
-  });
-
-  return {
-    buffer: Buffer.from(encoded),
-    width: resized.width,
-    height: resized.height,
-    quality,
-  };
-}
-
-async function compressDiagramToJpeg(inputPath, outputPath, maxBytes) {
-  const imageData = await decodeImage(inputPath);
-  const widths = [1280, 1120, 960, 840, 720].filter((width) => width <= imageData.width);
-  if (!widths.includes(imageData.width) && imageData.width < 1280) {
-    widths.unshift(imageData.width);
-  }
-  const qualities = [82, 76, 70, 64, 58, 52, 46, 40];
-  let best = null;
-
-  for (const width of widths) {
-    for (const quality of qualities) {
-      const candidate = await encodeJpegCandidate(imageData, width, quality);
-      if (!best || candidate.buffer.length < best.buffer.length) {
-        best = candidate;
-      }
-
-      if (candidate.buffer.length <= maxBytes) {
-        await fs.writeFile(outputPath, candidate.buffer);
-        return { ...candidate, outputPath };
-      }
-    }
-  }
-
-  if (best) {
-    await fs.writeFile(outputPath, best.buffer);
-  }
-
-  fail(`Could not compress diagram below ${Math.round(maxBytes / 1024)}KB. Best result: ${best ? Math.round(best.buffer.length / 1024) : "unknown"}KB.`);
 }
 
 function forceDraftFrontmatter(parsed) {
@@ -243,7 +113,7 @@ function getDiagramAlt(data) {
 async function uploadDiagram({ baseUrl, cookie, filePath, locale, slug, alt }) {
   const bytes = await fs.readFile(filePath);
   const formData = new FormData();
-  const blob = new Blob([bytes], { type: "image/jpeg" });
+  const blob = new Blob([bytes], { type: "image/webp" });
   formData.set("file", blob, path.basename(filePath));
   formData.set("scope", "ai-term");
   formData.set("role", "diagram");
@@ -286,14 +156,15 @@ async function importMarkdown({ baseUrl, cookie, markdown }) {
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes("--dry-run");
-  const term = normalizeTermArg(args.find((arg) => !arg.startsWith("-")));
-  if (!term || term === "-h" || term === "--help") {
+  const targetEnv = getTargetEnv(args);
+  const term = normalizeTermArg(args.find((arg, index) => !arg.startsWith("-") && args[index - 1] !== "--env"));
+  if (!term || args.includes("-h") || args.includes("--help")) {
     usage();
-    process.exit(term ? 0 : 1);
+    process.exit(args.includes("-h") || args.includes("--help") ? 0 : 1);
   }
 
-  const cookie = dryRun ? "" : getRequiredCookie();
-  const baseUrl = getBaseUrl();
+  const cookie = dryRun ? "" : getRequiredCookie(targetEnv);
+  const baseUrl = getBaseUrl(targetEnv);
   const maxBytes = getMaxBytes();
   const proPath = path.join(workspaceRoot, "summery", "aiterms", "pro", `${term}.md`);
   if (!(await pathExists(proPath))) {
@@ -309,10 +180,16 @@ async function main() {
     fail("Frontmatter must contain locale zh/en and slug before uploading a diagram.");
   }
 
-  const inputImage = await findInputImage(term);
-  const outputJpeg = path.join(workspaceRoot, "summery", "aiterms", "diagram", `${term}_diagram.jpg`);
-  const compressed = await compressDiagramToJpeg(inputImage, outputJpeg, maxBytes);
-  console.log(`Compressed diagram: ${path.relative(workspaceRoot, outputJpeg)} (${Math.round(compressed.buffer.length / 1024)}KB, ${compressed.width}x${compressed.height}, q=${compressed.quality})`);
+  const outputWebp = optimizedDiagramPath(term);
+  if (!(await pathExists(outputWebp))) {
+    fail(`Optimized diagram not found: ${path.relative(workspaceRoot, outputWebp)}. Run npm run ai-term:diagram:optimize -- ${term} first.`);
+  }
+  const optimizedStats = await fs.stat(outputWebp);
+  if (optimizedStats.size > maxBytes) {
+    fail(`Optimized diagram exceeds ${Math.round(maxBytes / 1024)}KB: ${Math.round(optimizedStats.size / 1024)}KB. Re-run npm run ai-term:diagram:optimize -- ${term}.`);
+  }
+  console.log(`Sync target: ${targetEnv} (${baseUrl})`);
+  console.log(`Optimized diagram: ${path.relative(workspaceRoot, outputWebp)} (${Math.round(optimizedStats.size / 1024)}KB, WebP)`);
 
   if (dryRun) {
     console.log("Dry run complete. R2 upload, pro markdown update, and D1 import were skipped.");
@@ -320,7 +197,7 @@ async function main() {
   }
 
   const alt = getDiagramAlt(data);
-  const media = await uploadDiagram({ baseUrl, cookie, filePath: outputJpeg, locale, slug, alt });
+  const media = await uploadDiagram({ baseUrl, cookie, filePath: outputWebp, locale, slug, alt });
   console.log(`Uploaded diagram: ${media.url}`);
 
   data.diagram = {

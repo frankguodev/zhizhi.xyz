@@ -15,7 +15,7 @@
 推荐 CSV 表头：
 
 ```csv
-term,diagram,image,story,sync,notes
+term,diagram,image,imageOptimize,story,sync,notes
 ```
 
 字段含义：
@@ -23,11 +23,15 @@ term,diagram,image,story,sync,notes
 - `term`：词条名，必填。
 - `diagram`：是否生成一图看懂 brief 和图片提示词。
 - `image`：是否真实生成一图看懂本地图。
+- `imageOptimize`：是否把本地图处理为 16:9、带 `zhizhi.xyz` 水印、100KB 以内的 WebP。
 - `story`：是否生成寓言故事。
 - `sync`：是否同步生产数据库/R2。
 - `notes`：可选备注，不作为事实来源。
 
 布尔值支持 `true/false`、`是/否`、`1/0`、`yes/no`。
+
+如果 `sync=true`，视为同时要求 `diagram=true`、`image=true`、`imageOptimize=true`。
+如果用户在批量指令或备注中明确说“不要寓言故事 / 不生成寓言故事 / story=false”，则 `story=false` 优先，不要因为“一条龙”自动生成寓言故事。
 
 # 批量执行原则
 
@@ -38,27 +42,30 @@ term,diagram,image,story,sync,notes
 - 只有用户明确要求“使用资料卡”时，才启用资料卡缓存；资料卡只能作为命中的当前词条或明确相关资料来源。
 - 一个词条完成本地校验后，才能进入下一个词条。
 - 某个词条失败时，记录失败原因并继续处理后续词条；除非失败原因会影响全部词条。
-- 同步数据库只在该词条 `sync=true` 时执行；没有生产 Cookie 或前置检查失败时，跳过同步并记录原因。
+- 同步数据库只在该词条 `sync=true` 时执行；没有目标环境 Cookie 或前置检查失败时，跳过同步并记录原因。
+- 批量同步默认先同步测试环境；只有用户明确要求“同步生产环境 / 同步生产库”时，才使用生产同步。
 
 # 每个词条的执行路径
 
 对清单每一行：
 
-1. 解析 `term / diagram / image / story / sync`。
+1. 解析 `term / diagram / image / imageOptimize / story / sync`。
 2. 默认联网核查资料。
 3. 如果用户明确要求“使用资料卡”，先查询资料卡索引；命中则只读取对应资料卡，未命中仍需联网核查。
 4. 生成 `summery/aiterms/pro/{{TERM}}.md`。
 5. 运行本地 `pro` 校验和导入 dry-run。
 6. 如果 `diagram=true`，生成一图看懂 brief 和图片提示词。
-7. 如果 `image=true`，生成本地图，并检查图解文件和压缩可行性。
-8. 如果 `story=true`，生成寓言故事素材。
-9. 如果 `sync=true`，先确认：
+7. 如果 `image=true`，生成本地图，并检查图解文件。
+8. 如果 `imageOptimize=true` 或 `sync=true`，生成优化后的 WebP，并检查 16:9、水印和 100KB 目标。
+9. 如果 `story=true`，生成寓言故事素材。
+10. 如果 `sync=true`，先确认：
    - `pro` 已存在。
    - 本地图已存在。
-   - 本地图可压缩到 100KB。
-   - `AI_TERM_ADMIN_COOKIE` 已设置。
-10. 满足同步条件后执行生产同步；不满足则跳过同步并记录原因。
-11. 记录该词条结果，再处理下一行。
+   - 优化后的 `{{TERM}}_diagram.webp` 已存在且不超过 100KB。
+   - 测试同步时：测试环境 URL 和测试后台 Cookie 已设置。
+   - 生产同步时：生产后台 Cookie 已设置，且用户明确要求生产。
+11. 满足同步条件后执行生产同步；不满足则跳过同步并记录原因。
+12. 记录该词条结果，再处理下一行。
 
 # 内部检查命令
 
@@ -69,7 +76,9 @@ npm run ai-term:sources:match -- {{TERM}}
 npm run ai-term:validate -- {{TERM}}
 npm run ai-term:import:dry-run -- {{TERM}}
 npm run ai-term:diagram:check -- {{TERM}}
+npm run ai-term:diagram:optimize -- {{TERM}}
 npm run ai-term:diagram:compress:dry-run -- {{TERM}}
+npm run ai-term:push:test -- {{TERM}}
 npm run ai-term:push:prod -- {{TERM}}
 ```
 
@@ -81,6 +90,7 @@ npm run ai-term:push:prod -- {{TERM}}
 - 成功生成 `pro` 数。
 - 成功生成一图看懂 brief/prompt 数。
 - 成功生成本地图数。
+- 成功优化一图看懂 WebP 数。
 - 成功生成寓言故事数。
 - 成功同步数据库数。
 - 跳过或失败的词条及原因。

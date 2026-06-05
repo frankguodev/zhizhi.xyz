@@ -13,10 +13,18 @@ type UploadedImage = {
 };
 
 type AvatarShape = "circle" | "rounded";
+type QrOutputFormat = "png" | "webp" | "jpeg";
+
+const qrOutputFormats: QrOutputFormat[] = ["png", "webp", "jpeg"];
+const qrFormatMimes: Record<QrOutputFormat, string> = { png: "image/png", webp: "image/webp", jpeg: "image/jpeg" };
+const qrFormatExtensions: Record<QrOutputFormat, string> = { png: "png", webp: "webp", jpeg: "jpg" };
+const qrFormatLabels: Record<QrOutputFormat, string> = { png: "PNG", webp: "WebP", jpeg: "JPG" };
+const qrFormatQuality = 0.92;
 
 type GeneratedQr = {
   blob: Blob;
   fileName: string;
+  formatLabel: string;
   previewUrl: string;
   size: number;
 };
@@ -28,6 +36,7 @@ type WechatQrCopy = {
   borderSize: string;
   clear: string;
   download: string;
+  format: string;
   dropAvatar: string;
   dropQr: string;
   generate: string;
@@ -54,7 +63,8 @@ const copy: WechatQrCopy = {
     avatarSize: "头像大小",
     borderSize: "白边",
     clear: "清空",
-    download: "下载 PNG",
+    download: "下载",
+    format: "输出格式",
     dropAvatar: "拖拽头像到这里，或点击选择",
     dropQr: "拖拽微信加好友二维码到这里，或点击选择",
     generate: "生成二维码",
@@ -83,6 +93,7 @@ type WechatQrPrefs = {
   padding: number;
   outputSize: number;
   avatarShape: AvatarShape;
+  format: QrOutputFormat;
 };
 
 function parseWechatQrPrefs(raw: Record<string, unknown>): WechatQrPrefs {
@@ -92,6 +103,7 @@ function parseWechatQrPrefs(raw: Record<string, unknown>): WechatQrPrefs {
     padding: clampInt(raw.padding, 0, 10, 4),
     outputSize: clampInt(raw.outputSize, 512, 1600, 1024),
     avatarShape: raw.avatarShape === "rounded" ? "rounded" : "circle",
+    format: qrOutputFormats.includes(raw.format as QrOutputFormat) ? (raw.format as QrOutputFormat) : "png",
   };
 }
 
@@ -108,6 +120,7 @@ export function WechatQrTool() {
   const [padding, setPadding] = useState(4);
   const [outputSize, setOutputSize] = useState(1024);
   const [avatarShape, setAvatarShape] = useState<AvatarShape>("circle");
+  const [format, setFormat] = useState<QrOutputFormat>("png");
   const [generatedQr, setGeneratedQr] = useState<GeneratedQr | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(labels.outputPlaceholder);
@@ -124,6 +137,7 @@ export function WechatQrTool() {
         setPadding(stored.padding);
         setOutputSize(stored.outputSize);
         setAvatarShape(stored.avatarShape);
+        setFormat(stored.format);
       }
       setPrefsHydrated(true);
     }, 0);
@@ -135,15 +149,15 @@ export function WechatQrTool() {
     if (!prefsHydrated) {
       return;
     }
-    writeMediaPrefs(mediaPrefKeys.wechatQr, { avatarSize, borderSize, padding, outputSize, avatarShape } satisfies WechatQrPrefs);
-  }, [prefsHydrated, avatarSize, borderSize, padding, outputSize, avatarShape]);
+    writeMediaPrefs(mediaPrefKeys.wechatQr, { avatarSize, borderSize, padding, outputSize, avatarShape, format } satisfies WechatQrPrefs);
+  }, [prefsHydrated, avatarSize, borderSize, padding, outputSize, avatarShape, format]);
 
   const canGenerate = Boolean(qrImage && avatarImage && !busy);
   const outputSummary = useMemo(() => {
     if (!generatedQr) {
       return "";
     }
-    return `${formatBytes(generatedQr.size)} · ${outputSize} x ${outputSize} PNG`;
+    return `${formatBytes(generatedQr.size)} · ${outputSize} x ${outputSize} ${generatedQr.formatLabel}`;
   }, [generatedQr, outputSize]);
 
   useEffect(() => {
@@ -217,6 +231,8 @@ export function WechatQrTool() {
         outputSize,
         paddingPercent: padding,
         qrFile: qrImage.file,
+        mime: qrFormatMimes[format],
+        quality: format === "png" ? undefined : qrFormatQuality,
       });
       if (resultUrlRef.current) {
         URL.revokeObjectURL(resultUrlRef.current);
@@ -225,7 +241,8 @@ export function WechatQrTool() {
       resultUrlRef.current = previewUrl;
       setGeneratedQr({
         blob,
-        fileName: buildOutputFileName(qrImage.name),
+        fileName: buildOutputFileName(qrImage.name, qrFormatExtensions[format]),
+        formatLabel: qrFormatLabels[format],
         previewUrl,
         size: blob.size,
       });
@@ -298,6 +315,22 @@ export function WechatQrTool() {
             <RangeControl label={labels.borderSize} value={borderSize} min={1} max={8} suffix="%" onChange={setBorderSize} />
             <RangeControl label={labels.padding} value={padding} min={0} max={10} suffix="%" onChange={setPadding} />
             <RangeControl label={labels.outputSize} value={outputSize} min={512} max={1600} step={64} suffix="px" onChange={setOutputSize} />
+            <div className="grid gap-1.5 text-xs font-semibold text-muted">
+              <span>{labels.format}</span>
+              <div className="grid grid-cols-3 rounded-md bg-accent/8 p-1">
+                {qrOutputFormats.map((item) => (
+                  <button
+                    key={item}
+                    className={`h-8 rounded text-xs font-semibold transition ${format === item ? "bg-paper text-accent shadow-[var(--shadow-quiet)]" : "text-muted hover:text-accent"}`}
+                    type="button"
+                    aria-pressed={format === item}
+                    onClick={() => setFormat(item)}
+                  >
+                    {qrFormatLabels[item]}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <p className="mt-4 rounded-md bg-accent/8 px-3 py-2 text-xs font-semibold leading-5 text-muted">{labels.avatarHint}</p>
           <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800">{labels.scanTip}</p>
@@ -485,6 +518,8 @@ async function composeWechatQr({
   outputSize,
   paddingPercent,
   qrFile,
+  mime,
+  quality,
 }: {
   avatarFile: File;
   avatarShape: AvatarShape;
@@ -493,6 +528,8 @@ async function composeWechatQr({
   outputSize: number;
   paddingPercent: number;
   qrFile: File;
+  mime: string;
+  quality: number | undefined;
 }) {
   const [qrBitmap, avatarBitmap] = await Promise.all([createImageBitmap(qrFile), createImageBitmap(avatarFile)]);
   try {
@@ -538,7 +575,7 @@ async function composeWechatQr({
     drawImageCover(context, avatarBitmap, avatarX, avatarY, avatarSize, avatarSize);
     context.restore();
 
-    return await canvasToBlob(canvas);
+    return await canvasToBlob(canvas, mime, quality);
   } finally {
     qrBitmap.close();
     avatarBitmap.close();
@@ -579,7 +616,7 @@ function roundedRectPath(context: CanvasRenderingContext2D, x: number, y: number
   context.closePath();
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement) {
+function canvasToBlob(canvas: HTMLCanvasElement, mime: string, quality: number | undefined) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) {
@@ -587,13 +624,13 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
         return;
       }
       resolve(blob);
-    }, "image/png");
+    }, mime, mime === "image/png" ? undefined : quality);
   });
 }
 
-function buildOutputFileName(sourceName: string) {
+function buildOutputFileName(sourceName: string, extension: string) {
   const baseName = sourceName.replace(/\.[^.]+$/, "").replace(/[\\/:*?"<>|]/g, "-") || "wechat-qr";
-  return `${baseName}-avatar.png`;
+  return `${baseName}-avatar.${extension}`;
 }
 
 function clearObjectUrls(urls: Set<string>) {

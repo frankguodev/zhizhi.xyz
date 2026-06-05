@@ -6,7 +6,7 @@ import { users } from "@/db/schema";
 const sessionCookieName = "zz_session";
 const adminSessionCookieName = "zz_admin_session";
 const sessionMaxAgeSeconds = 60 * 60 * 24 * 30;
-const adminSessionMaxAgeSeconds = 60 * 60 * 2;
+const adminSessionMaxAgeSeconds = 60 * 60 * 24 * 30;
 // Cloudflare Web Crypto in Workers currently rejects PBKDF2 iterations above 100000.
 const maxSupportedPasswordIterations = 100_000;
 const passwordIterations = maxSupportedPasswordIterations;

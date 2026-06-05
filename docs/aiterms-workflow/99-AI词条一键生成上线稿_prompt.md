@@ -17,6 +17,9 @@
 - `term=LoRA，生成一图看懂`
 - `term=LoRA，生成一图看懂，生成本地图，不同步数据库`
 - `term=LoRA，生成一图看懂，生成本地图，同步数据库`
+- `term=LoRA，一条龙。`
+- `term=LoRA，一条龙，不要寓言故事。`
+- `term=LoRA，一条龙，同步测试环境，不要寓言故事。`
 
 如果用户提供批量清单文件，应改用 `98-AI词条批量生成_prompt.md`。
 
@@ -25,10 +28,15 @@
 - 没有明确要求时，只生成 `pro`。
 - “生成一图看懂”：生成 brief 和图片提示词。
 - “生成本地图 / 生成图片 / 生成一图看懂本地图”：真实调用图片生成能力生成本地图。
+- “优化图片 / 图片优化 / imageOptimize”：把一图看懂本地图处理为 16:9、带 `zhizhi.xyz` 水印、100KB 以内的 WebP。
 - “生成寓言故事”：生成独立寓言故事素材。
-- “同步数据库 / 同步生产草稿 / 写入数据库 / 入库草稿”：同步生产 D1/R2。
+- “同步测试环境 / 同步 test / 写入测试库”：同步测试环境 D1/R2，使用 `ai-term:push:test`。
+- “同步生产环境 / 同步生产草稿 / 写入生产库”：同步生产 D1/R2，使用 `ai-term:push:prod`。
+- 只说“同步数据库 / 写入数据库 / 入库草稿”但没有说明 test/prod 时，先默认测试环境；如果用户明确要求生产，才同步生产环境。
 - “保留中间稿 / debug 模式”：额外输出 `draft/publish/check` 调试文件。
-- “生成一图看懂，同步数据库”等同于同时要求一图看懂、本地图和同步。
+- “生成一图看懂，同步数据库”等同于同时要求一图看懂、本地图、图片优化和同步。
+- “term=XXX，一条龙。”等同于完整流程：生成 `pro`、一图看懂 brief/prompt、本地图、图片优化、寓言故事，并同步测试环境 D1/R2 草稿。
+- “不要寓言故事 / 不生成寓言故事 / story=false”优先级高于“一条龙”；`term=XXX，一条龙，不要寓言故事。` 等同于完整流程但跳过寓言故事。
 
 # 默认输出
 
@@ -41,6 +49,7 @@
 - `./summery/aiterms/diagram/{{TERM}}_一图看懂brief.md`
 - `./summery/aiterms/diagram/{{TERM}}_一图看懂提示词.md`
 - `./summery/aiterms/diagram/{{TERM}}_diagram.{ext}`
+- `./summery/aiterms/diagram/{{TERM}}_diagram.webp`
 - `./summery/aiterms/story/{{TERM}}_寓言故事.md`
 - `./summery/aiterms/cover/{{TERM}}_封面图提示词.md`
 - `./summery/aiterms/cover/{{TERM}}_cover.{ext}`
@@ -73,13 +82,21 @@ npm run ai-term:import:dry-run -- {{TERM}}
 
 ```bash
 npm run ai-term:diagram:check -- {{TERM}}
+```
+
+8. 如要求图片优化或同步数据库，运行：
+
+```bash
+npm run ai-term:diagram:optimize -- {{TERM}}
 npm run ai-term:diagram:compress:dry-run -- {{TERM}}
 ```
 
-8. 如要求寓言故事，按 `04-AI词条寓言故事_prompt.md` 生成独立素材。
-9. 如要求同步数据库，先确认同步前置条件，再执行：
+9. 如要求寓言故事，按 `04-AI词条寓言故事_prompt.md` 生成独立素材。
+10. 如要求同步数据库，先确认同步目标环境和前置条件，再执行：
 
 ```bash
+npm run ai-term:push:test -- {{TERM}}
+# 或明确生产时：
 npm run ai-term:push:prod -- {{TERM}}
 ```
 
@@ -107,8 +124,10 @@ npm run ai-term:push:prod -- {{TERM}}
 
 - `pro` 已存在且本地校验通过。
 - 本地图已存在。
-- 本地图可压缩到 100KB。
-- 环境变量 `AI_TERM_ADMIN_COOKIE` 已设置。
+- 优化后的 `summery/aiterms/diagram/{{TERM}}_diagram.webp` 已存在。
+- 优化图保持 16:9、带 `zhizhi.xyz` 水印，且不超过 100KB。
+- 测试同步：`AI_TERM_TEST_ADMIN_BASE_URL` 和 `AI_TERM_TEST_ADMIN_COOKIE` 已设置；或使用 `AI_TERM_ADMIN_BASE_URL` / `AI_TERM_ADMIN_COOKIE` 指向测试环境。
+- 生产同步：`AI_TERM_ADMIN_COOKIE` 已设置，`AI_TERM_ADMIN_BASE_URL` 默认 `https://zhizhi.xyz`。
 
 如果任一条件缺失，跳过同步并说明原因；不要绕过后台鉴权，不要直接写 D1。
 

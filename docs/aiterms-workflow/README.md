@@ -17,6 +17,9 @@
 
 ```text
 term=LoRA，生成一图看懂，生成本地图，不同步数据库
+term=LoRA，一条龙。
+term=LoRA，一条龙，不要寓言故事。
+term=LoRA，一条龙，同步测试环境，不要寓言故事。
 ```
 
 批量词条：
@@ -28,9 +31,9 @@ term=LoRA，生成一图看懂，生成本地图，不同步数据库
 批量清单推荐格式：
 
 ```csv
-term,diagram,image,story,sync,notes
-RAG,true,true,false,false,"生成 pro 和一图看懂本地图"
-MCP,true,false,false,false,"只生成一图看懂 brief/prompt"
+term,diagram,image,imageOptimize,story,sync,notes
+RAG,true,true,true,false,false,"生成 pro、一图看懂本地图和优化 WebP"
+MCP,true,false,false,false,false,"只生成一图看懂 brief/prompt"
 ```
 
 ## 输出策略
@@ -53,8 +56,12 @@ MCP,true,false,false,false,"只生成一图看懂 brief/prompt"
 
 - `diagram=true` 或“生成一图看懂”：生成 brief 和图片提示词。
 - `image=true` 或“生成本地图”：真实调用图片生成能力生成本地图。
+- `imageOptimize=true` 或“优化图片”：生成 16:9、带 `zhizhi.xyz` 水印、100KB 以内的 WebP。
 - `story=true` 或“生成寓言故事”：生成独立寓言故事素材。
-- `sync=true` 或“同步数据库”：同步生产 D1/R2；要求本地图存在、可压缩到 100KB，并且环境变量 `AI_TERM_ADMIN_COOKIE` 已设置。
+- `sync=true` 或“同步数据库”：同步目标环境 D1/R2；要求优化后的 WebP 存在、100KB 以内，并且目标环境后台 Cookie 已设置。
+- 默认先同步测试环境；只有明确说“同步生产环境 / 同步生产库”时，才使用生产同步。
+- `term=XXX，一条龙。`：完整执行 `pro`、一图看懂、本地图、图片优化、寓言故事和生产草稿同步。
+- `term=XXX，一条龙，不要寓言故事。`：完整执行 `pro`、一图看懂、本地图、图片优化和测试环境草稿同步，但跳过寓言故事。
 
 ## 主要提示词
 
@@ -78,7 +85,10 @@ MCP,true,false,false,false,"只生成一图看懂 brief/prompt"
 npm run ai-term:validate -- RAG
 npm run ai-term:import:dry-run -- RAG
 npm run ai-term:diagram:check -- RAG
+npm run ai-term:diagram:optimize -- RAG
 npm run ai-term:diagram:compress:dry-run -- RAG
+npm run ai-term:push:test -- RAG
+npm run ai-term:push:prod -- RAG
 npm run ai-term:check -- RAG
 ```
 
@@ -94,6 +104,7 @@ npm run ai-term:sources:index
 - `summery/aiterms/sources/`：可选资料卡缓存和 `index.json`，默认流程不依赖它。
 - `summery/aiterms/pro/`：最终上线候选稿。
 - `summery/aiterms/diagram/`：一图看懂 brief、提示词和本地图。
+- `summery/aiterms/diagram/{{TERM}}_diagram.webp`：优化后的同步用图，固定 WebP、16:9、带 `zhizhi.xyz` 水印、目标 100KB 以内。
 - `summery/aiterms/story/`：寓言故事素材。
 - `summery/aiterms/tasks/terms.csv`：批量词条输入清单。
 
@@ -102,5 +113,8 @@ npm run ai-term:sources:index
 - 批量生成时，一次只处理一个词条；一个词条完成本地校验后再进入下一个词条。
 - 默认联网核查，不使用资料卡；只有用户明确要求“使用资料卡”时，才先读 `sources/index.json`，命中后只读单张资料卡。
 - 本地图不是线上路径，不要写入 `diagram.image`。
+- 只有优化后的 WebP 上传 R2 后，才把返回的 `/media/...` 路径写入 `diagram.image`。
 - 同步生产前必须保持 `status: draft` 与 `source.human_reviewed: false`。
 - 同步失败或前置条件缺失时，记录原因并继续处理后续词条。
+- 测试环境同步使用 `AI_TERM_TEST_ADMIN_BASE_URL` + `AI_TERM_TEST_ADMIN_COOKIE` 和 `npm run ai-term:push:test -- TERM`。
+- 生产环境同步使用 `AI_TERM_ADMIN_COOKIE` 和 `npm run ai-term:push:prod -- TERM`；不要在未明确要求生产时执行。
