@@ -33,7 +33,7 @@ export type ToolPreferences = {
 };
 
 const defaultToolPreferences: ToolPreferences = {
-  activeGroup: "all",
+  activeGroup: "data",
   activeTab: "json",
   csvDelimiter: "auto",
   csvEmptyAsNull: false,

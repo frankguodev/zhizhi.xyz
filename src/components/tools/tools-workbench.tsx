@@ -201,7 +201,7 @@ export function ToolsWorkbench() {
   const labels = copyLabels;
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [activeTab, setActiveTab] = useState<ToolTab>("json");
-  const [activeGroup, setActiveGroup] = useState<ToolGroup>("all");
+  const [activeGroup, setActiveGroup] = useState<ToolGroup>("data");
   const [mobilePanel, setMobilePanel] = useState<"input" | "output">("input");
   const [toolSearch, setToolSearch] = useState("");
   const [historyMounted, setHistoryMounted] = useState(false);

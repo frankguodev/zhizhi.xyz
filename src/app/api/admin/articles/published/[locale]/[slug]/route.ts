@@ -142,7 +142,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ loca
     await updatePublishedArticle({
       ...result.article,
       viewCount: previous.viewCount,
-      publishedAt: previous.publishedAt || result.article.publishedAt,
     });
     const article = await getPublishedArticle(parsedParams.data.locale, parsedParams.data.slug);
 

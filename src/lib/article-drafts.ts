@@ -38,13 +38,15 @@ function categoryIdFor(locale: ArticleRecord["locale"], category: string) {
   return `category:${locale}:${slugify(category || "未分类")}`;
 }
 
+const shanghaiDateFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" });
+
 function dateString(value: Date | string | number | null) {
   if (value === null) {
     return "";
   }
 
   const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? "" : shanghaiDateFormatter.format(date);
 }
 
 function yamlString(value: string) {
