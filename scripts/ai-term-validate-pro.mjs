@@ -227,8 +227,15 @@ function validateFrontmatter(data, content) {
     }
   }
 
-  if (text(diagram.image) && !/^\/media\/ai-terms\/zh\/[a-z0-9-]+\/diagram-[a-f0-9-]+\.(jpg|jpeg|png|webp|gif)$/i.test(text(diagram.image))) {
-    add(issues, "warning", "diagram.image 建议使用 /media/ai-terms/zh/{slug}/diagram-{uuid}.{ext} 形式");
+  const validDiagramImage =
+    /^\/media\/ai-terms\/\d{4}\/(0[1-9]|1[0-2])\/diagram-[a-f0-9-]+\.(jpg|jpeg|png|webp|gif)$/i.test(
+      text(diagram.image),
+    ) ||
+    /^\/media\/ai-terms\/(zh|en)\/[a-z0-9-]+\/diagram-[a-f0-9-]+\.(jpg|jpeg|png|webp|gif)$/i.test(
+      text(diagram.image),
+    );
+  if (text(diagram.image) && !validDiagramImage) {
+    add(issues, "warning", "diagram.image 建议使用 /media/ai-terms/YYYY/MM/diagram-{uuid}.{ext} 形式");
   }
 
   const structuredData = isRecord(data.structured_data) ? data.structured_data : {};

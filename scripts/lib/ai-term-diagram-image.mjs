@@ -7,6 +7,10 @@ import encodeWebp, { init as initWebpEncode } from "@jsquash/webp/encode.js";
 
 export const defaultMaxWebpBytes = 100 * 1024;
 export const diagramAspectRatio = 16 / 9;
+export const optimizedDiagramSizes = [
+  { width: 1600, height: 900 },
+  { width: 1280, height: 720 },
+];
 export const diagramDir = path.join(process.cwd(), "summery", "aiterms", "diagram");
 
 let pngDecoderReady = false;
@@ -35,6 +39,14 @@ export async function findSourceDiagramImage(term) {
 
 export function optimizedDiagramPath(term) {
   return path.join(diagramDir, `${term}_diagram.webp`);
+}
+
+export function describeOptimizedDiagramSizes() {
+  return optimizedDiagramSizes.map((size) => `${size.width}x${size.height}`).join(" or ");
+}
+
+export function isAllowedOptimizedDiagramSize(dimensions) {
+  return optimizedDiagramSizes.some((size) => size.width === dimensions?.width && size.height === dimensions?.height);
 }
 
 export async function decodeDiagramImage(filePath) {
@@ -102,10 +114,6 @@ function cropToAspect(source, aspectRatio = diagramAspectRatio) {
 }
 
 function resizeImageData(source, targetWidth) {
-  if (targetWidth >= source.width) {
-    return source;
-  }
-
   const targetHeight = Math.round(targetWidth / diagramAspectRatio);
   const targetData = new Uint8ClampedArray(targetWidth * targetHeight * 4);
   const xRatio = source.width / targetWidth;
@@ -190,18 +198,20 @@ function textPixelWidth(text, scale) {
 }
 
 function addWatermark(imageData) {
-  const text = "zhizhi.xyz";
+  // Keep the public watermark all lowercase; this is the visible brand text on AI term diagrams.
+  const watermarkText = "zhizhi.xyz";
   const data = new Uint8ClampedArray(imageData.data);
   const scale = Math.max(2, Math.round(imageData.width / 640));
-  const margin = Math.max(18, Math.round(imageData.width * 0.022));
+  const marginX = Math.max(16, Math.round(imageData.width * 0.017));
+  const marginY = Math.max(10, Math.round(imageData.height * 0.017));
   const color = [47, 79, 53];
   const alpha = 0.42;
-  const textWidth = textPixelWidth(text, scale);
+  const textWidth = textPixelWidth(watermarkText, scale);
   const textHeight = 7 * scale;
-  let cursorX = imageData.width - margin - textWidth;
-  const startY = imageData.height - margin - textHeight;
+  let cursorX = imageData.width - marginX - textWidth;
+  const startY = imageData.height - marginY - textHeight;
 
-  for (const char of text) {
+  for (const char of watermarkText) {
     const glyph = glyphs[char] ?? glyphs["."];
     for (let gy = 0; gy < glyph.length; gy += 1) {
       for (let gx = 0; gx < glyph[gy].length; gx += 1) {
@@ -241,18 +251,23 @@ export async function buildOptimizedDiagram(inputPath, maxBytes = defaultMaxWebp
   const decoded = await decodeDiagramImage(inputPath);
   const cropped = cropToAspect(decoded);
   const source = flattenAlpha(cropped);
-  const widths = [1280, 1120, 960, 840, 720].filter((width) => width <= source.width);
-  if (source.width < 1280) {
-    widths.unshift(source.width);
-  }
   const qualities = [84, 80, 76, 72, 68, 64, 60, 56, 52, 48, 44, 40, 36, 32];
   let smallest = null;
 
-  for (const width of widths) {
-    const resized = addWatermark(resizeImageData(source, width));
+  for (const size of optimizedDiagramSizes) {
+    const resized = addWatermark(resizeImageData(source, size.width));
     for (const quality of qualities) {
       const buffer = await encodeWebpCandidate(resized, quality);
-      const candidate = { buffer, height: resized.height, quality, sourceHeight: decoded.height, sourceWidth: decoded.width, width: resized.width };
+      const candidate = {
+        buffer,
+        height: resized.height,
+        quality,
+        sourceHeight: decoded.height,
+        sourceWidth: decoded.width,
+        targetHeight: size.height,
+        targetWidth: size.width,
+        width: resized.width,
+      };
       if (!smallest || candidate.buffer.length < smallest.buffer.length) {
         smallest = candidate;
       }

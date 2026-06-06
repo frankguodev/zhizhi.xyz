@@ -2,6 +2,7 @@
 
 import { Download, ImageIcon, Loader2, Maximize2, RefreshCw, UploadCloud, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Select } from "@/components/ui/select";
 import { encodeImage, fitWithin, formatMimeTypes, type ImageOutputFormat } from "./image-codec";
 import {
   clearObjectUrls,
@@ -781,14 +782,17 @@ export function ImageTool() {
         <section className="min-w-0 rounded-md border border-line bg-paper/80 p-4">
           <h3 className="text-sm font-semibold text-foreground">{labels.output}</h3>
           <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)]">
-            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
-              {labels.format}
-              <select className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70" value={format} disabled={busy} onChange={(event) => setFormat(event.target.value as ImageOutputFormat)}>
-                {(["webp", "avif", "jpeg", "png"] as const).map((item) => (
-                  <option key={item} value={item}>{formatLabels[item]}</option>
-                ))}
-              </select>
-            </label>
+            <div className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
+              <span>{labels.format}</span>
+              <Select
+                ariaLabel={labels.format}
+                size="sm"
+                disabled={busy}
+                value={format}
+                onChange={(next) => setFormat(next as ImageOutputFormat)}
+                options={(["webp", "avif", "jpeg", "png"] as const).map((item) => ({ value: item, label: formatLabels[item] }))}
+              />
+            </div>
             <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
               {labels.maxWidth}
               <input className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-70" inputMode="numeric" value={maxWidth} disabled={busy} onChange={(event) => setMaxWidth(cleanDimensionInput(event.target.value))} placeholder="1600" />

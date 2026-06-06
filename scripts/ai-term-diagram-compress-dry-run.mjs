@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
-import { buildOptimizedDiagram, findSourceDiagramImage } from "./lib/ai-term-diagram-image.mjs";
+import { buildOptimizedDiagram, describeOptimizedDiagramSizes, findSourceDiagramImage } from "./lib/ai-term-diagram-image.mjs";
 
 const workspaceRoot = process.cwd();
 
@@ -8,7 +8,8 @@ function usage() {
   console.log(`Usage:
   npm run ai-term:diagram:compress:dry-run -- <TERM>
 
-Tests whether the local diagram can become a 16:9, watermarked WebP below 100KB without writing output.`);
+Tests whether the local diagram can become a watermarked WebP below 100KB without writing output.
+Preferred output is 1600x900; fallback output is 1280x720.`);
 }
 
 function getMaxBytes() {
@@ -38,6 +39,7 @@ async function main() {
   console.log(`Input: ${path.relative(workspaceRoot, inputPath)} (${candidate.sourceWidth}x${candidate.sourceHeight})`);
   if (candidate.metTarget) {
     console.log(`PASS: ${Math.round(candidate.buffer.length / 1024)}KB, ${candidate.width}x${candidate.height}, webp q=${candidate.quality}, watermark zhizhi.xyz`);
+    console.log(`Allowed sizes: ${describeOptimizedDiagramSizes()}`);
     return;
   }
 

@@ -1,6 +1,6 @@
 export type ToolLocale = "zh" | "en";
 
-export type ToolTab = "json" | "encoding" | "time" | "text" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr";
+export type ToolTab = "json" | "encoding" | "time" | "text" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64";
 export type CsvDelimiter = "auto" | "comma" | "tab";
 export type CsvOutputMode = "objects" | "rows";
 export type EncodingAction = "urlEncode" | "urlDecode" | "base64Encode" | "base64Decode" | "unicodeEscape" | "unicodeUnescape" | "htmlEscape" | "htmlUnescape";
@@ -14,7 +14,7 @@ export type TimeDisplayMode = "local" | "utc";
 export type TimestampUnit = "auto" | "seconds" | "milliseconds";
 export type UtilityAction = "base64Encode" | "base64Decode" | "textDedupe" | "textSort" | "regexReplace" | "regexTest";
 export type UuidFormat = "standard" | "uppercase" | "compact" | "json";
-export type ToolGroup = "all" | "data" | "encode" | "dev" | "writing" | "media";
+export type ToolGroup = "data" | "encode" | "dev" | "writing" | "media";
 export type EditorPanelSize = "compact" | "medium" | "large" | "expanded";
 
 export type Status = {
@@ -110,12 +110,15 @@ export function isToolTab(value: unknown): value is ToolTab {
     value === "image" ||
     value === "watermark" ||
     value === "wechatQr" ||
-    value === "linkQr"
+    value === "linkQr" ||
+    value === "crop" ||
+    value === "qrDecode" ||
+    value === "imageBase64"
   );
 }
 
 export function isToolGroup(value: unknown): value is ToolGroup {
-  return value === "all" || value === "data" || value === "encode" || value === "dev" || value === "writing" || value === "media";
+  return value === "data" || value === "encode" || value === "dev" || value === "writing" || value === "media";
 }
 
 export function isCsvDelimiter(value: unknown): value is CsvDelimiter {

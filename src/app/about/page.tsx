@@ -42,7 +42,7 @@ export default function AboutPage() {
               <UserRound className="h-4 w-4" />
               关于我
             </p>
-            <h1 className="mt-4 max-w-4xl text-3xl font-semibold leading-tight text-foreground">你好，我是FrankGuo</h1>
+            <h1 className="mt-4 max-w-4xl text-3xl font-semibold leading-tight text-foreground">你好，我是郭福，英文名字叫FrankGuo</h1>
             <p className="mt-5 max-w-3xl text-lg leading-8 text-muted">
               一位软件工程师，也是一名AI 探索者。
             </p>

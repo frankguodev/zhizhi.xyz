@@ -36,15 +36,18 @@ Markdown 预览,content,8`;
 export function getSampleInput(tab: ToolTab) {
   return {
     color: "#d9b861",
+    crop: "",
     csv: sampleCsv,
     data: sampleStructured,
     encoding: "https://zhizhi.xyz/articles?tag=AI 应用",
     hash: "知之工具",
     image: "",
+    imageBase64: "",
     json: sampleJson,
     jwt: "",
     linkQr: "https://zhizhi.xyz",
     markdown: sampleMarkdown,
+    qrDecode: "",
     regex: "知之工具\nzhizhi.xyz",
     text: "知识\n工具\n知识\n\n知之",
     time: "",

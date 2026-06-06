@@ -23,7 +23,7 @@ term,diagram,image,imageOptimize,story,sync,notes
 - `term`：词条名，必填。
 - `diagram`：是否生成一图看懂 brief 和图片提示词。
 - `image`：是否真实生成一图看懂本地图。
-- `imageOptimize`：是否把本地图处理为 16:9、带 `zhizhi.xyz` 水印、100KB 以内的 WebP。
+- `imageOptimize`：是否把本地图处理为带 `zhizhi.xyz` 水印、100KB 以内的 WebP；优先输出 1600×900，压缩后无法满足 100KB 时降级为 1280×720。
 - `story`：是否生成寓言故事。
 - `sync`：是否同步生产数据库/R2。
 - `notes`：可选备注，不作为事实来源。
@@ -56,12 +56,12 @@ term,diagram,image,imageOptimize,story,sync,notes
 5. 运行本地 `pro` 校验和导入 dry-run。
 6. 如果 `diagram=true`，生成一图看懂 brief 和图片提示词。
 7. 如果 `image=true`，生成本地图，并检查图解文件。
-8. 如果 `imageOptimize=true` 或 `sync=true`，生成优化后的 WebP，并检查 16:9、水印和 100KB 目标。
+8. 如果 `imageOptimize=true` 或 `sync=true`，生成优化后的 WebP，并检查水印、100KB 目标和允许尺寸（优先 1600×900，必要时 1280×720）。
 9. 如果 `story=true`，生成寓言故事素材。
 10. 如果 `sync=true`，先确认：
    - `pro` 已存在。
    - 本地图已存在。
-   - 优化后的 `{{TERM}}_diagram.webp` 已存在且不超过 100KB。
+   - 优化后的 `{{TERM}}_diagram.webp` 已存在，尺寸为 1600×900 或 1280×720，且不超过 100KB。
    - 测试同步时：测试环境 URL 和测试后台 Cookie 已设置。
    - 生产同步时：生产后台 Cookie 已设置，且用户明确要求生产。
 11. 满足同步条件后执行生产同步；不满足则跳过同步并记录原因。

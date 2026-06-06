@@ -9,7 +9,9 @@
 - App Router 开发要记住：本项目使用 Next.js `16.2.4`，`params` 和 `searchParams` props 是 Promise。
 - 不要自作主张的进行npm run build，只有大改动采用。
 - 如果用户说“分析整个项目”，则只读取`docs/project-state.md`了解整个项目，不要把项目中的所有内容都读一遍。
+- 当用户输入形如 `term=XXX`、`term=XXX，一条龙`、`term=XXX，生成一图看懂` 的指令时，默认这是 AI 词条生产任务，应按 `docs/aiterms-workflow/99-AI词条一键生成上线稿_prompt.md` 执行。
 - Skill 只是辅助流程，不能覆盖项目已有流程。除非用户明确点名某个 skill，或项目文档/脚本明确要求使用该 skill，否则优先按项目本地工作流、脚本、文件约定执行。若 skill 的默认输出、步骤或工具选择与项目流程不一致，必须先说明冲突并询问，不得直接启用。
+- AI 词条一条龙或同步数据库前，必须先查目标库是否已有同 `locale + slug` 词条；已存在时默认停止，除非用户明确要求覆盖已有或更新已有词条。
 
 # 必须遵循的规则
 ## 与我合作

@@ -25,6 +25,17 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-06",
+    title: "工具升级：新增三个图片 / 二维码工具，JSON 自动格式化",
+    changes: [
+      { type: "added", label: "图片裁剪", text: "在线裁剪图片，支持原比例 / 1:1 / 16:9 等多种比例、旋转和翻转，可导出 PNG / JPG / WebP，全程本地处理不上传。" },
+      { type: "added", label: "二维码识别", text: "上传图片即可解析二维码 / 条形码内容，自动识别网址、WiFi、名片等并给出可点操作。" },
+      { type: "added", label: "图片转 Base64", text: "图片与 Base64 / Data URI 互转，附带 CSS、HTML、Markdown 等可一键复制的代码片段。" },
+      { type: "improved", label: "JSON", text: "粘贴或编辑内容时自动格式化，右侧实时出结果；格式有误会自动提示，不必再手动点按钮。" },
+      { type: "improved", label: "工具页", text: "优化分类导航，默认进入「数据」分类，工具按用途归类更好找。" },
+    ],
+  },
+  {
     date: "2026-06-05",
     title: "知之正式上线",
     changes: [

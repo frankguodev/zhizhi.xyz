@@ -2,6 +2,7 @@
 
 import { Download, ImageIcon, Loader2, Type, UploadCloud, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Select } from "@/components/ui/select";
 import {
   clearObjectUrls,
   createZipBlob,
@@ -772,18 +773,16 @@ export function ImageWatermarkTool() {
           </label>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
-              {labels.format}
-              <select
-                className="h-10 w-full min-w-0 rounded-md border border-line bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent"
+            <div className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted">
+              <span>{labels.format}</span>
+              <Select
+                ariaLabel={labels.format}
+                size="sm"
                 value={format}
-                onChange={(event) => setFormat(event.target.value as OutputFormat)}
-              >
-                {outputFormats.map((item) => (
-                  <option key={item} value={item}>{outputFormatLabels[item]}</option>
-                ))}
-              </select>
-            </label>
+                onChange={(next) => setFormat(next as OutputFormat)}
+                options={outputFormats.map((item) => ({ value: item, label: outputFormatLabels[item] }))}
+              />
+            </div>
             {usesQuality ? <RangeRow label={labels.quality} value={quality} min={10} max={100} suffix="" onChange={setQuality} /> : <div />}
           </div>
 

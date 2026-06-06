@@ -3,6 +3,7 @@ import { countPublicAiTerms, listPublicAiTerms } from "@/lib/ai-terms";
 import { getPublicArticles } from "@/lib/public-articles";
 import { listPublicSeries } from "@/lib/series";
 import { siteConfig } from "@/lib/site";
+import { toolRoutes } from "@/lib/tools-meta";
 
 function siteUrl(path = "") {
   return `${siteConfig.url}${path}`;
@@ -83,6 +84,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: safeDate(term.updatedAt || term.publishedAt),
       changeFrequency: "monthly" as const,
       priority: 0.78,
+    })),
+    ...toolRoutes.map((route) => ({
+      url: siteUrl(`/tools/${route.slug}`),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     })),
   ];
 }

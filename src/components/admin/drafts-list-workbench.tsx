@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Eye, FilePenLine, Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Select } from "@/components/ui/select";
 
 export type DraftListItem = {
   id: string;
@@ -111,20 +112,10 @@ export function DraftsListWorkbench({ drafts }: { drafts: DraftListItem[] }) {
           <SelectFilter label="语言" value={locale} onChange={setLocale} options={localeOptions} />
           <SelectFilter label="流程" value={workflowStatus} onChange={setWorkflowStatus} options={workflowOptions} />
           <SelectFilter label="权限" value={visibility} onChange={setVisibility} options={visibilityOptions} />
-          <label className="grid gap-1">
+          <div className="grid gap-1">
             <span className="text-xs font-semibold text-muted">排序</span>
-            <select
-              className="h-11 min-w-32 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as typeof sortBy)}
-            >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Select className="min-w-32" ariaLabel="排序" value={sortBy} onChange={(next) => setSortBy(next as typeof sortBy)} options={[...sortOptions]} />
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
@@ -224,20 +215,15 @@ function SelectFilter({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-1">
+    <div className="grid gap-1">
       <span className="text-xs font-semibold text-muted">{label}</span>
-      <select
-        className="h-11 min-w-32 border border-line bg-background px-3 text-sm outline-none focus:border-accent"
+      <Select
+        className="min-w-32"
+        ariaLabel={label}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        <option value={allValue}>全部</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+        onChange={onChange}
+        options={[{ value: allValue, label: "全部" }, ...options.map((option) => ({ value: option, label: option }))]}
+      />
+    </div>
   );
 }

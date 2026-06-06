@@ -3,11 +3,13 @@
 import {
   ArrowDownToLine,
   ArrowRightLeft,
+  Binary,
   Braces,
   Check,
   ChevronDown,
   Clipboard,
   Code2,
+  Crop,
   Download,
   FileText,
   Fingerprint,
@@ -21,6 +23,7 @@ import {
   QrCode,
   Rows3,
   Save,
+  ScanLine,
   Search,
   Stamp,
   Table2,
@@ -28,19 +31,17 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import dynamic from "next/dynamic";
+import type { ComponentType, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
-import { ImageTool } from "./image-tool";
-import { ImageWatermarkTool } from "./image-watermark-tool";
-import { LinkQrTool } from "./link-qr-tool";
-import { WechatQrTool } from "./wechat-qr-tool";
 import { enhanceJsonError, getJsonErrorHighlight, translateJsonErrorReason } from "./tool-json-diagnostics";
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
 import { readToolPreferences, writeToolPreferences } from "./tool-preferences";
-import { getSampleInput, sampleCsv, sampleJson, sampleMarkdown, sampleStructured } from "./tool-samples";
+import { toolSlugById } from "@/lib/tools-meta";
+import { getSampleInput, sampleCsv, sampleMarkdown, sampleStructured } from "./tool-samples";
 import { parseTomlDocument, parseYamlDocument } from "./tool-structured";
 import type {
   CsvDelimiter,
@@ -70,7 +71,15 @@ import type {
 } from "./tool-types";
 import { isToolTab } from "./tool-types";
 
-
+// 重型独立工具按需加载，避免把图片/二维码工具及其依赖（如 qrcode）打进 /tools 首屏 bundle。
+const standaloneToolLoading = () => <div className="py-16 text-center text-sm text-muted">加载工具中…</div>;
+const ImageTool = dynamic(() => import("./image-tool").then((m) => m.ImageTool), { ssr: false, loading: standaloneToolLoading });
+const ImageWatermarkTool = dynamic(() => import("./image-watermark-tool").then((m) => m.ImageWatermarkTool), { ssr: false, loading: standaloneToolLoading });
+const LinkQrTool = dynamic(() => import("./link-qr-tool").then((m) => m.LinkQrTool), { ssr: false, loading: standaloneToolLoading });
+const WechatQrTool = dynamic(() => import("./wechat-qr-tool").then((m) => m.WechatQrTool), { ssr: false, loading: standaloneToolLoading });
+const ImageCropTool = dynamic(() => import("./image-crop-tool").then((m) => m.ImageCropTool), { ssr: false, loading: standaloneToolLoading });
+const QrDecodeTool = dynamic(() => import("./qr-decode-tool").then((m) => m.QrDecodeTool), { ssr: false, loading: standaloneToolLoading });
+const ImageBase64Tool = dynamic(() => import("./image-base64-tool").then((m) => m.ImageBase64Tool), { ssr: false, loading: standaloneToolLoading });
 
 type TextHighlight = {
   end: number;
@@ -86,7 +95,6 @@ const historyDrawerTransitionMs = 240;
 const utilityWorkerTimeoutMs = 60000;
 
 const toolGroups = [
-  { id: "all", label: "全部" },
   { id: "data", label: "数据" },
   { id: "encode", label: "编码" },
   { id: "dev", label: "开发" },
@@ -94,17 +102,20 @@ const toolGroups = [
   { id: "writing", label: "文本" },
 ] as const satisfies readonly { id: ToolGroup; label: string }[];
 
-const toolGroupByTab: Record<ToolTab, Exclude<ToolGroup, "all">> = {
+const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   color: "dev",
+  crop: "media",
   csv: "data",
   data: "data",
   encoding: "encode",
   hash: "dev",
   image: "media",
+  imageBase64: "media",
   json: "data",
   jwt: "dev",
   linkQr: "media",
   markdown: "writing",
+  qrDecode: "media",
   regex: "dev",
   text: "writing",
   time: "dev",
@@ -176,19 +187,25 @@ const tabLabels = [
   { id: "watermark", label: "水印", description: "给图片添加文字水印，支持单个定位与斜向平铺，可批量处理。", icon: Stamp },
   { id: "linkQr", label: "链接二维码", description: "输入网址后一键生成可下载的二维码 PNG。", icon: QrCode },
   { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
+  { id: "crop", label: "裁剪旋转", description: "按比例裁剪图片，支持圆形头像、90° 旋转和水平翻转。", icon: Crop },
+  { id: "qrDecode", label: "二维码识别", description: "上传或粘贴二维码 / 条形码图片，本地解出链接或文本。", icon: ScanLine },
+  { id: "imageBase64", label: "图片转 Base64", description: "图片与 Base64 / Data URI 互转，输出 CSS / HTML / Markdown 片段。", icon: Binary },
 ] as const;
 
 const toolSearchAliases: Record<ToolTab, string> = {
   color: "hex rgb hsl css color palette yanse se sezhi",
+  crop: "crop rotate flip image avatar circle ratio aspect cut tupian caijian xuanzhuan fanzhuan touxiang yuanxing bili",
   csv: "csv tsv table excel sheet delimiter comma tab biaoge",
   data: "yaml toml front matter config configuration json peizhi",
   encoding: "url uri base64 unicode html escape unescape encode decode bianma",
   hash: "sha sha1 sha256 sha384 sha512 digest checksum file wenjian",
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
+  imageBase64: "image base64 datauri data url css html markdown embed inline tupian bianma neilian",
   json: "json format minify validate sort flatten parse escape",
   jwt: "jwt token bearer header payload exp iat nbf",
   linkQr: "link url qr qrcode website webpage erweima lianjie wangzhi",
   markdown: "markdown md gfm preview render table code yulan",
+  qrDecode: "qr qrcode barcode decode scan read recognize erweima tiaoma shibie saoma jiema",
   regex: "regex regexp regular expression pattern replace zhengze",
   text: "text string line dedupe sort trim uppercase lowercase wenben",
   time: "time timestamp unix date utc local seconds milliseconds shijian shijianchuo",
@@ -197,11 +214,11 @@ const toolSearchAliases: Record<ToolTab, string> = {
   wechatQr: "wechat weixin qr qrcode contact friend avatar scan saoyisao erweima touxiang",
 };
 
-export function ToolsWorkbench() {
+export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) {
   const labels = copyLabels;
   const [preferencesReady, setPreferencesReady] = useState(false);
-  const [activeTab, setActiveTab] = useState<ToolTab>("json");
-  const [activeGroup, setActiveGroup] = useState<ToolGroup>("data");
+  const [activeTab, setActiveTab] = useState<ToolTab>(initialTool ?? "json");
+  const [activeGroup, setActiveGroup] = useState<ToolGroup>(initialTool ? toolGroupByTab[initialTool] : "data");
   const [mobilePanel, setMobilePanel] = useState<"input" | "output">("input");
   const [toolSearch, setToolSearch] = useState("");
   const [historyMounted, setHistoryMounted] = useState(false);
@@ -223,7 +240,7 @@ export function ToolsWorkbench() {
   const [jsonBusy, setJsonBusy] = useState(false);
   const [regexBusy, setRegexBusy] = useState(false);
   const [textBusy, setTextBusy] = useState(false);
-  const [jsonInput, setJsonInput] = useState(sampleJson);
+  const [jsonInput, setJsonInput] = useState("");
   const [jsonErrorHighlight, setJsonErrorHighlight] = useState<TextHighlight | null>(null);
   const [jsonOutput, setJsonOutput] = useState("");
   const [jsonSpaces, setJsonSpaces] = useState("2");
@@ -266,18 +283,22 @@ export function ToolsWorkbench() {
   const utilityWorkerRef = useRef<Worker | null>(null);
   const jsonFileInputRef = useRef<HTMLInputElement | null>(null);
   const hashFileInputRef = useRef<HTMLInputElement | null>(null);
+  const toolUrlSeededRef = useRef(false);
 
   const currentOutput = getToolValue(activeTab, {
     color: colorOutput,
+    crop: "",
     csv: csvOutput,
     data: structuredOutput,
     encoding: encodingOutput,
     hash: hashOutput,
     image: "",
+    imageBase64: "",
     json: jsonOutput,
     jwt: jwtOutput,
     linkQr: "",
     markdown: markdownOutput,
+    qrDecode: "",
     regex: regexOutput,
     text: textOutput,
     time: timeOutput,
@@ -287,15 +308,18 @@ export function ToolsWorkbench() {
   });
   const currentInput = getToolValue(activeTab, {
     color: colorInput,
+    crop: "",
     csv: csvInput,
     data: structuredInput,
     encoding: encodingInput,
     hash: hashInput,
     image: "",
+    imageBase64: "",
     json: jsonInput,
     jwt: jwtInput,
     linkQr: "",
     markdown: markdownInput,
+    qrDecode: "",
     regex: regexInput,
     text: textInput,
     time: timeInput,
@@ -310,9 +334,9 @@ export function ToolsWorkbench() {
   const filteredTabs = useMemo(() => {
     const keyword = toolSearch.trim().toLowerCase();
     return tabLabels.filter((tab) => {
-      const inGroup = activeGroup === "all" || toolGroupByTab[tab.id] === activeGroup;
       const searchable = `${tab.label} ${tab.description} ${tab.id} ${toolSearchAliases[tab.id]}`.toLowerCase();
-      return inGroup && (!keyword || searchable.includes(keyword));
+      // 有关键词时跨所有分组搜索；否则只看当前分组（去掉「全部」后，搜索仍能找到任意工具）。
+      return keyword ? searchable.includes(keyword) : toolGroupByTab[tab.id] === activeGroup;
     });
   }, [activeGroup, toolSearch]);
   const currentInputMetrics = useMemo(() => getTextMetrics(currentInput), [currentInput]);
@@ -347,7 +371,7 @@ export function ToolsWorkbench() {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       const preferences = readToolPreferences();
-      const linkedTool = readToolFromUrl();
+      const linkedTool = initialTool ?? readToolFromUrl();
       setActiveTab(linkedTool ?? preferences.activeTab);
       setActiveGroup(linkedTool ? toolGroupByTab[linkedTool] : preferences.activeGroup);
       setCsvDelimiter(preferences.csvDelimiter);
@@ -367,7 +391,7 @@ export function ToolsWorkbench() {
     }, 0);
 
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [initialTool]);
 
   useEffect(() => {
     if (!preferencesReady) {
@@ -413,12 +437,17 @@ export function ToolsWorkbench() {
       return;
     }
 
-    const url = new URL(window.location.href);
-    if (url.searchParams.get("tool") === activeTab) {
+    // 首次（seed 后）不改写 URL，保持落地页地址干净；之后切换工具才把路径同步成 /tools/<slug>。
+    if (!toolUrlSeededRef.current) {
+      toolUrlSeededRef.current = true;
       return;
     }
-    url.searchParams.set("tool", activeTab);
-    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+
+    const target = `/tools/${toolSlugById[activeTab]}`;
+    if (window.location.pathname === target) {
+      return;
+    }
+    window.history.replaceState(null, "", `${target}${window.location.hash}`);
   }, [activeTab, preferencesReady]);
 
   useEffect(() => {
@@ -432,6 +461,39 @@ export function ToolsWorkbench() {
 
     return () => window.clearTimeout(timeout);
   }, [activeTab, markdownAutoPreview, markdownInput]);
+
+  useEffect(() => {
+    if (activeTab !== "json") {
+      return;
+    }
+
+    // 过大的 JSON 不在主线程同步格式化，交给手动按钮走 Worker。
+    if (jsonInput.trim() !== "" && new TextEncoder().encode(jsonInput).byteLength > jsonLargeInputBytes) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      // 输入为空时清空输出与错误高亮，避免残留上一次的结果。
+      if (jsonInput.trim() === "") {
+        setJsonOutput("");
+        setJsonErrorHighlight(null);
+        return;
+      }
+
+      try {
+        const formatted = JSON.stringify(JSON.parse(jsonInput), null, Number(jsonSpaces));
+        setJsonOutput(formatted);
+        setJsonErrorHighlight(null);
+      } catch (error) {
+        // 防抖结束后仍非法才报错，和手动「格式化」按钮一致：输出区给错误信息 + 输入框行内高亮。
+        const errorMessage = enhanceJsonError(error instanceof Error ? error.message : "JSON 格式无效。", jsonInput);
+        setJsonOutput(formatJsonErrorOutput(errorMessage));
+        setJsonErrorHighlight(getJsonErrorHighlight(errorMessage, jsonInput));
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeTab, jsonInput, jsonSpaces]);
 
   useEffect(() => () => {
     clearHistoryTransitionTimers();
@@ -668,6 +730,7 @@ export function ToolsWorkbench() {
 
   function selectTool(tab: ToolTab) {
     setActiveTab(tab);
+    setActiveGroup(toolGroupByTab[tab]);
     setMobilePanel("input");
     setStructuredResult(null);
     setCopiedTarget(null);
@@ -675,7 +738,7 @@ export function ToolsWorkbench() {
 
   function selectGroup(group: ToolGroup) {
     setActiveGroup(group);
-    if (group === "all" || toolGroupByTab[activeTab] === group) {
+    if (toolGroupByTab[activeTab] === group) {
       return;
     }
 
@@ -683,6 +746,33 @@ export function ToolsWorkbench() {
     if (firstTool) {
       selectTool(firstTool.id);
     }
+  }
+
+  function onTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, index: number) {
+    const count = filteredTabs.length;
+    if (count === 0) {
+      return;
+    }
+
+    let next = -1;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      next = (index + 1) % count;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      next = (index - 1 + count) % count;
+    } else if (event.key === "Home") {
+      next = 0;
+    } else if (event.key === "End") {
+      next = count - 1;
+    }
+
+    const target = next === -1 ? null : filteredTabs[next];
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+    selectTool(target.id);
+    window.requestAnimationFrame(() => document.getElementById(`tools-tab-${target.id}`)?.focus());
   }
 
   async function copyText(value: string, target: "input" | "output") {
@@ -1193,22 +1283,27 @@ export function ToolsWorkbench() {
               />
             </label>
           </div>
-          <nav className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6" aria-label="工具">
-            {filteredTabs.map((tab) => {
+          <nav className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6" aria-label="工具" role="tablist" aria-orientation="horizontal">
+            {filteredTabs.map((tab, index) => {
               const active = tab.id === activeTab;
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
+                  id={`tools-tab-${tab.id}`}
                   className={`group flex min-h-20 cursor-pointer flex-col items-start gap-1.5 rounded-md border p-2.5 text-left transition ${
                     active
                       ? "border-accent/45 bg-accent/16 text-accent shadow-[var(--shadow-quiet)]"
                       : "border-line/75 bg-background/54 text-foreground hover:border-accent/32 hover:bg-accent/8 hover:text-accent"
                   }`}
                   type="button"
-                  aria-pressed={active}
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls="tools-tabpanel"
+                  tabIndex={active ? 0 : -1}
                   aria-label={`${tab.label}: ${tab.description}`}
                   onClick={() => selectTool(tab.id)}
+                  onKeyDown={(event) => onTabKeyDown(event, index)}
                 >
                   <span className="flex w-full items-center justify-between gap-2">
                     <span className="text-xs font-semibold">{tab.label}</span>
@@ -1226,7 +1321,13 @@ export function ToolsWorkbench() {
           </nav>
         </div>
       </section>
-      <section className={`index-surface tools-workbench-surface mx-auto w-full rounded-md border border-line p-4 md:p-5 ${expandedWorkspace ? "max-w-[108rem]" : "max-w-7xl"}`}>
+      <section
+        id="tools-tabpanel"
+        role="tabpanel"
+        aria-labelledby="tools-active-tool-heading"
+        tabIndex={0}
+        className={`index-surface tools-workbench-surface mx-auto w-full rounded-md border border-line p-4 md:p-5 ${expandedWorkspace ? "max-w-[108rem]" : "max-w-7xl"}`}
+      >
         <div className="grid gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line/80 pb-4">
             <div className="flex items-start gap-2.5">
@@ -1234,7 +1335,7 @@ export function ToolsWorkbench() {
                 <ActiveIcon className="h-4 w-4" />
               </span>
               <div>
-                <h2 className="text-base font-semibold text-foreground">{activeTabInfo.label}</h2>
+                <h2 id="tools-active-tool-heading" className="text-base font-semibold text-foreground">{activeTabInfo.label}</h2>
                 <p className="mt-0.5 max-w-3xl text-xs leading-5 text-muted">{activeTabInfo.description}</p>
               </div>
             </div>
@@ -1335,6 +1436,9 @@ export function ToolsWorkbench() {
           {activeTab === "watermark" ? <ImageWatermarkTool /> : null}
           {activeTab === "linkQr" ? <LinkQrTool /> : null}
           {activeTab === "wechatQr" ? <WechatQrTool /> : null}
+          {activeTab === "crop" ? <ImageCropTool /> : null}
+          {activeTab === "qrDecode" ? <QrDecodeTool /> : null}
+          {activeTab === "imageBase64" ? <ImageBase64Tool /> : null}
 
           {!isStandaloneTool(activeTab) ? (
             <>
@@ -2826,7 +2930,15 @@ function isExpandedWorkspaceTool(tab: ToolTab) {
 }
 
 function isStandaloneTool(tab: ToolTab) {
-  return tab === "image" || tab === "watermark" || tab === "wechatQr" || tab === "linkQr";
+  return (
+    tab === "image" ||
+    tab === "watermark" ||
+    tab === "wechatQr" ||
+    tab === "linkQr" ||
+    tab === "crop" ||
+    tab === "qrDecode" ||
+    tab === "imageBase64"
+  );
 }
 
 function getPanelSize(tab: ToolTab): EditorPanelSize {

@@ -56,9 +56,9 @@ MCP,true,false,false,false,false,"只生成一图看懂 brief/prompt"
 
 - `diagram=true` 或“生成一图看懂”：生成 brief 和图片提示词。
 - `image=true` 或“生成本地图”：真实调用图片生成能力生成本地图。
-- `imageOptimize=true` 或“优化图片”：生成 16:9、带 `zhizhi.xyz` 水印、100KB 以内的 WebP。
+- `imageOptimize=true` 或“优化图片”：生成带 `zhizhi.xyz` 水印、100KB 以内的 WebP；优先 1600×900，压不进 100KB 时降级为 1280×720。
 - `story=true` 或“生成寓言故事”：生成独立寓言故事素材。
-- `sync=true` 或“同步数据库”：同步目标环境 D1/R2；要求优化后的 WebP 存在、100KB 以内，并且目标环境后台 Cookie 已设置。
+- `sync=true` 或“同步数据库”：同步目标环境 D1/R2；要求优化后的 WebP 存在、尺寸为 1600×900 或 1280×720、100KB 以内，并且目标环境后台 Cookie 已设置。
 - 默认先同步测试环境；只有明确说“同步生产环境 / 同步生产库”时，才使用生产同步。
 - `term=XXX，一条龙。`：完整执行 `pro`、一图看懂、本地图、图片优化、寓言故事和生产草稿同步。
 - `term=XXX，一条龙，不要寓言故事。`：完整执行 `pro`、一图看懂、本地图、图片优化和测试环境草稿同步，但跳过寓言故事。
@@ -104,7 +104,7 @@ npm run ai-term:sources:index
 - `summery/aiterms/sources/`：可选资料卡缓存和 `index.json`，默认流程不依赖它。
 - `summery/aiterms/pro/`：最终上线候选稿。
 - `summery/aiterms/diagram/`：一图看懂 brief、提示词和本地图。
-- `summery/aiterms/diagram/{{TERM}}_diagram.webp`：优化后的同步用图，固定 WebP、16:9、带 `zhizhi.xyz` 水印、目标 100KB 以内。
+- `summery/aiterms/diagram/{{TERM}}_diagram.webp`：优化后的同步用图，固定 WebP、带 `zhizhi.xyz` 水印、目标 100KB 以内；优先 1600×900，必要时降级 1280×720。
 - `summery/aiterms/story/`：寓言故事素材。
 - `summery/aiterms/tasks/terms.csv`：批量词条输入清单。
 

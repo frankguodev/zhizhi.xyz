@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
 import path from "node:path";
+import { describeOptimizedDiagramSizes, isAllowedOptimizedDiagramSize } from "./lib/ai-term-diagram-image.mjs";
 
 const workspaceRoot = process.cwd();
 const diagramDir = path.join(workspaceRoot, "summery", "aiterms", "diagram");
@@ -159,6 +160,9 @@ async function main() {
     const warning = ratioWarning(dimensions);
     if (warning) {
       warnings.push(`优化图 ${warning}`);
+    }
+    if (dimensions && !isAllowedOptimizedDiagramSize(dimensions)) {
+      errors.push(`优化图尺寸不是允许规格（${describeOptimizedDiagramSizes()}）：${dimensions.width}x${dimensions.height}`);
     }
     if (stats.size > 100 * 1024) {
       warnings.push(`优化图超过 100KB：${Math.round(stats.size / 1024)}KB`);

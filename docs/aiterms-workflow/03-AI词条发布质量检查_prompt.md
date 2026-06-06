@@ -124,7 +124,7 @@
 - `diagram.image` 是否只填写真实可访问路径；优先检查是否为 `/media/ai-terms/{locale}/{slug}/diagram-{uuid}.{ext}` 这类 R2 媒体代理路径，推荐 WebP。
 - 没有词条图解不阻塞，但要记录“未提供一图看懂，建议运行 05-AI词条一图看懂_prompt.md 并在后台/R2 上传后回填 diagram.image。”
 - `diagram.image` 是否误用了本地路径、封面图路径、社交分享图路径或不存在的路径；如是，列为必须修复。
-- 词条图解画幅是否适合 16:9 正文开头展示，避免重要文字或图形靠边。
+- 词条图解画幅是否适合 16:9 正文开头展示，避免重要文字或图形靠边；优化同步用图应为 1600×900 或 1280×720，且不超过 100KB。
 - 有 `diagram.image` 时，`diagram.image_alt` 是否描述清楚图解内容。
 - `structured_data.schema_type` 是否为 `DefinedTerm`，字段是否和词条主体一致。
 

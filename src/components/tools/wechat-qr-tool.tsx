@@ -71,10 +71,10 @@ const copy: WechatQrCopy = {
     generated: "已生成，请用微信扫一扫测试一次。",
     inputHint: "支持 JPG、PNG、WebP，单张不超过 20 MB。",
     output: "合成结果",
-    outputPlaceholder: "上传微信二维码和头像后，一键生成中间带头像的扫一扫图片。",
+    outputPlaceholder: "上传二维码和头像后点击生成，合成图会显示在这里。",
     outputSize: "输出尺寸",
     padding: "二维码留白",
-    qr: "微信二维码",
+    qr: "加好友二维码",
     readyHint: "二维码和头像已就绪，可以生成。",
     rounded: "圆角",
     scanTip: "微信二维码识别依赖原图纠错能力，头像过大或遮挡关键区域会降低成功率。",
@@ -123,7 +123,7 @@ export function WechatQrTool() {
   const [format, setFormat] = useState<QrOutputFormat>("png");
   const [generatedQr, setGeneratedQr] = useState<GeneratedQr | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState(labels.outputPlaceholder);
+  const [message, setMessage] = useState("");
   const [messageTone, setMessageTone] = useState<"error" | "muted" | "success">("muted");
   const [prefsHydrated, setPrefsHydrated] = useState(false);
 
@@ -214,7 +214,7 @@ export function WechatQrTool() {
 
   async function generateQr() {
     if (!qrImage || !avatarImage) {
-      setMessage(labels.outputPlaceholder);
+      setMessage("");
       setMessageTone("muted");
       return;
     }
@@ -275,7 +275,7 @@ export function WechatQrTool() {
       resultUrlRef.current = null;
     }
     setGeneratedQr(null);
-    setMessage(labels.outputPlaceholder);
+    setMessage("");
     setMessageTone("muted");
     if (qrInputRef.current) qrInputRef.current.value = "";
     if (avatarInputRef.current) avatarInputRef.current.value = "";
@@ -369,7 +369,7 @@ export function WechatQrTool() {
             <div className="max-w-md text-center text-sm font-semibold leading-6 text-muted">{labels.outputPlaceholder}</div>
           )}
         </div>
-        <p className={`mt-4 text-sm font-semibold leading-6 ${messageTone === "error" ? "text-red-700" : messageTone === "success" ? "text-accent" : "text-muted"}`} role={messageTone === "error" ? "alert" : "status"}>{message}</p>
+        {message ? <p className={`mt-4 text-sm font-semibold leading-6 ${messageTone === "error" ? "text-red-700" : messageTone === "success" ? "text-accent" : "text-muted"}`} role={messageTone === "error" ? "alert" : "status"}>{message}</p> : null}
       </section>
 
       <input ref={qrInputRef} className="hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void chooseImage(event.target.files, "qr")} />
