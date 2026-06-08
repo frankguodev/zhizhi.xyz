@@ -14,6 +14,8 @@ export const toolRoutes: readonly ToolRouteMeta[] = [
   { id: "encoding", slug: "encoding", title: "URL / Base64 / Unicode 编码转换工具", description: "在线 URL、Base64、Unicode 和 HTML 实体编码与解码，本地运行，数据不上传。" },
   { id: "time", slug: "time", title: "时间戳转换工具（Unix 时间）", description: "Unix 时间戳与日期互转，自动识别秒和毫秒，本地运行，数据不上传。" },
   { id: "text", slug: "text", title: "文本处理工具（去重 / 排序 / 统计）", description: "在线文本统计、去空行、去重、排序和大小写转换，本地运行，数据不上传。" },
+  { id: "diff", slug: "diff", title: "文本 / 代码 Diff 对比工具", description: "在线对比两段文本或代码，左右并排显示行级差异并高亮改动行内的不同字词，本地运行，数据不上传。" },
+  { id: "jsonToTs", slug: "json-to-ts", title: "JSON 转 TypeScript 类型工具", description: "粘贴 JSON 自动推断 TypeScript interface / type 类型定义，嵌套对象拆成独立接口，本地运行，数据不上传。" },
   { id: "jwt", slug: "jwt", title: "JWT 解码工具", description: "本地解码 JWT 的 Header 和 Payload，不验证签名、不上传 token。" },
   { id: "hash", slug: "hash", title: "Hash 计算工具（SHA-1/256/384/512）", description: "在线计算 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要，支持文件，本地运行。" },
   { id: "uuid", slug: "uuid", title: "UUID 生成工具（v4）", description: "在线生成单个或批量 UUID v4，本地运行，数据不上传。" },

@@ -21,9 +21,11 @@ Exit code:
   0  Target database does not have this locale + slug.
   2  Target database already has this locale + slug.
 
-Required env:
-  AI_TERM_ADMIN_COOKIE       Admin Cookie header value.
-  AI_TERM_TEST_ADMIN_COOKIE  Optional test admin Cookie header value.
+Auth env (Bearer Token preferred; Cookie is fallback):
+  AI_TERM_ADMIN_API_TOKEN       Script token for prod (sent as Authorization: Bearer).
+  AI_TERM_TEST_ADMIN_API_TOKEN  Script token for --env test.
+  AI_TERM_ADMIN_COOKIE          Fallback admin Cookie header value for prod.
+  AI_TERM_TEST_ADMIN_COOKIE     Fallback test admin Cookie header value.
 
 Optional env:
   AI_TERM_ADMIN_BASE_URL       Defaults to ${defaultBaseUrl} for prod.
@@ -90,15 +92,25 @@ function getTargetEnv(args) {
   return value;
 }
 
-function getRequiredCookie(targetEnv) {
+// 优先使用脚本专用 Bearer Token，未配置时回退到复制的后台 Cookie。
+function getAuthHeaders(targetEnv) {
+  const token =
+    (targetEnv === "test" ? process.env.AI_TERM_TEST_ADMIN_API_TOKEN?.trim() : "") ||
+    process.env.AI_TERM_ADMIN_API_TOKEN?.trim();
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+
   const cookie =
     (targetEnv === "test" ? process.env.AI_TERM_TEST_ADMIN_COOKIE?.trim() : "") ||
     process.env.AI_TERM_ADMIN_COOKIE?.trim();
-  if (!cookie) {
-    const name = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_COOKIE or AI_TERM_ADMIN_COOKIE" : "AI_TERM_ADMIN_COOKIE";
-    fail(`Missing ${name}. Copy the ${targetEnv} admin Cookie header after logging in.`);
+  if (cookie) {
+    return { Cookie: cookie };
   }
-  return cookie;
+
+  const tokenName = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_API_TOKEN" : "AI_TERM_ADMIN_API_TOKEN";
+  const cookieName = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_COOKIE or AI_TERM_ADMIN_COOKIE" : "AI_TERM_ADMIN_COOKIE";
+  fail(`Missing auth for ${targetEnv}. Set ${tokenName} (preferred) or copy ${cookieName} after logging in.`);
 }
 
 function getBaseUrl(targetEnv) {
@@ -156,10 +168,10 @@ async function resolveLocaleAndSlug({ term, rawSlug }) {
   return { locale: "zh", slug };
 }
 
-async function getExistingAiTerm({ baseUrl, cookie, locale, slug }) {
+async function getExistingAiTerm({ baseUrl, authHeaders, locale, slug }) {
   const response = await fetch(`${baseUrl}/api/admin/ai-terms/${encodeURIComponent(locale)}/${encodeURIComponent(slug)}`, {
     method: "GET",
-    headers: { Cookie: cookie },
+    headers: { ...authHeaders },
   });
   const payload = await response.json().catch(() => null);
 
@@ -190,14 +202,14 @@ async function main() {
     process.exit(1);
   }
 
-  const cookie = getRequiredCookie(targetEnv);
+  const authHeaders = getAuthHeaders(targetEnv);
   const baseUrl = getBaseUrl(targetEnv);
   const { locale, slug } = await resolveLocaleAndSlug({ term, rawSlug });
 
   console.log(`Existence check target: ${targetEnv} (${baseUrl})`);
   console.log(`AI term key: ${locale}/${slug}`);
 
-  const existing = await getExistingAiTerm({ baseUrl, cookie, locale, slug });
+  const existing = await getExistingAiTerm({ baseUrl, authHeaders, locale, slug });
   if (!existing) {
     console.log("Result: not found. Safe to generate/sync by default.");
     return;

@@ -15,6 +15,7 @@ const primaryLinks = [
 ];
 
 const siteInfoLinks = [
+  { href: "/feedback", label: "意见反馈" },
   { href: "/privacy", label: "隐私政策" },
   { href: "/terms", label: "使用条款" },
   { href: "/disclaimer", label: "免责声明" },

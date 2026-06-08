@@ -4,7 +4,7 @@ import { parseAiTermImport } from "@/lib/ai-term-import";
 import { checkAiTermQuality } from "@/lib/ai-term-quality";
 import { getAdminAiTermById, listAdminAiTerms, saveAiTerm, updateAiTermAdminFields } from "@/lib/ai-terms";
 import { writeAdminAiTermOperationLog } from "@/lib/admin-operation-logs";
-import { requireAdminApi } from "@/lib/admin-auth";
+import { requireAdminApi, requireAdminApiOrScriptToken } from "@/lib/admin-auth";
 
 const requestSchema = z.object({
   markdown: z.string().trim().min(1).max(800_000),
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApiOrScriptToken(request);
   if (admin.response) {
     return admin.response;
   }

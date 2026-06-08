@@ -7,6 +7,8 @@ type AnonymousFeedbackFormProps = {
   pageUrl: string;
   articleSlug?: string;
   articleTitle?: string;
+  feedbackType?: "article" | "site";
+  variant?: "article" | "page";
 };
 
 type SubmitState = {
@@ -39,9 +41,10 @@ function getErrorMessage(status: number) {
   return copy.failed;
 }
 
-export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTitle }: AnonymousFeedbackFormProps) {
+export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTitle, feedbackType = "article", variant = "article" }: AnonymousFeedbackFormProps) {
   const pageCopy = copy;
-  const [expanded, setExpanded] = useState(false);
+  const isPageVariant = variant === "page";
+  const [expanded, setExpanded] = useState(isPageVariant);
   const [content, setContent] = useState("");
   const [contact, setContact] = useState("");
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle", message: "" });
@@ -56,9 +59,9 @@ export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTit
       pageUrl,
       articleSlug: articleSlug ?? "",
       articleTitle: articleTitle ?? "",
-      feedbackType: "article",
+      feedbackType,
     }),
-    [articleSlug, articleTitle, locale, pageUrl],
+    [articleSlug, articleTitle, feedbackType, locale, pageUrl],
   );
 
   async function submitFeedback() {
@@ -98,27 +101,8 @@ export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTit
     }
   }
 
-  return (
-    <section className="mt-7 border-t border-line pt-7" aria-labelledby="anonymous-feedback-title">
-      <div>
-        <button
-          type="button"
-          className="-mx-2 flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--accent)_7%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          aria-expanded={expanded}
-          aria-controls="anonymous-feedback-body"
-          onClick={() => setExpanded((value) => !value)}
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-accent">
-            <MessageSquareText className="h-5 w-5" />
-          </span>
-          <p id="anonymous-feedback-title" className="min-w-0 flex-1 text-sm font-semibold text-accent">
-            {pageCopy.eyebrow}
-          </p>
-          <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition-transform ${expanded ? "rotate-180" : ""}`} />
-        </button>
-
-        {expanded ? (
-          <div id="anonymous-feedback-body">
+  const body = (
+      <div id="anonymous-feedback-body">
         <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">{pageCopy.description}</p>
         <div className="mt-5 grid gap-4">
           <label className="grid gap-2">
@@ -164,8 +148,40 @@ export function AnonymousFeedbackForm({ locale, pageUrl, articleSlug, articleTit
             {submitState.message}
           </p>
         ) : null}
-          </div>
-        ) : null}
+      </div>
+  );
+
+  if (isPageVariant) {
+    return (
+      <section aria-labelledby="anonymous-feedback-title">
+        <h2 id="anonymous-feedback-title" className="sr-only">
+          {pageCopy.eyebrow}
+        </h2>
+        {body}
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-7 border-t border-line pt-7" aria-labelledby="anonymous-feedback-title">
+      <div>
+        <button
+          type="button"
+          className="-mx-2 flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-left transition hover:bg-[color-mix(in_srgb,var(--accent)_6%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--accent)_7%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          aria-expanded={expanded}
+          aria-controls="anonymous-feedback-body"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-accent/24 bg-accent/8 text-accent">
+            <MessageSquareText className="h-5 w-5" />
+          </span>
+          <p id="anonymous-feedback-title" className="min-w-0 flex-1 text-sm font-semibold text-accent">
+            {pageCopy.eyebrow}
+          </p>
+          <ChevronDown className={`h-5 w-5 shrink-0 text-muted transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+
+        {expanded ? body : null}
       </div>
     </section>
   );

@@ -121,6 +121,8 @@ npm run ai-term:push:prod -- {{TERM}}
 npm run ai-term:push:test -- {{TERM}} --force-existing
 ```
 
+12. 对于已明确为“补齐/修正少量素材产物”的小任务，优先走快速路径：先复用现有 pro、brief、prompt 和本地图；只补缺失文件与必要验证，不展开完整批量生产流程，不生成冗长报告，除非用户明确要求。
+
 # pro 要求
 
 `pro` 必须满足：
@@ -148,8 +150,8 @@ npm run ai-term:push:test -- {{TERM}} --force-existing
 - 优化后的 `summery/aiterms/diagram/{{TERM}}_diagram.webp` 已存在。
 - 优化图带 `zhizhi.xyz` 水印，且不超过 100KB；尺寸优先 1600×900，若压缩后无法满足 100KB 以内，允许降级为 1280×720。
 - 目标库不存在同 `locale + slug` 词条；如果已存在，默认停止并提示后台链接，只有用户明确允许覆盖时才继续。
-- 测试同步：`AI_TERM_TEST_ADMIN_BASE_URL` 和 `AI_TERM_TEST_ADMIN_COOKIE` 已设置；或使用 `AI_TERM_ADMIN_BASE_URL` / `AI_TERM_ADMIN_COOKIE` 指向测试环境。
-- 生产同步：`AI_TERM_ADMIN_COOKIE` 已设置，`AI_TERM_ADMIN_BASE_URL` 默认 `https://zhizhi.xyz`。
+- 测试同步：`AI_TERM_TEST_ADMIN_API_TOKEN`（优先）或 `AI_TERM_TEST_ADMIN_COOKIE` 已设置，配合 `AI_TERM_TEST_ADMIN_BASE_URL`。
+- 生产同步：`AI_TERM_ADMIN_API_TOKEN`（优先）或 `AI_TERM_ADMIN_COOKIE` 已设置，`AI_TERM_ADMIN_BASE_URL` 默认 `https://zhizhi.xyz`。
 
 如果任一条件缺失，跳过同步并说明原因；不要绕过后台鉴权，不要直接写 D1。
 

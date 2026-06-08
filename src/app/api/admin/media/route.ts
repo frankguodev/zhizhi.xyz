@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdminApi } from "@/lib/admin-auth";
+import { requireAdminApi, requireAdminApiOrScriptToken } from "@/lib/admin-auth";
 import { deleteMediaImage, uploadImage, type MediaUploadScope } from "@/lib/media";
 
 const maxMultipartRequestSize = 6 * 1024 * 1024;
@@ -61,7 +61,7 @@ function uploadErrorResponse(error: unknown) {
 }
 
 export async function POST(request: Request) {
-  const admin = await requireAdminApi();
+  const admin = await requireAdminApiOrScriptToken(request);
   if (admin.response) {
     return admin.response;
   }

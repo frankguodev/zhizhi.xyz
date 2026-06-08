@@ -116,5 +116,7 @@ npm run ai-term:sources:index
 - 只有优化后的 WebP 上传 R2 后，才把返回的 `/media/...` 路径写入 `diagram.image`。
 - 同步生产前必须保持 `status: draft` 与 `source.human_reviewed: false`。
 - 同步失败或前置条件缺失时，记录原因并继续处理后续词条。
-- 测试环境同步使用 `AI_TERM_TEST_ADMIN_BASE_URL` + `AI_TERM_TEST_ADMIN_COOKIE` 和 `npm run ai-term:push:test -- TERM`。
-- 生产环境同步使用 `AI_TERM_ADMIN_COOKIE` 和 `npm run ai-term:push:prod -- TERM`；不要在未明确要求生产时执行。
+- 鉴权优先使用脚本专用 Bearer Token，未配置时回退到后台 Cookie：
+  - 测试：`AI_TERM_TEST_ADMIN_API_TOKEN`（优先）或 `AI_TERM_TEST_ADMIN_COOKIE`，配合 `AI_TERM_TEST_ADMIN_BASE_URL` 和 `npm run ai-term:push:test -- TERM`。
+  - 生产：`AI_TERM_ADMIN_API_TOKEN`（优先）或 `AI_TERM_ADMIN_COOKIE`，配合 `npm run ai-term:push:prod -- TERM`；不要在未明确要求生产时执行。
+- Token 只授予「建草稿 / 查重 / 上传图」白名单接口，不能发布、更新（PUT）或删除；Worker 端 secret 为 `AI_TERM_ADMIN_API_TOKEN`（+ 轮换用 `_NEXT`），仅配生产和测试，不进源码。

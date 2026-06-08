@@ -7,6 +7,8 @@ const { decodeJwtInput, formatHashResult } = await import("../src/components/too
 const { describeInvalidJsonPunctuation, findInvalidJsonPunctuationIndex, findInvalidJsonPunctuationRange } = await import("../src/components/tools/tool-json-diagnostics.ts");
 const { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } = await import("../src/components/tools/tool-markdown.ts");
 const { parseTomlDocument, parseYamlDocument } = await import("../src/components/tools/tool-structured.ts");
+const { computeDiff, createUnifiedPatch } = await import("../src/components/tools/tool-diff.ts");
+const { jsonToTypeScript } = await import("../src/components/tools/tool-json-to-ts.ts");
 
 const defaultOptions = { emptyAsNull: false, inferTypes: true, outputMode: "objects" };
 
@@ -169,5 +171,127 @@ const hashBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode
 assert.equal(formatHashResult(hashBytes, "SHA-256", "hex", 3).structured.digest, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
 assert.equal(formatHashResult(hashBytes, "SHA-256", "base64", 3).structured.digest, "ungWv48Bz+pBQUDeXa4iI7ADYaOWF3qctBD/YfIAFa0=");
 assert.equal(formatHashResult(hashBytes, "SHA-256", "base64url", 3).structured.digest, "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+
+const diffOptions = { ignoreWhitespace: false, ignoreCase: false };
+const identicalDiff = computeDiff("a\nb\n", "a\nb\n", diffOptions);
+assert.equal(identicalDiff.identical, true);
+assert.equal(identicalDiff.addedLines, 0);
+assert.equal(identicalDiff.removedLines, 0);
+
+const modifiedDiff = computeDiff("hello world\nkeep\n", "hello there\nkeep\n", diffOptions);
+assert.equal(modifiedDiff.modifiedLines, 1);
+const modifiedRow = modifiedDiff.rows.find((row) => row.type === "modified");
+assert.ok(modifiedRow, "expected a modified row");
+assert.ok(modifiedRow.leftSegments.some((segment) => segment.kind === "removed" && segment.value.includes("world")));
+assert.ok(modifiedRow.rightSegments.some((segment) => segment.kind === "added" && segment.value.includes("there")));
+
+const addRemoveDiff = computeDiff("only-left\n", "only-right\nextra\n", diffOptions);
+assert.ok(addRemoveDiff.addedLines + addRemoveDiff.modifiedLines >= 1);
+
+const caseDiff = computeDiff("Hello\n", "hello\n", { ignoreWhitespace: false, ignoreCase: true });
+assert.equal(caseDiff.identical, true);
+
+// A1: 完全不相关的行不应被配成 modified（应拆成独立删除/新增）。
+const unrelatedDiff = computeDiff("apple\n", "banana\ncherry\n", diffOptions);
+assert.equal(unrelatedDiff.modifiedLines, 0);
+assert.equal(unrelatedDiff.removedLines, 1);
+assert.equal(unrelatedDiff.addedLines, 2);
+
+// A2: 插入夹杂修改时，真正被编辑的行配成 modified，纯插入行单独成 added。
+const blockDiff = computeDiff("function foo(a) {\n  return a;\n}\n", "function foo(a, b) {\n  // new\n  return a + b;\n}\n", diffOptions);
+assert.equal(blockDiff.modifiedLines, 2);
+assert.equal(blockDiff.addedLines, 1);
+const insertedRow = blockDiff.rows.find((row) => row.type === "added");
+assert.ok(insertedRow && insertedRow.rightSegments.map((segment) => segment.value).join("").includes("// new"));
+
+// A3: 单侧超大输入返回友好错误且不计算。
+const hugeDiff = computeDiff("x".repeat(200001), "y", diffOptions);
+assert.ok(hugeDiff.error);
+assert.equal(hugeDiff.rows.length, 0);
+
+// C1: 字符级粒度对密集小改更细，能切到单字符差异。
+const charDiff = computeDiff("color: red;\n", "color: blue;\n", { ignoreWhitespace: false, ignoreCase: false, granularity: "char" });
+const charRow = charDiff.rows.find((row) => row.type === "modified");
+assert.ok(charRow, "expected a modified row at char granularity");
+assert.ok(charRow.leftSegments.some((segment) => segment.kind === "equal" && segment.value.includes("color: ")));
+
+// C3: 生成标准 unified 补丁，含 @@ hunk 头与 +/- 行。
+const patch = createUnifiedPatch("foo\nbar\n", "foo\nbaz\n");
+assert.match(patch, /^@@ .* @@$/m);
+assert.match(patch, /\n-bar/);
+assert.match(patch, /\n\+baz/);
+
+const tsResult = jsonToTypeScript('{"id":1,"name":"知之","owner":{"email":"a@b.c"},"tags":["x"]}', { rootName: "Root", declaration: "interface" });
+assert.equal(tsResult.error, null);
+assert.match(tsResult.code, /export interface Root \{/);
+assert.match(tsResult.code, /id: number;/);
+assert.match(tsResult.code, /name: string;/);
+assert.match(tsResult.code, /owner: Owner;/);
+assert.match(tsResult.code, /tags: string\[\];/);
+assert.match(tsResult.code, /export interface Owner \{/);
+
+const tsType = jsonToTypeScript('{"a":true}', { rootName: "Config", declaration: "type" });
+assert.match(tsType.code, /export type Config = \{/);
+assert.match(tsType.code, /a: boolean;/);
+
+const tsArrayRoot = jsonToTypeScript('[1, 2, 3]', { rootName: "Nums", declaration: "interface" });
+assert.match(tsArrayRoot.code, /export type Nums = number\[\];/);
+
+const tsInvalid = jsonToTypeScript("{ not json }", { rootName: "Root", declaration: "interface" });
+assert.ok(tsInvalid.error, "expected invalid JSON to report an error");
+assert.equal(tsInvalid.parseError, true);
+
+// P0: 顶层对象数组不能产生重名 Root（旧版会同时声明 type Root 和 interface Root）。
+const tsRootArray = jsonToTypeScript('[{"a":1}]', { rootName: "Root", declaration: "interface" });
+assert.match(tsRootArray.code, /export type Root = RootItem\[\];/);
+assert.match(tsRootArray.code, /export interface RootItem \{/);
+assert.doesNotMatch(tsRootArray.code, /export interface Root \{/);
+
+// P0: 对象数组字段不一致 → 合并成单接口，缺失字段标可选。
+const tsMerge = jsonToTypeScript('{"items":[{"a":1},{"a":1,"b":2}]}', { rootName: "Root", declaration: "interface" });
+assert.match(tsMerge.code, /items: Item\[\];/);
+assert.match(tsMerge.code, /a: number;/);
+assert.match(tsMerge.code, /b\?: number;/);
+assert.doesNotMatch(tsMerge.code, /Item2/);
+
+// P0: 数组内 null 与有值合并成 T | null。
+const tsNullUnion = jsonToTypeScript('{"items":[{"x":1},{"x":null}]}', { rootName: "Root", declaration: "interface" });
+assert.match(tsNullUnion.code, /x: number \| null;/);
+
+// P1: 同名嵌套对象冲突时用父级名限定，而非 Meta2。
+const tsQualified = jsonToTypeScript('{"user":{"meta":{"a":1}},"company":{"meta":{"b":true}}}', { rootName: "Root", declaration: "interface" });
+assert.match(tsQualified.code, /export interface Meta \{/);
+assert.match(tsQualified.code, /export interface CompanyMeta \{/);
+assert.doesNotMatch(tsQualified.code, /Meta2/);
+
+// P2: 大小与深度上限返回友好错误（非 parseError）。
+const tsTooBig = jsonToTypeScript(`"${"x".repeat(500001)}"`, { rootName: "Root", declaration: "interface" });
+assert.match(tsTooBig.error, /JSON 过大/);
+assert.equal(tsTooBig.parseError, false);
+
+let deepJson = "1";
+for (let i = 0; i < 300; i += 1) {
+  deepJson = `[${deepJson}]`;
+}
+const tsTooDeep = jsonToTypeScript(deepJson, { rootName: "Root", declaration: "interface" });
+assert.match(tsTooDeep.error, /嵌套层级过深/);
+assert.equal(tsTooDeep.parseError, false);
+
+// P3: lone null 字段按 nullType 渲染。
+assert.match(jsonToTypeScript('{"a":null}', { rootName: "Root", declaration: "interface" }).code, /a: null;/);
+assert.match(jsonToTypeScript('{"a":null}', { rootName: "Root", declaration: "interface", nullType: "unknown" }).code, /a: unknown;/);
+
+// P3: readonly / 缩进 / export 开关。
+const tsOpts = jsonToTypeScript('{"id":1}', { rootName: "Root", declaration: "interface", readonly: true, indent: "4", exportTypes: false });
+assert.match(tsOpts.code, /^interface Root \{/);
+assert.match(tsOpts.code, /\n {4}readonly id: number;/);
+assert.doesNotMatch(tsOpts.code, /export /);
+
+// P3: inferDates 把 ISO 日期串识别为 Date，非日期串仍为 string。
+const tsDates = jsonToTypeScript('{"createdAt":"2024-01-02T03:04:05Z","note":"hello"}', { rootName: "Root", declaration: "interface", inferDates: true });
+assert.match(tsDates.code, /createdAt: Date;/);
+assert.match(tsDates.code, /note: string;/);
+// 默认不识别日期。
+assert.match(jsonToTypeScript('{"createdAt":"2024-01-02"}', { rootName: "Root", declaration: "interface" }).code, /createdAt: string;/);
 
 console.log("Tools smoke tests passed.");

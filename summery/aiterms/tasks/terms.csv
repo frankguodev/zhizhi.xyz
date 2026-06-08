@@ -1,2 +1,9 @@
 term,diagram,image,imageOptimize,story,sync,notes
-DPO,FALSE,TRUE,TRUE,FALSE,FALSE,
+Embeddings,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+Prompt Engineering,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+MoA,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+CoT,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+ToT,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+GEO,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+SEO,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+Vibe Coding,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,

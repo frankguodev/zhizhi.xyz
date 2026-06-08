@@ -10,7 +10,7 @@ import {
 import { checkAiTermQuality } from "@/lib/ai-term-quality";
 import { parseAiTermImport } from "@/lib/ai-term-import";
 import { listAiTermOperationLogs, writeAdminAiTermOperationLog } from "@/lib/admin-operation-logs";
-import { requireAdminApi } from "@/lib/admin-auth";
+import { requireAdminApi, requireAdminApiOrScriptToken } from "@/lib/admin-auth";
 import { scanAiTermFable } from "@/lib/markdown";
 
 const paramsSchema = z.object({
@@ -57,8 +57,8 @@ async function parseParams(params: Promise<{ locale: string; slug: string }>) {
   return paramsSchema.safeParse(await params);
 }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ locale: string; slug: string }> }) {
-  const admin = await requireAdminApi();
+export async function GET(request: Request, { params }: { params: Promise<{ locale: string; slug: string }> }) {
+  const admin = await requireAdminApiOrScriptToken(request);
   if (admin.response) {
     return admin.response;
   }

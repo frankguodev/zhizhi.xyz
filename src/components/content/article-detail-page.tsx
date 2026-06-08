@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays, RefreshCw } from "lucide-react";
 import { ArticleLikeButton } from "@/components/content/article-like-button";
-import { AnonymousFeedbackForm } from "@/components/content/anonymous-feedback-form";
 import { ArticleReader } from "@/components/content/article-reader";
 import { ArticleToc } from "@/components/content/article-toc";
 import { ArticleViewCount } from "@/components/content/article-view-count";
@@ -133,7 +132,6 @@ export function ArticleDetailPage({ article, blocks, tocItems, navigation, exter
                     <ArticleReader blocks={blocks} defaultMode={article.defaultReadingMode} locale={locale} supportsReadingMode={article.supportsReadingMode} />
                     <div className="mt-10 rounded-md bg-surface/58 px-4 py-5 sm:px-5">
                       <ArticleLikeButton locale={locale} slug={article.slug} />
-                      <AnonymousFeedbackForm locale={locale} pageUrl={currentPath} articleSlug={article.slug} articleTitle={article.title} />
                     </div>
                   </div>
                 </div>

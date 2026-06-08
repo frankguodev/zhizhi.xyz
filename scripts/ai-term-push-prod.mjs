@@ -24,9 +24,11 @@ function usage() {
   node scripts/ai-term-push-prod.mjs --env test <TERM>
   node scripts/ai-term-push-prod.mjs --env test <TERM> --force-existing
 
-Required env:
-  AI_TERM_ADMIN_COOKIE       Admin Cookie header value.
-  AI_TERM_TEST_ADMIN_COOKIE  Optional test admin Cookie header value.
+Auth env (Bearer Token preferred; Cookie is fallback):
+  AI_TERM_ADMIN_API_TOKEN       Script token for prod (sent as Authorization: Bearer).
+  AI_TERM_TEST_ADMIN_API_TOKEN  Script token for --env test.
+  AI_TERM_ADMIN_COOKIE          Fallback admin Cookie header value for prod.
+  AI_TERM_TEST_ADMIN_COOKIE     Fallback test admin Cookie header value.
 
 Optional env:
   AI_TERM_ADMIN_BASE_URL       Defaults to ${defaultBaseUrl} for prod.
@@ -46,11 +48,11 @@ Example:
   AI_TERM_TEST_ADMIN_BASE_URL='https://zhizhi-test.example.workers.dev'
   AI_TERM_TEST_ADMIN_COOKIE='zz_admin_session=...'
 
-  $env:AI_TERM_ADMIN_COOKIE='zz_admin_session=...'
+  $env:AI_TERM_ADMIN_API_TOKEN='paste-prod-script-token'
   npm run ai-term:push:prod -- Agent
 
   $env:AI_TERM_TEST_ADMIN_BASE_URL='https://zhizhi-test.example.workers.dev'
-  $env:AI_TERM_TEST_ADMIN_COOKIE='zz_admin_session=...'
+  $env:AI_TERM_TEST_ADMIN_API_TOKEN='paste-test-script-token'
   npm run ai-term:push:test -- Agent`);
 }
 
@@ -111,15 +113,25 @@ function getTargetEnv(args) {
   return value;
 }
 
-function getRequiredCookie(targetEnv) {
+// 优先使用脚本专用 Bearer Token，未配置时回退到复制的后台 Cookie。
+function getAuthHeaders(targetEnv) {
+  const token =
+    (targetEnv === "test" ? process.env.AI_TERM_TEST_ADMIN_API_TOKEN?.trim() : "")
+    || process.env.AI_TERM_ADMIN_API_TOKEN?.trim();
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+
   const cookie =
     (targetEnv === "test" ? process.env.AI_TERM_TEST_ADMIN_COOKIE?.trim() : "")
     || process.env.AI_TERM_ADMIN_COOKIE?.trim();
-  if (!cookie) {
-    const name = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_COOKIE or AI_TERM_ADMIN_COOKIE" : "AI_TERM_ADMIN_COOKIE";
-    fail(`Missing ${name}. Copy the ${targetEnv} admin Cookie header after logging in.`);
+  if (cookie) {
+    return { Cookie: cookie };
   }
-  return cookie;
+
+  const tokenName = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_API_TOKEN" : "AI_TERM_ADMIN_API_TOKEN";
+  const cookieName = targetEnv === "test" ? "AI_TERM_TEST_ADMIN_COOKIE or AI_TERM_ADMIN_COOKIE" : "AI_TERM_ADMIN_COOKIE";
+  fail(`Missing auth for ${targetEnv}. Set ${tokenName} (preferred) or copy ${cookieName} after logging in.`);
 }
 
 function getBaseUrl(targetEnv) {
@@ -197,7 +209,7 @@ function backfillImageMetadata(data, imageUrl, alt) {
   };
 }
 
-async function uploadDiagram({ baseUrl, cookie, filePath, locale, slug, alt }) {
+async function uploadDiagram({ baseUrl, authHeaders, filePath, locale, slug, alt }) {
   const bytes = await fs.readFile(filePath);
   const formData = new FormData();
   const blob = new Blob([bytes], { type: "image/webp" });
@@ -210,7 +222,7 @@ async function uploadDiagram({ baseUrl, cookie, filePath, locale, slug, alt }) {
 
   const response = await fetch(`${baseUrl}/api/admin/media`, {
     method: "POST",
-    headers: { Cookie: cookie },
+    headers: { ...authHeaders },
     body: formData,
   });
   const payload = await response.json().catch(() => null);
@@ -222,11 +234,11 @@ async function uploadDiagram({ baseUrl, cookie, filePath, locale, slug, alt }) {
   return payload.media;
 }
 
-async function importMarkdown({ baseUrl, cookie, markdown }) {
+async function importMarkdown({ baseUrl, authHeaders, markdown }) {
   const response = await fetch(`${baseUrl}/api/admin/ai-terms`, {
     method: "POST",
     headers: {
-      Cookie: cookie,
+      ...authHeaders,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ markdown }),
@@ -240,10 +252,10 @@ async function importMarkdown({ baseUrl, cookie, markdown }) {
   return payload;
 }
 
-async function getExistingAiTerm({ baseUrl, cookie, locale, slug }) {
+async function getExistingAiTerm({ baseUrl, authHeaders, locale, slug }) {
   const response = await fetch(`${baseUrl}/api/admin/ai-terms/${encodeURIComponent(locale)}/${encodeURIComponent(slug)}`, {
     method: "GET",
-    headers: { Cookie: cookie },
+    headers: { ...authHeaders },
   });
   const payload = await response.json().catch(() => null);
 
@@ -278,7 +290,7 @@ async function main() {
     process.exit(args.includes("-h") || args.includes("--help") ? 0 : 1);
   }
 
-  const cookie = dryRun ? "" : getRequiredCookie(targetEnv);
+  const authHeaders = dryRun ? {} : getAuthHeaders(targetEnv);
   const baseUrl = getBaseUrl(targetEnv);
   const maxBytes = getMaxBytes();
   const proPath = path.join(workspaceRoot, "summery", "aiterms", "pro", `${term}.md`);
@@ -317,7 +329,7 @@ async function main() {
     return;
   }
 
-  const existingAiTerm = await getExistingAiTerm({ baseUrl, cookie, locale, slug });
+  const existingAiTerm = await getExistingAiTerm({ baseUrl, authHeaders, locale, slug });
   if (existingAiTerm && !forceExisting) {
     console.log(`Existing AI term: ${describeExistingAiTerm(existingAiTerm)}`);
     console.log(`${baseUrl}/admin/ai-terms/${locale}/${slug}`);
@@ -328,7 +340,7 @@ async function main() {
   }
 
   const alt = getDiagramAlt(data);
-  const media = await uploadDiagram({ baseUrl, cookie, filePath: outputWebp, locale, slug, alt });
+  const media = await uploadDiagram({ baseUrl, authHeaders, filePath: outputWebp, locale, slug, alt });
   console.log(`Uploaded diagram: ${media.url}`);
 
   backfillImageMetadata(data, media.url, alt);
@@ -337,7 +349,7 @@ async function main() {
   await fs.writeFile(proPath, updatedMarkdown, "utf8");
   console.log(`Updated pro markdown: ${path.relative(workspaceRoot, proPath)}`);
 
-  const imported = await importMarkdown({ baseUrl, cookie, markdown: updatedMarkdown });
+  const imported = await importMarkdown({ baseUrl, authHeaders, markdown: updatedMarkdown });
   console.log(`Imported draft: ${imported.aiTerm.locale}/${imported.aiTerm.slug} (${imported.aiTerm.id})`);
   if (imported.importWarnings?.length) {
     console.log("Import warnings:");

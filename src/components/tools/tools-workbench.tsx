@@ -12,8 +12,10 @@ import {
   Crop,
   Download,
   FileText,
+  FileCode2,
   Fingerprint,
   FileJson2,
+  GitCompareArrows,
   FileImage,
   Hash as HashIcon,
   History,
@@ -80,6 +82,8 @@ const WechatQrTool = dynamic(() => import("./wechat-qr-tool").then((m) => m.Wech
 const ImageCropTool = dynamic(() => import("./image-crop-tool").then((m) => m.ImageCropTool), { ssr: false, loading: standaloneToolLoading });
 const QrDecodeTool = dynamic(() => import("./qr-decode-tool").then((m) => m.QrDecodeTool), { ssr: false, loading: standaloneToolLoading });
 const ImageBase64Tool = dynamic(() => import("./image-base64-tool").then((m) => m.ImageBase64Tool), { ssr: false, loading: standaloneToolLoading });
+const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
+const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
 
 type TextHighlight = {
   end: number;
@@ -107,7 +111,9 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   crop: "media",
   csv: "data",
   data: "data",
+  diff: "writing",
   encoding: "encode",
+  jsonToTs: "dev",
   hash: "dev",
   image: "media",
   imageBase64: "media",
@@ -175,6 +181,8 @@ const tabLabels = [
   { id: "encoding", label: "编码", description: "URL、Base64、Unicode 和 HTML 实体转换。", icon: Code2 },
   { id: "time", label: "时间", description: "时间戳与日期互转，自动识别秒和毫秒。", icon: TimerReset },
   { id: "text", label: "文本", description: "统计、去空行、去重、排序和大小写转换。", icon: Rows3 },
+  { id: "diff", label: "Diff", description: "对比两段文本或代码，左右并排显示行级差异并高亮改动字词。", icon: GitCompareArrows },
+  { id: "jsonToTs", label: "JSON→TS", description: "粘贴 JSON 自动推断 TypeScript interface / type 类型。", icon: FileCode2 },
   { id: "jwt", label: "JWT", description: "本地解码 JWT Header 和 Payload，不验证签名。", icon: KeyRound },
   { id: "hash", label: "Hash", description: "计算 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要。", icon: HashIcon },
   { id: "uuid", label: "UUID", description: "生成单个或批量 UUID v4。", icon: Fingerprint },
@@ -197,7 +205,9 @@ const toolSearchAliases: Record<ToolTab, string> = {
   crop: "crop rotate flip image avatar circle ratio aspect cut tupian caijian xuanzhuan fanzhuan touxiang yuanxing bili",
   csv: "csv tsv table excel sheet delimiter comma tab biaoge",
   data: "yaml toml front matter config configuration json peizhi",
+  diff: "diff compare text code difference changes merge duibi chayi wenben daima bijiao",
   encoding: "url uri base64 unicode html escape unescape encode decode bianma",
+  jsonToTs: "json typescript ts type interface convert codegen leixing jiekou zhuanhuan",
   hash: "sha sha1 sha256 sha384 sha512 digest checksum file wenjian",
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
   imageBase64: "image base64 datauri data url css html markdown embed inline tupian bianma neilian",
@@ -290,7 +300,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     crop: "",
     csv: csvOutput,
     data: structuredOutput,
+    diff: "",
     encoding: encodingOutput,
+    jsonToTs: "",
     hash: hashOutput,
     image: "",
     imageBase64: "",
@@ -311,7 +323,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     crop: "",
     csv: csvInput,
     data: structuredInput,
+    diff: "",
     encoding: encodingInput,
+    jsonToTs: "",
     hash: hashInput,
     image: "",
     imageBase64: "",
@@ -1439,6 +1453,8 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
           {activeTab === "crop" ? <ImageCropTool /> : null}
           {activeTab === "qrDecode" ? <QrDecodeTool /> : null}
           {activeTab === "imageBase64" ? <ImageBase64Tool /> : null}
+          {activeTab === "diff" ? <DiffTool /> : null}
+          {activeTab === "jsonToTs" ? <JsonToTsTool /> : null}
 
           {!isStandaloneTool(activeTab) ? (
             <>
@@ -2937,7 +2953,9 @@ function isStandaloneTool(tab: ToolTab) {
     tab === "linkQr" ||
     tab === "crop" ||
     tab === "qrDecode" ||
-    tab === "imageBase64"
+    tab === "imageBase64" ||
+    tab === "diff" ||
+    tab === "jsonToTs"
   );
 }
 
