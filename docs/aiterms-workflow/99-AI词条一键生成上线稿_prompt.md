@@ -66,7 +66,9 @@
 
 1. 读取 `./docs/aiterms-workflow/00-AI词条标准分类.md`。
 2. 先做已有内容检查：
-   - 如果本地 `./summery/aiterms/pro/{{TERM}}.md` 已存在，说明本地已有 pro 草稿；除非用户明确要求覆盖生成，否则优先复用现有稿件继续后续素材/同步步骤，或提醒用户确认是否重生成。
+   - 如果本地 `./summery/aiterms/pro/{{TERM}}.md` 已存在且不是空文件，说明本地已有 pro 草稿；除非用户明确要求覆盖生成，否则优先复用现有稿件继续后续素材/同步步骤。
+   - 如果本地 `./summery/aiterms/pro/{{TERM}}.md` 不存在、是 0 字节空文件，或无法解析为有效 Markdown/frontmatter，则视为缺少可用 pro，先按本文件生成 pro。
+   - 如果本地 pro 已存在但本地校验失败，优先做完成当前任务所需的最小修复（例如标准分类 `sort_order`、`source.human_reviewed: false`、明显缺失的必需字段），不要重写正文；修复后重新校验。若无法最小修复，再停止并说明。
    - 如果本次选项包含同步数据库（含“一条龙”默认同步测试环境），先确认目标环境；再查询目标库是否已有同 `locale + slug` 词条。
    - 测试环境查询：
      ```bash
@@ -92,8 +94,8 @@ npm run ai-term:validate -- {{TERM}}
 npm run ai-term:import:dry-run -- {{TERM}}
 ```
 
-7. 如要求一图看懂，按 `05-AI词条一图看懂_prompt.md` 生成 brief 和图片提示词。
-8. 如要求本地图，先确认当前环境存在可用的原生图片生成能力，或项目文档/脚本已明确指定可用的图片生成路径；不要自动启用用户未点名的 skill。确认后生成本地图，并运行：
+7. 如要求一图看懂，按 `05-AI词条一图看懂_prompt.md` 生成 brief 和图片提示词。若要求本地图、图片优化或同步，但 brief/prompt 不存在，也先补齐 brief/prompt。
+8. 如要求本地图，或图片优化/同步需要本地图但本地图不存在，先确认当前环境存在可用的原生图片生成能力，或项目文档/脚本已明确指定可用的图片生成路径；不要自动启用用户未点名的 skill。确认后生成本地图，并运行：
 
 ```bash
 npm run ai-term:diagram:check -- {{TERM}}
@@ -108,7 +110,7 @@ npm run ai-term:diagram:optimize -- {{TERM}}
 npm run ai-term:diagram:compress:dry-run -- {{TERM}}
 ```
 
-10. 如要求寓言故事，按 `04-AI词条寓言故事_prompt.md` 生成独立素材。
+10. 如要求寓言故事，按 `04-AI词条寓言故事_prompt.md` 生成独立素材。不要因为同步或图片优化自动生成寓言故事。
 11. 如要求同步数据库，先确认同步目标环境、目标库不存在同 `locale + slug` 词条（除非用户明确允许覆盖）和前置条件，再执行：
 
 ```bash
@@ -177,6 +179,7 @@ npm run ai-term:push:test -- {{TERM}} --force-existing
 - 是否联网核查；如明确要求资料卡，说明是否命中资料卡。
 - 是否生成一图看懂 brief/prompt。
 - 是否生成本地图。
+- 是否优化图片。
 - 是否调用 skill；未明确要求时必须为“否”。
 - 是否生成寓言故事。
 - 是否同步生产 D1/R2。

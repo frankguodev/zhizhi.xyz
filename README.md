@@ -1,13 +1,15 @@
 # 知之 ZhiZhi
 
 > 一个面向长期内容沉淀的个人知识分享系统。  
-> A personal knowledge system for high-quality articles, layered reading, publishing workflows, and learning paths.
+> A personal knowledge system for high-quality articles, an AI glossary, layered reading, publishing workflows, and learning paths.
 
-知之不是一个传统按时间倒序排列的博客，而是一个围绕“文章质量、分层阅读、专题路线、Markdown 发布、SEO 和可持续维护”设计的个人知识网站。
+知之不是一个传统按时间倒序排列的博客，而是一个围绕“文章质量、AI 词条库、分层阅读、专题路线、Markdown 发布、SEO 和可持续维护”设计的个人知识网站。
+
+内容由三类形态组成：长篇**文章**、把文章串成阅读路线的**专题**，以及用「一图看懂 + 快速理解」拆解 AI 术语的**词条**。
 
 项目当前运行目标是：
 
-- 让读者可以快速找到、读懂并继续追踪高质量文章。
+- 让读者可以快速找到、读懂并继续追踪高质量文章，并用词条快速建立 AI 概念。
 - 让作者可以从 Obsidian / Markdown / AI 辅助草稿顺畅进入后台发布流程。
 - 让内容通过专题、分类、质量检查和结构化 metadata 逐步变成可复用的知识系统。
 
@@ -41,6 +43,8 @@
 - 文章列表支持关键词、分类和排序筛选。
 - 文章详情支持阅读次数、点赞、更新时间、上一篇/下一篇、目录导航和匿名反馈。
 - 专题页把多篇文章组织成连续阅读路线。
+- AI 词条库 `/ai-terms` 列表 + `/ai-terms/[slug]` 详情，支持按分类、难度筛选和排序，并展示热度与趋势。
+- 工具页 `/tools` 提供 JSON、编码、图片、二维码等在浏览器本地运行的实用工具。
 - 中英文路由已预留并部分实现：`/`、`/en`、`/articles`、`/en/articles`、`/series`、`/en/series`。
 
 ### 分层阅读
@@ -55,6 +59,16 @@
 
 读者可以在快速阅读和完整阅读之间切换。普通正文保持完整主线，分层块用于补充解释、案例、风险和经验。
 
+### AI 词条库
+
+词条是与文章、专题并列的内容形态，专门拆解 AI 术语：
+
+- 详情页围绕「一图看懂」信息图、一句话概念、快速理解、相关概念和参考资料组织，帮助快速建立概念。
+- 列表页支持分类、难度筛选、排序和服务端分页，并展示热度与趋势，适合从几条增长到成百上千条。
+- 每条词条带标准分类（主分类 + 可选副分类）和词条间关系；尚未建立的关联会作为候选关系保存，前台暂不展示。
+- 「一图看懂」信息图统一带 `zhizhi.xyz` 水印、压缩到 100KB 以内（优先 1600×900，必要时降级 1280×720），存储在 R2。
+- 数据结构含 `locale` 和 `translation_key`，为中英文词条对照预留。
+
 ### 内容后台
 
 - Markdown 导入：解析 frontmatter、正文和分层块。
@@ -62,6 +76,7 @@
 - 已发布文章管理：更新、下架、恢复和删除。
 - 图片上传：上传到 R2，返回可插入正文的 Markdown 图片语法。
 - 专题管理：创建专题、排序文章、发布和归档。
+- 词条管理：导入、草稿、发布、批量操作、分类（taxonomy）维护和「一图看懂」图上传，发布前同样走质量检查。
 - 外部链接管理：首页、文章页、捐赠页和站点底部链接配置。
 - 匿名反馈管理：查看、标记、归档和删除读者反馈。
 
@@ -70,13 +85,14 @@
 - `sitemap.xml` 和 `robots.txt` 由 App Router 动态生成。
 - 文章 frontmatter 支持 `seo`、`open_graph`、`twitter`、`content`、`source`、`structured_data`。
 - 文章页生成 canonical、robots、Open Graph、Twitter Card 和 Article 结构化数据。
+- 词条同样输出 canonical、Open Graph 和结构化数据，列表页带 `ItemList` JSON-LD。
 - 隐藏内容默认不进入公开列表。
 
 ### Cloudflare 原生部署
 
 - Next.js 通过 OpenNext Cloudflare 适配到 Cloudflare Workers。
-- D1 存储文章、专题、后台配置、统计和反馈。
-- R2 存储文章图片、封面图和 OpenNext 缓存对象。
+- D1 存储文章、词条、专题、后台配置、统计和反馈。
+- R2 存储文章图片、封面图、词条「一图看懂」图和 OpenNext 缓存对象。
 - 测试环境和生产环境使用独立 Worker、D1、R2 配置。
 
 ## 技术栈
@@ -115,6 +131,7 @@ Admin Markdown Import
         v
 Cloudflare D1
   - articles
+  - ai_terms (+ categories / relations)
   - categories
   - series
   - links
@@ -124,13 +141,14 @@ Cloudflare D1
         v
 Next.js App Router on Cloudflare Workers
         |
-        +--> Public pages: home / articles / series / tools / legal
-        +--> Admin pages: import / drafts / published / series / links / feedback
+        +--> Public pages: home / articles / ai-terms / series / tools / legal
+        +--> Admin pages: import / drafts / published / ai-terms / series / links / feedback
         +--> API routes: public data / admin CRUD / media / likes / views / feedback
         |
         v
 Cloudflare R2
   - article media
+  - ai-term diagrams
   - OpenNext cache
 ```
 
@@ -143,9 +161,10 @@ src/
   app/
     page.tsx                         首页
     articles/                        文章列表、详情、分类、标签、质量页
+    ai-terms/                        词条列表和词条详情
     series/                          专题列表和专题详情
     tools/                           工具页
-    admin/                           后台页面
+    admin/                           后台页面（含 ai-terms 词条工作台）
     api/                             API route
     media/[...key]/                  R2 媒体读取路由
     sitemap.ts                       sitemap.xml
@@ -168,6 +187,11 @@ src/
     article-drafts.ts                草稿、发布和后台文章服务
     public-articles.ts               公开文章查询
     public-article-detail.ts         文章详情查询和导航
+    ai-terms.ts                      词条查询、列表筛选和详情
+    ai-term-import.ts                词条 Markdown / frontmatter 解析
+    ai-term-quality.ts               词条质量检查
+    ai-term-standard-categories.ts   词条标准分类
+    ai-term-structured-data.ts       词条结构化数据
     series.ts                        专题查询和管理
     media.ts                         R2 媒体上传和删除
     admin-auth.ts                    后台鉴权
@@ -176,9 +200,11 @@ src/
     anonymous-feedback.ts            匿名反馈
 
 drizzle/                             D1 migrations
-scripts/                             管理员、测试、编码检查等脚本
+scripts/                             管理员、测试、编码检查和 ai-term 工作流脚本
 docs/                                项目记忆、工作流提示词和问题记录
+  aiterms-workflow/                  词条生成工作流提示词（单条 99 / 批量 98 等）
 summery/                             内容生产过程文件
+  aiterms/                           词条生产产物（pro / diagram / story / sources ...）
 public/                              静态资源
 wrangler.example.toml                Cloudflare Workers 配置模板
 ```
@@ -451,6 +477,14 @@ npm run dev:remote
 - `07-预备发布稿_prompt.md`
 - `08-发布质量检查_prompt.md`
 
+### 词条生产流程
+
+AI 词条有独立的生成工作流，提示词在 `docs/aiterms-workflow/`，配套脚本统一以 `ai-term:` 为前缀（见[常用命令](#常用命令)）：
+
+- 单条：`99-AI词条一键生成上线稿_prompt.md`，从生成 `pro` 上线候选稿到按需产出「一图看懂」、寓言故事并同步草稿。
+- 批量：`98-AI词条批量生成_prompt.md`，读取清单逐条调度，单条流程仍以 99 为准。
+- 同步只入草稿（`status: "draft"`），不自动发布；同步前会先查目标库是否已存在同 `locale + slug` 词条，已存在默认停止，避免覆盖人工编辑。
+
 ## Markdown 文章格式
 
 后台导入文章需要 frontmatter。示例：
@@ -563,6 +597,12 @@ structured_data:
 | `/admin/articles/drafts/[locale]/[slug]` | 草稿编辑与发布 |
 | `/admin/articles/published` | 已发布文章管理 |
 | `/admin/articles/published/[locale]/[slug]` | 已发布文章编辑 |
+| `/admin/ai-terms` | 词条概览 |
+| `/admin/ai-terms/import` | 词条 Markdown 导入 |
+| `/admin/ai-terms/drafts` | 词条草稿列表 |
+| `/admin/ai-terms/published` | 已发布词条管理 |
+| `/admin/ai-terms/[locale]/[slug]` | 词条编辑与发布 |
+| `/admin/ai-terms/taxonomy` | 词条分类管理 |
 | `/admin/series` | 专题管理 |
 | `/admin/links` | 外部链接管理 |
 | `/admin/feedback` | 匿名反馈管理 |
@@ -592,6 +632,11 @@ Cloudflare Access -> /admin/login -> zz_admin_session -> role === admin
 | `tags` | 标签 |
 | `articles` | 文章主体、SEO、发布状态和阅读配置 |
 | `article_tags` | 文章和标签关联 |
+| `ai_terms` | 词条主体、SEO、发布状态、热度和质量分 |
+| `ai_term_categories` | 词条标准分类 |
+| `ai_term_category_relations` | 词条和分类关联 |
+| `ai_term_relations` | 已建立的词条间关系 |
+| `ai_term_relation_candidates` | 尚未建立的候选关系（前台暂不展示） |
 | `series` | 专题 |
 | `series_articles` | 专题文章排序关系 |
 | `external_links` | 首页、文章页、捐赠页和站点底部外链 |
@@ -612,6 +657,11 @@ drizzle/
   0003_article_likes.sql
   0004_article_views.sql
   0005_anonymous_feedback.sql
+  0006_ai_terms.sql
+  0007_ai_term_diagram_image.sql
+  0008_remove_ai_term_tags.sql
+  0009_seed_ai_term_standard_categories.sql
+  0010_ai_term_relation_candidates.sql
 ```
 
 ## 常用命令
@@ -702,6 +752,27 @@ npx wrangler d1 migrations apply zhizhi --remote --config wrangler.toml
 | `npm run test:public-api` | `node scripts/test-public-api.mjs` | 测试公开 API 基础行为。 |
 | `npm run test:admin-regression` | `node scripts/test-admin-regression.mjs` | 后台链路回归测试，覆盖登录、导入、草稿、媒体、发布、专题和外链等关键路径。 |
 
+### AI 词条工作流
+
+词条生成和同步的脚本，统一以 `ai-term:` 为前缀，词条名通过 `-- <TERM>` 传入（详见 `docs/aiterms-workflow/`）：
+
+| 命令 | 说明 |
+| --- | --- |
+| `npm run ai-term:validate -- <TERM>` | 校验 `pro` 上线候选稿字段和结构。 |
+| `npm run ai-term:import:dry-run -- <TERM>` | 模拟导入，提前发现解析或字段问题。 |
+| `npm run ai-term:check -- <TERM>` | 词条综合检查。 |
+| `npm run ai-term:diagram:check -- <TERM>` | 检查「一图看懂」图解文件是否齐全合规。 |
+| `npm run ai-term:diagram:optimize -- <TERM>` | 生成带 `zhizhi.xyz` 水印、100KB 以内的优化 WebP。 |
+| `npm run ai-term:diagram:compress:dry-run -- <TERM>` | 体检优化图的体积和尺寸，不写文件。 |
+| `npm run ai-term:sources:index` | 构建资料卡索引。 |
+| `npm run ai-term:sources:match -- <TERM>` | 为词条匹配资料卡（仅在使用资料卡时）。 |
+| `npm run ai-term:exists:test -- <TERM>` | 查询测试库是否已有同 `locale + slug` 词条。 |
+| `npm run ai-term:exists:prod -- <TERM>` | 查询生产库是否已有同 `locale + slug` 词条。 |
+| `npm run ai-term:push:test -- <TERM>` | 同步词条草稿到测试 D1/R2（不自动发布）。 |
+| `npm run ai-term:push:prod -- <TERM>` | 同步词条草稿到生产 D1/R2（不自动发布）。 |
+
+同步走后台鉴权接口，依赖 `AI_TERM_ADMIN_*` / `AI_TERM_TEST_ADMIN_*` 环境变量；同步前会先查目标库，已存在同 `locale + slug` 词条时默认停止，需明确允许覆盖才追加 `--force-existing`。
+
 ### 编码检查
 
 | 命令 | 实际执行 | 说明 |
@@ -782,6 +853,10 @@ database_id = "00000000-0000-0000-0000-000000000000"
 ```
 
 生产部署前必须替换为 `npx wrangler d1 create zhizhi` 返回的真实 ID，并执行远程 migration。
+
+### 词条和文章有什么区别？
+
+文章是长篇内容，支持分层阅读、专题串联和完整发布流程；词条是 AI 术语的轻量解释，围绕「一图看懂 + 快速理解」组织，强调一眼建立概念。两者各有独立的页面、数据表、后台工作台和生成工作流，但共用 D1、R2、后台鉴权和 SEO 体系。
 
 ### 项目是否可以直接作为通用博客模板？
 
