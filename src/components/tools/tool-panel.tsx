@@ -6,10 +6,12 @@ import type { ComponentType, ReactNode } from "react";
 // 与工作台内联工具（JWT/MD 等）统一的面板外观：标题栏（Link2 图标 + 标签 + 指标 + 动作按钮）
 // 与输入/输出框框样式。standalone 工具（Diff / JSON→TS）复用，保持全站工具布局一致。
 
+// 高度：clamp(下限, 视口比例 dvh, 上限)，与工作台 getPanelHeightClass 同档同值。内容区随屏放大、
+// 宽敞，不减 chrome 偏移、允许自然滚动；下限保证矮屏可用，上限防超大屏稀疏。min-h 保留 resize-y。
 const heights = {
-  compact: "min-h-56 md:min-h-64",
-  medium: "min-h-80 lg:min-h-[30rem]",
-  large: "min-h-[28rem] lg:min-h-[36rem]",
+  compact: "min-h-[clamp(14rem,36dvh,24rem)]",
+  medium: "min-h-[clamp(18rem,48dvh,34rem)]",
+  large: "min-h-[clamp(22rem,60dvh,46rem)]",
 } as const;
 
 export type ToolPanelHeight = keyof typeof heights;

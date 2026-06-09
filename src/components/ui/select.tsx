@@ -9,7 +9,7 @@ export type SelectOption = {
   value: string;
 };
 
-type SelectSize = "md" | "sm";
+type SelectSize = "md" | "sm" | "xs";
 
 type SelectProps = {
   ariaLabel?: string;
@@ -22,10 +22,11 @@ type SelectProps = {
 };
 
 // 全站共享的自定义下拉框：可访问的 listbox（方向键 / Home / End / Enter / Esc、外点关闭、焦点管理），
-// 用全局主题 token，size="md" 给后台筛选，size="sm" 给工具紧凑控件。
+// 用全局主题 token，size="md" 给后台筛选，size="sm" 给工具紧凑控件，size="xs" 与面板标题栏的 h-7 按钮对齐。
 const sizeStyles: Record<SelectSize, string> = {
   md: "h-11 gap-3 text-sm",
   sm: "h-10 gap-2 text-xs",
+  xs: "h-7 gap-1 px-2 text-[0.7rem]",
 };
 
 export function Select({ ariaLabel, className, options, value, onChange, disabled = false, size = "md" }: SelectProps) {
@@ -186,14 +187,17 @@ export function Select({ ariaLabel, className, options, value, onChange, disable
         onKeyDown={handleButtonKeyDown}
       >
         <span className="min-w-0 flex-1 truncate text-foreground">{selectedLabel}</span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted transition", open ? "rotate-180 text-accent" : "")} />
+        <ChevronDown className={cn("shrink-0 text-muted transition", size === "xs" ? "h-3.5 w-3.5" : "h-4 w-4", open ? "rotate-180 text-accent" : "")} />
       </button>
 
       {open ? (
         <div
           id={listboxId}
           role="listbox"
-          className="absolute left-0 right-0 z-40 mt-2 max-h-64 overflow-auto rounded-md border border-accent/25 bg-paper p-1.5 shadow-lg shadow-foreground/10"
+          className={cn(
+            "absolute left-0 right-0 z-40 max-h-64 overflow-auto rounded-md border border-accent/25 bg-paper shadow-lg shadow-foreground/10",
+            size === "xs" ? "mt-1 p-1" : "mt-2 p-1.5",
+          )}
           onKeyDown={handleListKeyDown}
         >
           {options.map((option, index) => (
@@ -204,7 +208,8 @@ export function Select({ ariaLabel, className, options, value, onChange, disable
               key={option.value}
               aria-selected={value === option.value}
               className={cn(
-                "flex min-h-9 w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left text-sm font-medium transition",
+                "flex w-full cursor-pointer items-center justify-between gap-2 rounded-md text-left font-medium transition",
+                size === "xs" ? "min-h-7 px-2 py-1 text-[0.7rem]" : "min-h-9 px-2.5 py-2 text-sm",
                 value === option.value ? "bg-accent/12 text-accent" : "text-foreground hover:bg-surface hover:text-accent",
                 index === activeIndex && value !== option.value ? "bg-surface text-accent" : "",
               )}
@@ -214,7 +219,7 @@ export function Select({ ariaLabel, className, options, value, onChange, disable
               onClick={() => selectOption(option.value)}
             >
               <span className="truncate">{option.label}</span>
-              {value === option.value ? <Check className="h-4 w-4 shrink-0" /> : null}
+              {value === option.value ? <Check className={cn("shrink-0", size === "xs" ? "h-3.5 w-3.5" : "h-4 w-4")} /> : null}
             </button>
           ))}
         </div>

@@ -29,7 +29,7 @@
 - 没有明确要求时，只生成 `pro`。
 - “生成一图看懂”：生成 brief 和图片提示词。
 - “生成本地图 / 生成图片 / 生成一图看懂本地图”：在当前环境已有可用、且未超出项目授权边界的图片生成路径时，生成本地图；不要把这句话自动理解为可以调用用户未点名的 skill、外部 API 或第三方生成脚本。
-- “优化图片 / 图片优化 / imageOptimize”：把一图看懂本地图处理为带 `zhizhi.xyz` 水印、100KB 以内的 WebP；优先输出 1600×900，若压缩后无法满足 100KB 以内，再降级为 1280×720。
+- “优化图片 / 图片优化 / imageOptimize”：把一图看懂本地图处理为100KB 以内的 WebP；优先输出 1600×900，若压缩后无法满足 100KB 以内，再降级为 1280×720。
 - “生成寓言故事”：生成独立寓言故事素材。
 - “同步测试环境 / 同步 test / 写入测试库”：同步测试环境 D1/R2，使用 `ai-term:push:test`。
 - “同步生产环境 / 同步生产草稿 / 写入生产库”：同步生产 D1/R2，使用 `ai-term:push:prod`。
@@ -148,7 +148,7 @@ npm run ai-term:push:test -- {{TERM}} --force-existing
 - `pro` 已存在且本地校验通过。
 - 本地图已存在。
 - 优化后的 `summery/aiterms/diagram/{{TERM}}_diagram.webp` 已存在。
-- 优化图带 `zhizhi.xyz` 水印，且不超过 100KB；尺寸优先 1600×900，若压缩后无法满足 100KB 以内，允许降级为 1280×720。
+- 优化图不超过 100KB；尺寸优先 1600×900，若压缩后无法满足 100KB 以内，允许降级为 1280×720。
 - 目标库不存在同 `locale + slug` 词条；如果已存在，默认停止并提示后台链接，只有用户明确允许覆盖时才继续。
 - 测试同步：`AI_TERM_TEST_ADMIN_API_TOKEN`（优先）或 `AI_TERM_TEST_ADMIN_COOKIE` 已设置，配合 `AI_TERM_TEST_ADMIN_BASE_URL`。
 - 生产同步：`AI_TERM_ADMIN_API_TOKEN`（优先）或 `AI_TERM_ADMIN_COOKIE` 已设置，`AI_TERM_ADMIN_BASE_URL` 默认 `https://zhizhi.xyz`。

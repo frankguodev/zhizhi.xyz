@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, ChevronUp, Search } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 type JsonView = "highlight" | "tree" | "text";
@@ -54,6 +54,108 @@ function tokenizeForHighlight(text: string): HighlightToken[] {
   return tokens;
 }
 
+type Match = { start: number; end: number };
+
+// 命中数上限，防止超大文本里常见关键词产生过多 <mark> 卡顿。
+const maxMatches = 5000;
+
+// 内容搜索：在文本里逐个找子串（大小写不敏感、字面量匹配，不走正则避免特殊字符干扰）。
+function findMatches(text: string, rawQuery: string): Match[] {
+  const query = rawQuery.trim();
+  if (!query) {
+    return [];
+  }
+  const haystack = text.toLowerCase();
+  const needle = query.toLowerCase();
+  const result: Match[] = [];
+  let index = haystack.indexOf(needle);
+  while (index !== -1 && result.length < maxMatches) {
+    result.push({ start: index, end: index + needle.length });
+    index = haystack.indexOf(needle, index + needle.length);
+  }
+  return result;
+}
+
+// 把语法高亮 token（或纯文本单 token）按命中区间切片，命中处包 <mark>，当前命中标 data 属性供滚动定位。
+function renderTokensWithSearch(tokens: HighlightToken[], matches: Match[], activeIndex: number): ReactNode {
+  const renderPlainToken = (token: HighlightToken, key: number) =>
+    token.cls === "plain" ? (
+      <Fragment key={key}>{token.text}</Fragment>
+    ) : (
+      <span key={key} style={{ color: tokenColor[token.cls] }}>
+        {token.text}
+      </span>
+    );
+
+  if (matches.length === 0) {
+    return tokens.map((token, index) => renderPlainToken(token, index));
+  }
+
+  const nodes: ReactNode[] = [];
+  let pos = 0;
+  let mi = 0;
+
+  tokens.forEach((token, ti) => {
+    const tokenStart = pos;
+    const tokenEnd = pos + token.text.length;
+    pos = tokenEnd;
+
+    while (mi < matches.length && matches[mi].end <= tokenStart) {
+      mi += 1;
+    }
+
+    if (mi >= matches.length || matches[mi].start >= tokenEnd) {
+      nodes.push(renderPlainToken(token, ti));
+      return;
+    }
+
+    const color = token.cls === "plain" ? undefined : tokenColor[token.cls];
+    const pieces: ReactNode[] = [];
+    let local = 0;
+    let k = mi;
+
+    while (k < matches.length && matches[k].start < tokenEnd) {
+      const sliceStart = Math.max(matches[k].start, tokenStart) - tokenStart;
+      const sliceEnd = Math.min(matches[k].end, tokenEnd) - tokenStart;
+      if (sliceStart > local) {
+        pieces.push(<Fragment key={`b${local}`}>{token.text.slice(local, sliceStart)}</Fragment>);
+      }
+      const isActive = k === activeIndex;
+      pieces.push(
+        <mark
+          key={`m${k}-${sliceStart}`}
+          data-json-active-match={isActive ? "true" : undefined}
+          className={`rounded-[2px] ${isActive ? "bg-amber/55 text-foreground ring-1 ring-amber" : "bg-amber/25 text-foreground"}`}
+        >
+          {token.text.slice(sliceStart, sliceEnd)}
+        </mark>,
+      );
+      local = sliceEnd;
+      if (matches[k].end <= tokenEnd) {
+        k += 1;
+      } else {
+        break;
+      }
+    }
+
+    if (local < token.text.length) {
+      pieces.push(<Fragment key={`a${local}`}>{token.text.slice(local)}</Fragment>);
+    }
+
+    nodes.push(
+      color ? (
+        <span key={ti} style={{ color }}>
+          {pieces}
+        </span>
+      ) : (
+        <Fragment key={ti}>{pieces}</Fragment>
+      ),
+    );
+  });
+
+  return nodes;
+}
+
 // 带行号槽的代码块：行号槽水平 sticky，与内容一起纵向滚动，行号能对上「第 N 行」报错。
 function CodeBlock({ text, children }: { text: string; children: ReactNode }) {
   const lineCount = useMemo(() => (text === "" ? 1 : text.split("\n").length), [text]);
@@ -63,39 +165,17 @@ function CodeBlock({ text, children }: { text: string; children: ReactNode }) {
   );
 
   return (
-    <div className="h-full overflow-auto rounded-md border border-line bg-paper/88 shadow-inner">
-      <div className="flex min-h-full min-w-full">
-        {gutter !== null ? (
-          <pre
-            aria-hidden="true"
-            className="sticky left-0 z-10 shrink-0 select-none border-r border-line/60 bg-paper px-2 py-3.5 text-right font-mono text-[0.8125rem] leading-6 text-muted/55"
-          >
-            {gutter}
-          </pre>
-        ) : null}
-        <pre className="grow whitespace-pre px-3.5 py-3.5 font-mono text-[0.8125rem] leading-6 text-foreground">{children}</pre>
-      </div>
+    <div className="flex min-h-full min-w-full">
+      {gutter !== null ? (
+        <pre
+          aria-hidden="true"
+          className="sticky left-0 z-10 shrink-0 select-none border-r border-line/60 bg-paper px-2 py-3.5 text-right font-mono text-[0.8125rem] leading-6 text-muted/55"
+        >
+          {gutter}
+        </pre>
+      ) : null}
+      <pre className="grow whitespace-pre px-3.5 py-3.5 font-mono text-[0.8125rem] leading-6 text-foreground">{children}</pre>
     </div>
-  );
-}
-
-function HighlightView({ text }: { text: string }) {
-  const tokens = useMemo(() => (text.length > maxHighlightChars ? null : tokenizeForHighlight(text)), [text]);
-
-  return (
-    <CodeBlock text={text}>
-      {tokens
-        ? tokens.map((token, index) =>
-            token.cls === "plain" ? (
-              <Fragment key={index}>{token.text}</Fragment>
-            ) : (
-              <span key={index} style={{ color: tokenColor[token.cls] }}>
-                {token.text}
-              </span>
-            ),
-          )
-        : text}
-    </CodeBlock>
   );
 }
 
@@ -205,136 +285,64 @@ function TreeNode({ name, value, depth }: { name: string | number | null; value:
 
 function TreeView({ value }: { value: unknown }) {
   return (
-    <div className="h-full overflow-auto rounded-md border border-line bg-paper/88 p-3.5 font-mono text-[0.8125rem] leading-6 text-foreground shadow-inner">
+    <div className="min-h-full p-3.5 font-mono text-[0.8125rem] leading-6 text-foreground">
       <TreeNode name={null} value={value} depth={0} />
     </div>
   );
 }
 
-type PathSegment = { type: "key"; key: string } | { type: "index"; index: number } | { type: "wildcard" };
-
-function parsePathSegments(path: string): PathSegment[] | null {
-  const segments: PathSegment[] = [];
-  let index = 0;
-
-  while (index < path.length) {
-    const char = path[index];
-
-    if (char === ".") {
-      index += 1;
-      continue;
-    }
-
-    if (char === "[") {
-      const close = path.indexOf("]", index);
-      if (close === -1) {
-        return null;
-      }
-      const inner = path.slice(index + 1, close).trim();
-      if (inner === "*") {
-        segments.push({ type: "wildcard" });
-      } else if (/^\d+$/.test(inner)) {
-        segments.push({ type: "index", index: Number(inner) });
-      } else if (/^"(.*)"$/.test(inner) || /^'(.*)'$/.test(inner)) {
-        segments.push({ type: "key", key: inner.slice(1, -1) });
-      } else {
-        return null;
-      }
-      index = close + 1;
-      continue;
-    }
-
-    if (char === "*") {
-      segments.push({ type: "wildcard" });
-      index += 1;
-      continue;
-    }
-
-    const bareKey = /^[^.[]+/.exec(path.slice(index));
-    if (!bareKey) {
-      return null;
-    }
-    segments.push({ type: "key", key: bareKey[0] });
-    index += bareKey[0].length;
-  }
-
-  return segments.length ? segments : null;
-}
-
-export function evaluateJsonPath(root: unknown, rawPath: string): { ok: true; value: unknown } | { ok: false; error: string } {
-  const path = rawPath.trim().replace(/^\$/, "").replace(/^\./, "");
-  if (!path) {
-    return { ok: true, value: root };
-  }
-
-  const segments = parsePathSegments(path);
-  if (!segments) {
-    return { ok: false, error: "路径语法无效，示例：data.items[0].name 或 users[*].id" };
-  }
-
-  let current: unknown[] = [root];
-  let wildcardUsed = false;
-
-  for (const segment of segments) {
-    const next: unknown[] = [];
-    for (const node of current) {
-      if (segment.type === "wildcard") {
-        if (Array.isArray(node)) {
-          next.push(...node);
-        } else if (node !== null && typeof node === "object") {
-          next.push(...Object.values(node as Record<string, unknown>));
-        } else {
-          return { ok: false, error: "[*] 只能用于数组或对象" };
-        }
-      } else if (segment.type === "index") {
-        if (Array.isArray(node) && segment.index < node.length) {
-          next.push(node[segment.index]);
-        } else {
-          return { ok: false, error: `索引 [${segment.index}] 越界，或目标不是数组` };
-        }
-      } else if (node !== null && typeof node === "object" && !Array.isArray(node) && segment.key in (node as Record<string, unknown>)) {
-        next.push((node as Record<string, unknown>)[segment.key]);
-      } else {
-        return { ok: false, error: `找不到键「${segment.key}」` };
-      }
-    }
-    wildcardUsed = wildcardUsed || segment.type === "wildcard";
-    current = next;
-  }
-
-  return { ok: true, value: wildcardUsed ? current : current[0] };
-}
-
 export function JsonViewer({
   value,
   text,
-  indent,
   heightClass,
 }: {
   value: unknown;
   text: string;
-  indent: number;
   heightClass: string;
 }) {
   const [view, setView] = useState<JsonView>("highlight");
-  const [path, setPath] = useState("");
-
-  const result = useMemo(() => evaluateJsonPath(value, path), [value, path]);
-  const displayValue = result.ok ? result.value : undefined;
-  const displayText = useMemo(() => {
-    if (!result.ok) {
-      return "";
-    }
-    if (!path.trim()) {
-      return text;
-    }
-    return JSON.stringify(result.value, null, indent);
-  }, [result, path, text, indent]);
+  const [query, setQuery] = useState("");
+  const [activeMatch, setActiveMatch] = useState(0);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const stats = useMemo(
-    () => (result.ok && displayValue !== null && typeof displayValue === "object" ? computeJsonStats(displayValue) : null),
-    [result.ok, displayValue],
+    () => (value !== null && typeof value === "object" ? computeJsonStats(value) : null),
+    [value],
   );
+
+  const searchable = view !== "tree";
+  const matches = useMemo(() => findMatches(text, query), [text, query]);
+  const count = matches.length;
+  const safeActive = count === 0 ? 0 : Math.min(activeMatch, count - 1);
+
+  const renderNodes = useMemo(() => {
+    if (!searchable) {
+      return null;
+    }
+    const tokens: HighlightToken[] =
+      view === "highlight" && text.length <= maxHighlightChars ? tokenizeForHighlight(text) : [{ cls: "plain", text }];
+    return renderTokensWithSearch(tokens, matches, safeActive);
+  }, [searchable, view, text, matches, safeActive]);
+
+  useEffect(() => {
+    if (searchable && count > 0) {
+      contentRef.current?.querySelector('[data-json-active-match="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [searchable, safeActive, count]);
+
+  // Ctrl/⌘+F 拦掉浏览器原生查找、聚焦站内内容搜索框。仅在 JsonViewer 挂载（即有合法 JSON 结果）期间生效。
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && (event.key === "f" || event.key === "F")) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const views: Array<{ id: JsonView; label: string }> = [
     { id: "highlight", label: "高亮" },
@@ -342,10 +350,21 @@ export function JsonViewer({
     { id: "text", label: "文本" },
   ];
 
+  function goToMatch(delta: number) {
+    if (count === 0) {
+      return;
+    }
+    setActiveMatch((current) => {
+      const base = Math.min(current, count - 1);
+      return (base + delta + count) % count;
+    });
+  }
+
   return (
-    <div className={`flex ${heightClass} flex-col gap-2`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-md bg-accent/8 p-0.5">
+    <div className={`flex ${heightClass} flex-col overflow-hidden rounded-md border border-line bg-paper/88 shadow-inner`}>
+      {/* 吸顶工具条：视图切换 + 内容搜索 + 统计，作为结果框内部的一条 bar，让结果框外框与左侧输入框对齐。 */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-line/60 bg-paper/70 px-2 py-1.5">
+        <div className="inline-flex shrink-0 rounded-md bg-accent/8 p-0.5">
           {views.map((item) => (
             <button
               key={item.id}
@@ -360,41 +379,69 @@ export function JsonViewer({
             </button>
           ))}
         </div>
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">{"JSON 路径查询"}</span>
+        <div className="relative flex min-w-0 flex-1 items-center">
+          <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-muted" />
           <input
-            className={`h-8 w-full rounded-md border bg-paper/88 px-2.5 font-mono text-xs text-foreground outline-none transition placeholder:text-muted/70 focus:ring-2 focus:ring-accent/15 ${
-              !result.ok ? "border-[color-mix(in_srgb,var(--accent-2)_55%,var(--line))] focus:border-[color-mix(in_srgb,var(--accent-2)_62%,var(--line))]" : "border-line focus:border-accent/55"
-            }`}
-            value={path}
-            onChange={(event) => setPath(event.target.value)}
-            placeholder="路径查询：data.items[0].name、users[*].id"
+            ref={searchInputRef}
+            className="h-7 w-full rounded-md border border-line bg-background pl-8 pr-2.5 font-mono text-xs text-foreground outline-none transition placeholder:text-muted/70 focus:border-accent/55 focus:ring-2 focus:ring-accent/15"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setActiveMatch(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && searchable) {
+                event.preventDefault();
+                goToMatch(event.shiftKey ? -1 : 1);
+              } else if (event.key === "Escape") {
+                event.currentTarget.blur();
+              }
+            }}
+            placeholder="内容搜索：键名或值…"
             spellCheck={false}
+            aria-label="内容搜索"
           />
-        </label>
+        </div>
+        {query.trim() ? (
+          searchable ? (
+            <div className="flex shrink-0 items-center gap-1">
+              <span className="min-w-[3rem] text-center text-xs tabular-nums text-muted">
+                {count === 0 ? "0/0" : `${safeActive + 1}/${count}`}
+              </span>
+              <button
+                type="button"
+                aria-label="上一处"
+                disabled={count === 0}
+                onClick={() => goToMatch(-1)}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-accent/6 text-muted transition hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="下一处"
+                disabled={count === 0}
+                onClick={() => goToMatch(1)}
+                className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-accent/6 text-muted transition hover:bg-accent/10 hover:text-accent disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <span className="shrink-0 text-xs text-muted/80">{`${count} 处（切到文本/高亮可定位）`}</span>
+          )
+        ) : stats ? (
+          <span className="shrink-0 text-xs text-muted/80">
+            {`对象 ${stats.objects} · 数组 ${stats.arrays} · 键 ${stats.keys} · 最深 ${stats.depth} 层`}
+          </span>
+        ) : null}
       </div>
 
-      {!result.ok && path.trim() ? (
-        <p className="text-xs font-medium text-[var(--accent-2)]">{result.error}</p>
-      ) : stats ? (
-        <p className="text-xs text-muted/80">
-          {`对象 ${stats.objects} · 数组 ${stats.arrays} · 键 ${stats.keys} · 最深 ${stats.depth} 层`}
-        </p>
-      ) : null}
-
-      <div className="min-h-0 flex-1">
-        {result.ok ? (
-          view === "tree" ? (
-            <TreeView value={displayValue} />
-          ) : view === "text" ? (
-            <CodeBlock text={displayText}>{displayText}</CodeBlock>
-          ) : (
-            <HighlightView text={displayText} />
-          )
+      <div ref={contentRef} className="min-h-0 flex-1 overflow-auto">
+        {view === "tree" ? (
+          <TreeView value={value} />
         ) : (
-          <div className="flex h-full items-center justify-center rounded-md border border-line bg-paper/88 text-xs text-muted shadow-inner">
-            {"没有匹配到内容，请检查路径。"}
-          </div>
+          <CodeBlock text={text}>{renderNodes}</CodeBlock>
         )}
       </div>
     </div>

@@ -25,6 +25,17 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-09",
+    title: "工具体验优化：命令面板切换、JSON 内容搜索与界面精修",
+    changes: [
+      { type: "added", label: "工具切换", text: "新增命令面板：点顶部「切换工具」或按 ⌘K / Ctrl+K，输入关键词或用方向键，在全部工具间快速切换。" },
+      { type: "added", label: "JSON 内容搜索", text: "结果区改为按内容搜索（替代原「路径查询」）：输入键名或值即高亮全部命中并计数，Enter / ↑↓ 逐个跳转，按 Ctrl / ⌘ + F 一键唤起。" },
+      { type: "improved", label: "JSON 操作", text: "把格式化、压缩、转换、导入文件归到输入区，缩进与自动格式化归到结果区，更顺手；「清空」加了二次确认避免误删；去掉多余的有效 / 无效标记（结果区已直接展示）。" },
+      { type: "improved", label: "工具界面", text: "工具区与背景融合更简洁，内容区随窗口自适应放大，输入框与结果框上下对齐。" },
+      { type: "improved", label: "滚动条", text: "全站滚动条改为更细、更克制的样式，随明暗主题切换。" },
+    ],
+  },
+  {
     date: "2026-06-08",
     title: "JSON 工具全面升级：高亮、树形、路径查询与智能修复",
     changes: [

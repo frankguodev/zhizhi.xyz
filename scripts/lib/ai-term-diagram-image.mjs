@@ -161,76 +161,6 @@ function flattenAlpha(imageData) {
   return { data, width: imageData.width, height: imageData.height };
 }
 
-const glyphs = {
-  ".": ["00000", "00000", "00000", "00000", "00000", "01100", "01100"],
-  h: ["10000", "10000", "10110", "11001", "10001", "10001", "10001"],
-  i: ["00100", "00000", "01100", "00100", "00100", "00100", "01110"],
-  x: ["10001", "01010", "00100", "00100", "01010", "10001", "10001"],
-  y: ["10001", "10001", "01010", "00100", "00100", "01000", "10000"],
-  z: ["11111", "00010", "00100", "01000", "10000", "10000", "11111"],
-};
-
-function blendPixel(data, width, x, y, color, alpha) {
-  if (x < 0 || y < 0 || x >= width) {
-    return;
-  }
-  const index = (y * width + x) * 4;
-  if (index < 0 || index + 3 >= data.length) {
-    return;
-  }
-  const sourceAlpha = alpha;
-  const targetAlpha = data[index + 3] / 255;
-  const outAlpha = sourceAlpha + targetAlpha * (1 - sourceAlpha);
-  if (outAlpha <= 0) {
-    return;
-  }
-  data[index] = Math.round((color[0] * sourceAlpha + data[index] * targetAlpha * (1 - sourceAlpha)) / outAlpha);
-  data[index + 1] = Math.round((color[1] * sourceAlpha + data[index + 1] * targetAlpha * (1 - sourceAlpha)) / outAlpha);
-  data[index + 2] = Math.round((color[2] * sourceAlpha + data[index + 2] * targetAlpha * (1 - sourceAlpha)) / outAlpha);
-  data[index + 3] = Math.round(outAlpha * 255);
-}
-
-function textPixelWidth(text, scale) {
-  return text.split("").reduce((total, char, index) => {
-    const glyph = glyphs[char] ?? glyphs["."];
-    return total + glyph[0].length * scale + (index === text.length - 1 ? 0 : scale);
-  }, 0);
-}
-
-function addWatermark(imageData) {
-  // Keep the public watermark all lowercase; this is the visible brand text on AI term diagrams.
-  const watermarkText = "zhizhi.xyz";
-  const data = new Uint8ClampedArray(imageData.data);
-  const scale = Math.max(2, Math.round(imageData.width / 640));
-  const marginX = Math.max(16, Math.round(imageData.width * 0.017));
-  const marginY = Math.max(10, Math.round(imageData.height * 0.017));
-  const color = [47, 79, 53];
-  const alpha = 0.42;
-  const textWidth = textPixelWidth(watermarkText, scale);
-  const textHeight = 7 * scale;
-  let cursorX = imageData.width - marginX - textWidth;
-  const startY = imageData.height - marginY - textHeight;
-
-  for (const char of watermarkText) {
-    const glyph = glyphs[char] ?? glyphs["."];
-    for (let gy = 0; gy < glyph.length; gy += 1) {
-      for (let gx = 0; gx < glyph[gy].length; gx += 1) {
-        if (glyph[gy][gx] !== "1") {
-          continue;
-        }
-        for (let sy = 0; sy < scale; sy += 1) {
-          for (let sx = 0; sx < scale; sx += 1) {
-            blendPixel(data, imageData.width, cursorX + gx * scale + sx, startY + gy * scale + sy, color, alpha);
-          }
-        }
-      }
-    }
-    cursorX += (glyph[0].length + 1) * scale;
-  }
-
-  return { data, width: imageData.width, height: imageData.height };
-}
-
 async function encodeWebpCandidate(imageData, quality) {
   if (!webpEncoderReady) {
     const wasm = await fs.readFile(path.join(process.cwd(), "node_modules", "@jsquash", "webp", "codec", "enc", "webp_enc.wasm"));
@@ -255,7 +185,7 @@ export async function buildOptimizedDiagram(inputPath, maxBytes = defaultMaxWebp
   let smallest = null;
 
   for (const size of optimizedDiagramSizes) {
-    const resized = addWatermark(resizeImageData(source, size.width));
+    const resized = resizeImageData(source, size.width);
     for (const quality of qualities) {
       const buffer = await encodeWebpCandidate(resized, quality);
       const candidate = {

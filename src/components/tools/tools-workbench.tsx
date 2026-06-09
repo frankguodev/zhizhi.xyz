@@ -5,7 +5,6 @@ import {
   ArrowRightLeft,
   Binary,
   Braces,
-  Check,
   ChevronDown,
   Clipboard,
   Code2,
@@ -20,7 +19,10 @@ import {
   Hash as HashIcon,
   History,
   KeyRound,
+  LayoutGrid,
   Link2,
+  Lock,
+  MoreHorizontal,
   Palette,
   QrCode,
   Rows3,
@@ -31,11 +33,14 @@ import {
   Table2,
   TimerReset,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import type { ComponentType, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Select } from "@/components/ui/select";
+import { ToolCommandPalette, type PaletteTool } from "./tool-command-palette";
 import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
@@ -44,7 +49,7 @@ import { enhanceJsonError, getJsonErrorHighlight, repairJsonText, translateJsonE
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
 import { readToolPreferences, writeToolPreferences } from "./tool-preferences";
 import { toolSlugById } from "@/lib/tools-meta";
-import { getSampleInput, sampleCsv, sampleMarkdown, sampleStructured } from "./tool-samples";
+import { sampleCsv, sampleMarkdown, sampleStructured } from "./tool-samples";
 import { parseTomlDocument, parseYamlDocument } from "./tool-structured";
 import type {
   CsvDelimiter,
@@ -140,7 +145,6 @@ const copyLabels = {
   input: "输入",
   output: "结果",
   importJson: "导入文件",
-  resetSample: "恢复示例",
   swap: "结果转输入",
   exchange: "交换",
   clear: "清空",
@@ -152,6 +156,7 @@ const copyLabels = {
   clearAllHistory: "清空全部",
   cancel: "取消",
   confirmClearAction: "确认清空",
+  confirmClearPrompt: "确定清空？此操作不可撤销。",
   confirmClearTitle: "清空历史记录",
   emptyHistory: "暂无历史记录。",
   historySearch: "搜索历史",
@@ -173,7 +178,6 @@ const copyLabels = {
   importFailed: "文件导入失败，请重新选择。",
   importedMessage: "文件已导入输入框。",
   movedMessage: "结果已填入输入框。",
-  sampleRestoredMessage: "示例已恢复。",
   copyFailed: "复制失败，请手动选择结果。",
   emptyInput: "输入框没有可复制的内容。",
   emptyOutput: "结果框没有可复制的内容。",
@@ -227,15 +231,26 @@ const toolSearchAliases: Record<ToolTab, string> = {
   wechatQr: "wechat weixin qr qrcode contact friend avatar scan saoyisao erweima touxiang",
 };
 
+// 命令面板用的工具清单：在 tabLabels 基础上补上分组与搜索别名，供 ⌘K 切换器过滤。
+const paletteTools: readonly PaletteTool[] = tabLabels.map((tab) => ({
+  id: tab.id,
+  label: tab.label,
+  description: tab.description,
+  icon: tab.icon,
+  group: toolGroupByTab[tab.id],
+  aliases: toolSearchAliases[tab.id],
+}));
+
 export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) {
   const labels = copyLabels;
   const [preferencesReady, setPreferencesReady] = useState(false);
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTool ?? "json");
   const [activeGroup, setActiveGroup] = useState<ToolGroup>(initialTool ? toolGroupByTab[initialTool] : "data");
   const [mobilePanel, setMobilePanel] = useState<"input" | "output">("input");
-  const [toolSearch, setToolSearch] = useState("");
   const [historyMounted, setHistoryMounted] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
+  const [paletteMounted, setPaletteMounted] = useState(false);
+  const [paletteVisible, setPaletteVisible] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
   const [toolHistoryItems, setToolHistoryItems] = useState<ToolHistoryItem[]>([]);
   const [structuredResult, setStructuredResult] = useState<StructuredToolResult | null>(null);
@@ -293,6 +308,10 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const jsonWorkerRef = useRef<Worker | null>(null);
   const historyAnimationFrameRef = useRef(0);
   const historyCloseTimerRef = useRef(0);
+  const paletteAnimationFrameRef = useRef(0);
+  const paletteCloseTimerRef = useRef(0);
+  const paletteVisibleRef = useRef(false);
+  paletteVisibleRef.current = paletteVisible;
   const utilityPendingRef = useRef<UtilityWorkerPending | null>(null);
   const utilityRequestIdRef = useRef(0);
   const utilityWorkerRef = useRef<Worker | null>(null);
@@ -350,14 +369,6 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const ActiveIcon = activeTabInfo.icon;
   const expandedWorkspace = isExpandedWorkspaceTool(activeTab);
   const panelSize = getPanelSize(activeTab);
-  const filteredTabs = useMemo(() => {
-    const keyword = toolSearch.trim().toLowerCase();
-    return tabLabels.filter((tab) => {
-      const searchable = `${tab.label} ${tab.description} ${tab.id} ${toolSearchAliases[tab.id]}`.toLowerCase();
-      // 有关键词时跨所有分组搜索；否则只看当前分组（去掉「全部」后，搜索仍能找到任意工具）。
-      return keyword ? searchable.includes(keyword) : toolGroupByTab[tab.id] === activeGroup;
-    });
-  }, [activeGroup, toolSearch]);
   const currentInputMetrics = useMemo(() => getTextMetrics(currentInput), [currentInput]);
   const currentOutputMetrics = useMemo(() => getTextMetrics(currentOutput), [currentOutput]);
 
@@ -523,6 +534,12 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
 
   useEffect(() => () => {
     clearHistoryTransitionTimers();
+    if (paletteAnimationFrameRef.current) {
+      window.cancelAnimationFrame(paletteAnimationFrameRef.current);
+    }
+    if (paletteCloseTimerRef.current) {
+      window.clearTimeout(paletteCloseTimerRef.current);
+    }
   }, []);
 
   function terminateJsonWorker() {
@@ -621,6 +638,54 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       openHistoryPanel();
     }
   }
+
+  const openCommandPalette = useCallback(() => {
+    if (paletteCloseTimerRef.current) {
+      window.clearTimeout(paletteCloseTimerRef.current);
+      paletteCloseTimerRef.current = 0;
+    }
+    if (paletteAnimationFrameRef.current) {
+      window.cancelAnimationFrame(paletteAnimationFrameRef.current);
+      paletteAnimationFrameRef.current = 0;
+    }
+    setPaletteMounted(true);
+    paletteAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      paletteAnimationFrameRef.current = 0;
+      setPaletteVisible(true);
+    });
+  }, []);
+
+  const closeCommandPalette = useCallback(() => {
+    if (paletteAnimationFrameRef.current) {
+      window.cancelAnimationFrame(paletteAnimationFrameRef.current);
+      paletteAnimationFrameRef.current = 0;
+    }
+    setPaletteVisible(false);
+    paletteCloseTimerRef.current = window.setTimeout(() => {
+      paletteCloseTimerRef.current = 0;
+      setPaletteMounted(false);
+    }, historyDrawerTransitionMs);
+  }, []);
+
+  const toggleCommandPalette = useCallback(() => {
+    if (paletteVisibleRef.current) {
+      closeCommandPalette();
+    } else {
+      openCommandPalette();
+    }
+  }, [closeCommandPalette, openCommandPalette]);
+
+  // ⌘K / Ctrl+K 打开或关闭工具切换面板。
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && (event.key === "k" || event.key === "K")) {
+        event.preventDefault();
+        toggleCommandPalette();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggleCommandPalette]);
 
   function getUtilityWorker() {
     if (utilityWorkerRef.current) {
@@ -762,43 +827,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     setCopiedTarget(null);
   }
 
-  function selectGroup(group: ToolGroup) {
-    setActiveGroup(group);
-    if (toolGroupByTab[activeTab] === group) {
-      return;
-    }
-
-    const firstTool = tabLabels.find((tab) => toolGroupByTab[tab.id] === group);
-    if (firstTool) {
-      selectTool(firstTool.id);
-    }
-  }
-
-  function onTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>, index: number) {
-    const count = filteredTabs.length;
-    if (count === 0) {
-      return;
-    }
-
-    let next = -1;
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      next = (index + 1) % count;
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      next = (index - 1 + count) % count;
-    } else if (event.key === "Home") {
-      next = 0;
-    } else if (event.key === "End") {
-      next = count - 1;
-    }
-
-    const target = next === -1 ? null : filteredTabs[next];
-    if (!target) {
-      return;
-    }
-
-    event.preventDefault();
-    selectTool(target.id);
-    window.requestAnimationFrame(() => document.getElementById(`tools-tab-${target.id}`)?.focus());
+  function selectToolFromPalette(tab: ToolTab) {
+    selectTool(tab);
+    closeCommandPalette();
   }
 
   async function copyText(value: string, target: "input" | "output") {
@@ -928,13 +959,6 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     }
     setToolHistoryItems(clearToolHistory(toolHistoryItems));
     showStatus("success", labels.historyClearedMessage);
-  }
-
-  function restoreSampleInput() {
-    setInput(getSampleInput(activeTab));
-    setOutput("");
-    setStructuredResult(null);
-    showStatus("success", labels.sampleRestoredMessage);
   }
 
   function exchangeInputOutput() {
@@ -1317,82 +1341,21 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
 
   return (
     <div className="grid gap-4">
-      <section className="mx-auto w-full max-w-7xl rounded-md border border-line bg-paper/72 p-3 shadow-[var(--shadow-quiet)]">
-        <div className="grid gap-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5" aria-label="工具分组">
-              {toolGroups.map((group) => {
-                const active = group.id === activeGroup;
-                return (
-                  <button
-                    key={group.id}
-                    className={`inline-flex h-8 cursor-pointer items-center justify-center rounded-md px-3 text-xs font-semibold transition ${
-                      active ? "bg-accent/22 text-accent shadow-[var(--shadow-quiet)]" : "bg-accent/8 text-muted hover:bg-accent/12 hover:text-accent"
-                    }`}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => selectGroup(group.id)}
-                  >
-                    {group.label}
-                  </button>
-                );
-              })}
-            </div>
-            <label className="flex h-8 w-full items-center gap-2 rounded-md border border-line bg-background/64 px-2.5 text-xs font-semibold text-muted focus-within:border-accent/45 focus-within:ring-2 focus-within:ring-accent/15 sm:w-56 lg:w-64">
-              <Search className="h-3.5 w-3.5 text-accent" />
-              <input
-                className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted"
-                value={toolSearch}
-                onChange={(event) => setToolSearch(event.target.value)}
-                aria-label="搜索工具"
-                placeholder="搜索"
-              />
-            </label>
-          </div>
-          <nav className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6" aria-label="工具" role="tablist" aria-orientation="horizontal">
-            {filteredTabs.map((tab, index) => {
-              const active = tab.id === activeTab;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  id={`tools-tab-${tab.id}`}
-                  className={`group flex min-h-20 cursor-pointer flex-col items-start gap-1.5 rounded-md border p-2.5 text-left transition ${
-                    active
-                      ? "border-accent/45 bg-accent/16 text-accent shadow-[var(--shadow-quiet)]"
-                      : "border-line/75 bg-background/54 text-foreground hover:border-accent/32 hover:bg-accent/8 hover:text-accent"
-                  }`}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  aria-controls="tools-tabpanel"
-                  tabIndex={active ? 0 : -1}
-                  aria-label={`${tab.label}: ${tab.description}`}
-                  onClick={() => selectTool(tab.id)}
-                  onKeyDown={(event) => onTabKeyDown(event, index)}
-                >
-                  <span className="flex w-full items-center justify-between gap-2">
-                    <span className="text-xs font-semibold">{tab.label}</span>
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
-                  </span>
-                  <span className="line-clamp-2 text-[0.7rem] font-medium leading-4 text-muted">{tab.description}</span>
-                </button>
-              );
-            })}
-            {filteredTabs.length === 0 ? (
-              <div className="col-span-full rounded-md border border-dashed border-line bg-background/54 px-3 py-4 text-xs font-semibold text-muted">
-                没有匹配的工具。
-              </div>
-            ) : null}
-          </nav>
-        </div>
-      </section>
+      {paletteMounted ? (
+        <ToolCommandPalette
+          open={paletteVisible}
+          tools={paletteTools}
+          groups={toolGroups}
+          group={activeGroup}
+          activeTab={activeTab}
+          onGroupChange={setActiveGroup}
+          onSelect={selectToolFromPalette}
+          onClose={closeCommandPalette}
+        />
+      ) : null}
       <section
-        id="tools-tabpanel"
-        role="tabpanel"
         aria-labelledby="tools-active-tool-heading"
-        tabIndex={0}
-        className={`index-surface tools-workbench-surface mx-auto w-full rounded-md border border-line p-4 md:p-5 ${expandedWorkspace ? "max-w-[108rem]" : "max-w-7xl"}`}
+        className={`mx-auto w-full ${expandedWorkspace ? "max-w-[108rem]" : "max-w-7xl"}`}
       >
         <div className="grid gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line/80 pb-4">
@@ -1405,30 +1368,22 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 <p className="mt-0.5 max-w-3xl text-xs leading-5 text-muted">{activeTabInfo.description}</p>
               </div>
             </div>
-            <div className="grid justify-items-start sm:justify-items-end">
-              <div className="max-w-full rounded-md border border-[color-mix(in_srgb,var(--accent)_34%,var(--line))] bg-accent/8 px-2.5 py-1.5 text-left text-xs font-semibold leading-5 text-accent">
-                所有工具均在浏览器本地运行，<br className="hidden sm:inline" />您的任何信息都不会上传服务器。
-              </div>
-            </div>
+            <button
+              type="button"
+              data-tools-palette-trigger="true"
+              aria-haspopup="dialog"
+              aria-expanded={paletteVisible}
+              onClick={toggleCommandPalette}
+              className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-md border border-accent/40 bg-accent/12 px-3.5 text-xs font-semibold text-accent shadow-[var(--shadow-quiet)] transition hover:border-accent/60 hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span>切换工具</span>
+              <span className="inline-flex items-center rounded-full bg-accent/22 px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none">{tabLabels.length}</span>
+            </button>
           </div>
 
-          {!isStandaloneTool(activeTab) ? (
+          {!isStandaloneTool(activeTab) && activeTab !== "json" ? (
           <div className="rounded-md bg-paper/54 p-2.5">
-            {activeTab === "json" ? (
-              <JsonControls
-                spaces={jsonSpaces}
-                setSpaces={setJsonSpaces}
-                runJson={runJson}
-                busy={jsonBusy}
-                validity={jsonValidity}
-                autoFormat={jsonAutoFormat}
-                onAutoFormatChange={setJsonAutoFormat}
-                onRepair={repairJson}
-                onUnwrap={unwrapJsonString}
-                onCancel={cancelJsonTask}
-                onImportClick={() => jsonFileInputRef.current?.click()}
-              />
-            ) : null}
             {activeTab === "encoding" ? <EncodingControls runEncoding={runEncoding} busy={encodingBusy} /> : null}
             {activeTab === "time" ? (
               <TimeControls
@@ -1547,15 +1502,38 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 resizable={activeTab !== "json"}
                 actions={
                   <>
+                    {activeTab === "json" ? (
+                      <>
+                        <PanelActionButton primary disabled={jsonBusy} label={"格式化"} onClick={() => runJson("format")}>{"格式化"}</PanelActionButton>
+                        <PanelOverflowMenu
+                          triggerLabel={"转换"}
+                          disabled={jsonBusy}
+                          items={[
+                            { key: "minify", label: "压缩", onClick: () => runJson("minify") },
+                            { key: "repair", label: "尝试修复", onClick: repairJson },
+                            { key: "sort", label: "Key 升序", onClick: () => runJson("sort") },
+                            { key: "sortDesc", label: "Key 降序", onClick: () => runJson("sortDesc") },
+                            { key: "escape", label: "字符串转义", onClick: () => runJson("escape") },
+                            { key: "unescape", label: "字符串反转义", onClick: () => runJson("unescape") },
+                            { key: "flatten", label: "扁平化", onClick: () => runJson("flatten") },
+                            { key: "unflatten", label: "还原扁平 JSON", onClick: () => runJson("unflatten") },
+                            { key: "unwrap", label: "解开转义 JSON", onClick: unwrapJsonString },
+                          ]}
+                        />
+                        <JsonStatusBadge busy={jsonBusy} validity={jsonValidity} onCancel={cancelJsonTask} />
+                      </>
+                    ) : null}
                     <PanelActionButton icon={Clipboard} label={copiedTarget === "input" ? labels.copied : labels.copy} onClick={() => copyText(currentInput, "input")}>
                       {copiedTarget === "input" ? labels.copied : labels.copy}
                     </PanelActionButton>
-                    <PanelActionButton icon={Save} label={labels.saveHistory} onClick={saveCurrentHistory}>{labels.saveHistory}</PanelActionButton>
-                    <span data-tools-history-trigger="true">
-                      <PanelActionButton icon={History} label={labels.history} onClick={toggleHistoryPanel}>{labels.history}</PanelActionButton>
-                    </span>
-                    <PanelActionButton label={labels.resetSample} onClick={restoreSampleInput}>{labels.resetSample}</PanelActionButton>
-                    <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearInput}>{labels.clear}</PanelActionButton>
+                    <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearInput} />
+                    <PanelOverflowMenu
+                      items={[
+                        ...(activeTab === "json" ? [{ key: "import", label: labels.importJson, icon: Upload, onClick: () => jsonFileInputRef.current?.click() }] : []),
+                        { key: "save", label: labels.saveHistory, icon: Save, onClick: saveCurrentHistory },
+                        { key: "history", label: labels.history, icon: History, onClick: toggleHistoryPanel },
+                      ]}
+                    />
                   </>
                 }
               />
@@ -1584,7 +1562,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
                       <PanelActionButton icon={Download} label={labels.download} onClick={downloadOutput}>{labels.download}</PanelActionButton>
-                      <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearOutput}>{labels.clear}</PanelActionButton>
+                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />
                     </>
                   }
                 />
@@ -1593,17 +1571,35 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                   label={labels.output}
                   metrics={currentOutputMetrics}
                   output={jsonOutput}
-                  indent={Number(jsonSpaces)}
                   size={panelSize}
                   actions={
                     <>
+                      <Select
+                        size="xs"
+                        className="w-16"
+                        ariaLabel={labels.spaces}
+                        value={jsonSpaces}
+                        onChange={setJsonSpaces}
+                        options={[
+                          { label: "2", value: "2" },
+                          { label: "4", value: "4" },
+                          { label: "6", value: "6" },
+                        ]}
+                      />
+                      <PanelActionButton active={jsonAutoFormat} label={"自动格式化"} onClick={() => setJsonAutoFormat(!jsonAutoFormat)}>
+                        {jsonAutoFormat ? "自动格式化 ✓" : "自动格式化"}
+                      </PanelActionButton>
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
-                      <PanelActionButton icon={ArrowDownToLine} label={labels.swap} onClick={moveOutputToInput}>{labels.swap}</PanelActionButton>
-                      <PanelActionButton icon={ArrowRightLeft} label={labels.exchange} onClick={exchangeInputOutput}>{labels.exchange}</PanelActionButton>
-                      <PanelActionButton icon={Download} label={labels.download} onClick={downloadOutput}>{labels.download}</PanelActionButton>
-                      <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearOutput}>{labels.clear}</PanelActionButton>
+                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />
+                      <PanelOverflowMenu
+                        items={[
+                          { key: "swap", label: labels.swap, icon: ArrowDownToLine, onClick: moveOutputToInput },
+                          { key: "exchange", label: labels.exchange, icon: ArrowRightLeft, onClick: exchangeInputOutput },
+                          { key: "download", label: labels.download, icon: Download, onClick: downloadOutput },
+                        ]}
+                      />
                     </>
                   }
                 />
@@ -1619,10 +1615,14 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
-                      <PanelActionButton icon={ArrowDownToLine} label={labels.swap} onClick={moveOutputToInput}>{labels.swap}</PanelActionButton>
-                      <PanelActionButton icon={ArrowRightLeft} label={labels.exchange} onClick={exchangeInputOutput}>{labels.exchange}</PanelActionButton>
-                      <PanelActionButton icon={Download} label={labels.download} onClick={downloadOutput}>{labels.download}</PanelActionButton>
-                      <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearOutput}>{labels.clear}</PanelActionButton>
+                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />
+                      <PanelOverflowMenu
+                        items={[
+                          { key: "swap", label: labels.swap, icon: ArrowDownToLine, onClick: moveOutputToInput },
+                          { key: "exchange", label: labels.exchange, icon: ArrowRightLeft, onClick: exchangeInputOutput },
+                          { key: "download", label: labels.download, icon: Download, onClick: downloadOutput },
+                        ]}
+                      />
                     </>
                   }
                 />
@@ -1639,10 +1639,14 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
-                      <PanelActionButton icon={ArrowDownToLine} label={labels.swap} onClick={moveOutputToInput}>{labels.swap}</PanelActionButton>
-                      <PanelActionButton icon={ArrowRightLeft} label={labels.exchange} onClick={exchangeInputOutput}>{labels.exchange}</PanelActionButton>
-                      <PanelActionButton icon={Download} label={labels.download} onClick={downloadOutput}>{labels.download}</PanelActionButton>
-                      <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearOutput}>{labels.clear}</PanelActionButton>
+                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />
+                      <PanelOverflowMenu
+                        items={[
+                          { key: "swap", label: labels.swap, icon: ArrowDownToLine, onClick: moveOutputToInput },
+                          { key: "exchange", label: labels.exchange, icon: ArrowRightLeft, onClick: exchangeInputOutput },
+                          { key: "download", label: labels.download, icon: Download, onClick: downloadOutput },
+                        ]}
+                      />
                     </>
                   }
                 />
@@ -1665,6 +1669,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
             type="file"
             onChange={(event) => void importHashFile(event.target.files?.[0] ?? null)}
           />
+
+          <p className="flex items-center gap-1.5 text-[0.7rem] font-medium text-muted">
+            <Lock className="h-3 w-3 shrink-0 text-accent" />
+            所有工具均在浏览器本地运行
+          </p>
         </div>
       </section>
     </div>
@@ -1720,9 +1729,6 @@ function ToolHistoryPanel({
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Node)) {
-        return;
-      }
-      if (target instanceof Element && target.closest('[data-tools-history-trigger="true"]')) {
         return;
       }
       if (target instanceof Element && target.closest('[data-tools-history-confirm="true"]')) {
@@ -1930,140 +1936,6 @@ function ToolHistoryPanel({
         </div>
       ) : null}
     </>
-  );
-}
-
-function JsonControls({
-  spaces,
-  setSpaces,
-  runJson,
-  busy,
-  validity,
-  autoFormat,
-  onAutoFormatChange,
-  onRepair,
-  onUnwrap,
-  onCancel,
-  onImportClick,
-}: {
-  spaces: string;
-  setSpaces: (value: string) => void;
-  runJson: (action: JsonAction) => void;
-  busy: boolean;
-  validity: { type: "idle" | "valid" | "error" | "large"; message: string };
-  autoFormat: boolean;
-  onAutoFormatChange: (value: boolean) => void;
-  onRepair: () => void;
-  onUnwrap: () => void;
-  onCancel: () => void;
-  onImportClick: () => void;
-}) {
-  const [moreOpen, setMoreOpen] = useState(false);
-
-  return (
-    <div className="grid gap-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <IndentSelect label={copyLabels.spaces} value={spaces} onChange={setSpaces} />
-        <ToolButton disabled={busy} onClick={onImportClick}>{copyLabels.importJson}</ToolButton>
-        <ToolButton disabled={busy} variant="primary" onClick={() => runJson("format")}>{"格式化"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runJson("minify")}>{"压缩"}</ToolButton>
-        <ToolButton disabled={busy} onClick={onRepair}>{"尝试修复"}</ToolButton>
-        <ToolButton ariaPressed={autoFormat} disabled={busy} onClick={() => onAutoFormatChange(!autoFormat)}>{autoFormat ? "自动格式化 ✓" : "自动格式化"}</ToolButton>
-        <button
-          className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-accent/10 px-2.5 text-xs font-semibold text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted))] transition hover:bg-accent/15 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55"
-          type="button"
-          disabled={busy}
-          aria-expanded={moreOpen}
-          onClick={() => setMoreOpen((current) => !current)}
-        >
-          {"更多"}
-          <ChevronDown className={`h-3.5 w-3.5 transition ${moreOpen ? "rotate-180" : ""}`} />
-        </button>
-        {busy ? (
-          <>
-            <ControlHint>{"处理中..."}</ControlHint>
-            <ToolButton onClick={onCancel}>{"取消"}</ToolButton>
-          </>
-        ) : validity.type !== "idle" ? (
-          <span
-            className={`inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold ${
-              validity.type === "valid"
-                ? "bg-emerald-500/12 text-emerald-600"
-                : validity.type === "error"
-                  ? "bg-red-500/12 text-red-600"
-                  : "bg-accent/10 text-muted"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {validity.type === "valid" ? <Check className="h-3.5 w-3.5" /> : validity.type === "error" ? <X className="h-3.5 w-3.5" /> : null}
-            {validity.message}
-          </span>
-        ) : null}
-      </div>
-      {moreOpen ? (
-        <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-line/70 bg-background/45 p-2">
-          <ToolButton disabled={busy} onClick={() => runJson("sort")}>{"Key 升序"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("sortDesc")}>{"Key 降序"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("escape")}>{"字符串转义"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("unescape")}>{"字符串反转义"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("flatten")}>{"扁平化"}</ToolButton>
-          <ToolButton disabled={busy} onClick={() => runJson("unflatten")}>{"还原扁平 JSON"}</ToolButton>
-          <ToolButton disabled={busy} onClick={onUnwrap}>{"解开转义 JSON"}</ToolButton>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function IndentSelect({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const options = ["2", "4", "6"];
-
-  return (
-    <div
-      className="relative"
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) {
-          setOpen(false);
-        }
-      }}
-    >
-      <button
-        className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-accent/10 px-2.5 text-xs font-semibold text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted))] transition hover:bg-accent/15 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span className="text-muted">{label}</span>
-        <span>{value}</span>
-        <ChevronDown className={`h-3.5 w-3.5 transition ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open ? (
-        <div className="absolute left-0 top-9 z-30 min-w-24 rounded-md bg-paper p-1 shadow-[var(--shadow-quiet)] ring-1 ring-line" role="listbox" aria-label={label}>
-          {options.map((option) => (
-            <button
-              key={option}
-              className={`flex h-7 w-full cursor-pointer items-center justify-between rounded px-2 text-xs font-semibold transition hover:bg-accent/12 hover:text-accent ${
-                value === option ? "text-accent" : "text-foreground"
-              }`}
-              type="button"
-              role="option"
-              aria-selected={value === option}
-              onClick={() => {
-                onChange(option);
-                setOpen(false);
-              }}
-            >
-              <span>{option}</span>
-              {value === option ? <Check className="h-3.5 w-3.5" /> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -2554,14 +2426,12 @@ function JsonOutputPanel({
   label,
   metrics,
   output,
-  indent,
   size = "large",
 }: {
   actions?: ReactNode;
   label: string;
   metrics: TextMetrics;
   output: string;
-  indent: number;
   size?: EditorPanelSize;
 }) {
   const heightClass = getFixedPanelHeightClass(size);
@@ -2594,7 +2464,7 @@ function JsonOutputPanel({
           {output}
         </pre>
       ) : parsed ? (
-        <JsonViewer value={parsed.value} text={output} indent={indent} heightClass={heightClass} />
+        <JsonViewer value={parsed.value} text={output} heightClass={heightClass} />
       ) : (
         <div className={`${heightClass} flex items-center justify-center rounded-md border border-line bg-paper/88 text-xs text-muted shadow-inner`}>
           {"在左侧输入 JSON，这里会自动显示格式化结果。"}
@@ -2834,23 +2704,237 @@ function PanelActionButton({
   onClick,
   icon: Icon,
   label,
+  primary = false,
+  active = false,
+  disabled = false,
 }: {
   children: ReactNode;
   onClick: () => void;
   icon?: ComponentType<{ className?: string }>;
   label?: string;
+  primary?: boolean;
+  active?: boolean;
+  disabled?: boolean;
 }) {
+  const tone = primary
+    ? "bg-accent/15 text-accent hover:bg-accent/22"
+    : active
+      ? "bg-accent/12 text-accent"
+      : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent";
   return (
     <button
-      className="inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md bg-accent/6 px-2 text-[0.7rem] font-semibold text-muted transition hover:bg-accent/10 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
+      className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${tone}`}
       type="button"
       aria-label={label}
+      aria-pressed={active || undefined}
+      disabled={disabled}
       onClick={onClick}
     >
       {Icon ? <Icon className="h-3 w-3" /> : null}
       {children}
     </button>
   );
+}
+
+// 低频面板操作收纳进溢出菜单；默认「···」图标，传 triggerLabel 则显示「文字 ▾」（如「转换」）。
+function PanelOverflowMenu({
+  label = "更多操作",
+  triggerLabel,
+  disabled = false,
+  items,
+}: {
+  label?: string;
+  triggerLabel?: string;
+  disabled?: boolean;
+  items: { key: string; label: string; icon?: ComponentType<{ className?: string }>; onClick: () => void }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function handlePointerDown(event: PointerEvent) {
+      if (ref.current && event.target instanceof Node && !ref.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${
+          open ? "bg-accent/12 text-accent" : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent"
+        }`}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={triggerLabel ?? label}
+        disabled={disabled}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {triggerLabel ? (
+          <>
+            {triggerLabel}
+            <ChevronDown className={`h-3.5 w-3.5 transition ${open ? "rotate-180" : ""}`} />
+          </>
+        ) : (
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        )}
+      </button>
+      {open ? (
+        <div role="menu" className="absolute right-0 top-[calc(100%+0.35rem)] z-30 min-w-[8.5rem] rounded-md border border-line bg-paper p-1 shadow-[var(--shadow-quiet)]">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.key}
+                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-[0.7rem] font-semibold text-muted transition hover:bg-accent/8 hover:text-accent focus-visible:outline-none focus-visible:bg-accent/8"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  item.onClick();
+                  setOpen(false);
+                }}
+              >
+                {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-accent" /> : null}
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// 清空按钮带二次确认（小气泡），避免误点丢失内容。
+function PanelClearButton({
+  label,
+  prompt,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+}: {
+  label: string;
+  prompt: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  onConfirm: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    function handlePointerDown(event: PointerEvent) {
+      if (ref.current && event.target instanceof Node && !ref.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 ${
+          open ? "bg-amber/15 text-amber" : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent"
+        }`}
+        type="button"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Trash2 className="h-3 w-3" />
+        {label}
+      </button>
+      {open ? (
+        <div role="dialog" aria-label={prompt} className="absolute right-0 top-[calc(100%+0.35rem)] z-30 w-48 rounded-md border border-line bg-paper p-2.5 shadow-[var(--shadow-quiet)]">
+          <p className="mb-2 text-[0.7rem] font-medium leading-5 text-muted">{prompt}</p>
+          <div className="flex justify-end gap-1.5">
+            <button
+              className="inline-flex h-7 cursor-pointer items-center rounded-md bg-accent/6 px-2.5 text-[0.7rem] font-semibold text-muted transition hover:bg-accent/10 hover:text-accent"
+              type="button"
+              onClick={() => setOpen(false)}
+            >
+              {cancelLabel}
+            </button>
+            <button
+              className="inline-flex h-7 cursor-pointer items-center rounded-md bg-amber/15 px-2.5 text-[0.7rem] font-semibold text-amber transition hover:bg-amber/25"
+              type="button"
+              onClick={() => {
+                onConfirm();
+                setOpen(false);
+              }}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// JSON 输入头部的紧凑状态：处理中（带取消）或校验结果徽标（有效/无效/大文件）。
+function JsonStatusBadge({
+  busy,
+  validity,
+  onCancel,
+}: {
+  busy: boolean;
+  validity: { type: "idle" | "valid" | "error" | "large"; message: string };
+  onCancel: () => void;
+}) {
+  if (busy) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="text-[0.7rem] font-semibold text-muted">{"处理中…"}</span>
+        <PanelActionButton label={"取消"} onClick={onCancel}>{"取消"}</PanelActionButton>
+      </span>
+    );
+  }
+  // 有效/无效不再用徽标提示——结果区已直接展示解析结果或报错、输入框也有行内错误高亮，徽标冗余。
+  // 仅保留「内容较大」这条可操作提示（告诉用户超过自动校验上限、需点「格式化」走 Worker）。
+  if (validity.type === "large") {
+    return (
+      <span className="inline-flex h-7 items-center px-1 text-[0.7rem] font-semibold text-muted" role="status" aria-live="polite" title={validity.message}>
+        {validity.message}
+      </span>
+    );
+  }
+  return null;
 }
 
 function ControlHint({ children }: { children: ReactNode }) {
@@ -3136,23 +3220,26 @@ function getPanelSize(tab: ToolTab): EditorPanelSize {
   return "large";
 }
 
+// 面板高度：clamp(下限, 视口比例 dvh, 上限)。给一个偏大的视口比例让内容区随屏放大、宽敞，
+// 但不再减任何 chrome 偏移（不追求把底部声明顶进首屏，允许自然滚动）。下限保证矮屏可用、
+// 上限防止超大屏过分稀疏。用 min-h 而非 flex，保留输入框 resize-y 手动拖拽。
 function getPanelHeightClass(size: EditorPanelSize) {
   return {
-    compact: "min-h-56 md:min-h-64",
-    expanded: "min-h-[34rem] lg:min-h-[48rem] 2xl:min-h-[56rem]",
-    medium: "min-h-80 lg:min-h-[30rem]",
-    large: "min-h-[28rem] lg:min-h-[36rem]",
+    compact: "min-h-[clamp(14rem,36dvh,24rem)]",
+    expanded: "min-h-[clamp(24rem,66dvh,56rem)]",
+    medium: "min-h-[clamp(18rem,48dvh,34rem)]",
+    large: "min-h-[clamp(22rem,60dvh,46rem)]",
   }[size];
 }
 
-// 固定高度版（对应 getPanelHeightClass 的下限值），用于内部需要滚动的面板（如 JSON 查看器），
+// 固定高度版（与 getPanelHeightClass 同档同值，但用 h- 锁高），用于内部需要滚动的面板（如 JSON 查看器），
 // 避免内容把面板撑到全铺开。字面量 class 以便 Tailwind 扫描生成。
 function getFixedPanelHeightClass(size: EditorPanelSize) {
   return {
-    compact: "h-56 md:h-64",
-    expanded: "h-[34rem] lg:h-[48rem] 2xl:h-[56rem]",
-    medium: "h-80 lg:h-[30rem]",
-    large: "h-[28rem] lg:h-[36rem]",
+    compact: "h-[clamp(14rem,36dvh,24rem)]",
+    expanded: "h-[clamp(24rem,66dvh,56rem)]",
+    medium: "h-[clamp(18rem,48dvh,34rem)]",
+    large: "h-[clamp(22rem,60dvh,46rem)]",
   }[size];
 }
 

@@ -76,6 +76,50 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* 全局滚动条统一一套：Chromium/Safari 走 ::-webkit-scrollbar（根与内部一致）；Firefox 不支持该伪元素，
+   用 @supports 只给它标准 scrollbar-*（scrollbar-width 不继承，故加在 * 上以覆盖所有滚动容器）。
+   两套互斥施加，避免同一引擎里标准属性与伪元素打架导致根/内部宽度不一致。 */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--muted) 42%, transparent) transparent;
+  }
+}
+
+/* 约 6px 可见的圆角药丸、半透明 muted、常驻、hover 透出一抹 accent；轨道透明，随主题切换。
+   已隐藏滚动条的规则（如 .article-toc-scroll）特异性更高，不受影响。 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--muted) 38%, transparent);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--accent) 42%, var(--muted));
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 文本输入框（cursor: text）若用自定义 ::-webkit-scrollbar，滚动条会跟随宿主显示文字 I 形光标、
+   无法在伪元素上改回箭头。改用标准 scrollbar-width：Chromium 会渲染真实滚动条（箭头光标正常）并
+   忽略上面的 webkit 伪元素；scrollbar-color 保持同款 muted 主题色。 */
+textarea {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 42%, transparent) transparent;
+}
+
 body {
   min-height: 100vh;
   background:

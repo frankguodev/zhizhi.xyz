@@ -66,7 +66,7 @@
 - 详情页围绕「一图看懂」信息图、一句话概念、快速理解、相关概念和参考资料组织，帮助快速建立概念。
 - 列表页支持分类、难度筛选、排序和服务端分页，并展示热度与趋势，适合从几条增长到成百上千条。
 - 每条词条带标准分类（主分类 + 可选副分类）和词条间关系；尚未建立的关联会作为候选关系保存，前台暂不展示。
-- 「一图看懂」信息图统一带 `zhizhi.xyz` 水印、压缩到 100KB 以内（优先 1600×900，必要时降级 1280×720），存储在 R2。
+- 「一图看懂」信息图统一压缩为 100KB 以内的优化 WebP（优先 1600×900，必要时降级 1280×720），存储在 R2。
 - 数据结构含 `locale` 和 `translation_key`，为中英文词条对照预留。
 
 ### 内容后台
@@ -762,7 +762,7 @@ npx wrangler d1 migrations apply zhizhi --remote --config wrangler.toml
 | `npm run ai-term:import:dry-run -- <TERM>` | 模拟导入，提前发现解析或字段问题。 |
 | `npm run ai-term:check -- <TERM>` | 词条综合检查。 |
 | `npm run ai-term:diagram:check -- <TERM>` | 检查「一图看懂」图解文件是否齐全合规。 |
-| `npm run ai-term:diagram:optimize -- <TERM>` | 生成带 `zhizhi.xyz` 水印、100KB 以内的优化 WebP。 |
+| `npm run ai-term:diagram:optimize -- <TERM>` | 生成 100KB 以内的优化 WebP。 |
 | `npm run ai-term:diagram:compress:dry-run -- <TERM>` | 体检优化图的体积和尺寸，不写文件。 |
 | `npm run ai-term:sources:index` | 构建资料卡索引。 |
 | `npm run ai-term:sources:match -- <TERM>` | 为词条匹配资料卡（仅在使用资料卡时）。 |

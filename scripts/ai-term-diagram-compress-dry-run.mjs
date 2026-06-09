@@ -8,7 +8,7 @@ function usage() {
   console.log(`Usage:
   npm run ai-term:diagram:compress:dry-run -- <TERM>
 
-Tests whether the local diagram can become a watermarked WebP below 100KB without writing output.
+Tests whether the local diagram can become an optimized WebP below 100KB without writing output.
 Preferred output is 1600x900; fallback output is 1280x720.`);
 }
 
@@ -38,7 +38,7 @@ async function main() {
   console.log(`AI term diagram optimization dry run: ${term}`);
   console.log(`Input: ${path.relative(workspaceRoot, inputPath)} (${candidate.sourceWidth}x${candidate.sourceHeight})`);
   if (candidate.metTarget) {
-    console.log(`PASS: ${Math.round(candidate.buffer.length / 1024)}KB, ${candidate.width}x${candidate.height}, webp q=${candidate.quality}, watermark zhizhi.xyz`);
+    console.log(`PASS: ${Math.round(candidate.buffer.length / 1024)}KB, ${candidate.width}x${candidate.height}, webp q=${candidate.quality}`);
     console.log(`Allowed sizes: ${describeOptimizedDiagramSizes()}`);
     return;
   }

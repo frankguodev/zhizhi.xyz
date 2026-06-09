@@ -8,7 +8,7 @@ function usage() {
   console.log(`Usage:
   npm run ai-term:diagram:optimize -- <TERM>
 
-Optimizes a local AI term diagram to WebP, prefers 1600x900, falls back to 1280x720, adds the zhizhi.xyz watermark, and enforces <=100KB.`);
+Optimizes a local AI term diagram to WebP, prefers 1600x900, falls back to 1280x720, and enforces <=100KB.`);
 }
 
 function getMaxBytes() {
@@ -33,7 +33,7 @@ async function main() {
   console.log(
     `Output: ${path.relative(workspaceRoot, optimized.outputPath)} (${Math.round(optimized.buffer.length / 1024)}KB, ${optimized.width}x${optimized.height}, webp q=${optimized.quality})`,
   );
-  console.log(`Limit: <=${Math.round(getMaxBytes() / 1024)}KB, ${describeOptimizedDiagramSizes()}, watermark: zhizhi.xyz`);
+  console.log(`Limit: <=${Math.round(getMaxBytes() / 1024)}KB, ${describeOptimizedDiagramSizes()}`);
 }
 
 main().catch((error) => {
