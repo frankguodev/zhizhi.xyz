@@ -24,6 +24,7 @@ export type ToolPreferences = {
   csvOutputMode: CsvOutputMode;
   hashAlgorithm: HashAlgorithm;
   hashOutputFormat: HashOutputFormat;
+  jsonAutoFormat: boolean;
   jsonSpaces: string;
   markdownAutoPreview: boolean;
   structuredFormat: StructuredFormat;
@@ -41,6 +42,7 @@ const defaultToolPreferences: ToolPreferences = {
   csvOutputMode: "objects",
   hashAlgorithm: "SHA-256",
   hashOutputFormat: "hex",
+  jsonAutoFormat: true,
   jsonSpaces: "2",
   markdownAutoPreview: true,
   structuredFormat: "yaml",
@@ -70,6 +72,7 @@ export function readToolPreferences() {
       csvOutputMode: isCsvOutputMode(parsed.csvOutputMode) ? parsed.csvOutputMode : defaultToolPreferences.csvOutputMode,
       hashAlgorithm: isHashAlgorithm(parsed.hashAlgorithm) ? parsed.hashAlgorithm : defaultToolPreferences.hashAlgorithm,
       hashOutputFormat: isHashOutputFormat(parsed.hashOutputFormat) ? parsed.hashOutputFormat : defaultToolPreferences.hashOutputFormat,
+      jsonAutoFormat: typeof parsed.jsonAutoFormat === "boolean" ? parsed.jsonAutoFormat : defaultToolPreferences.jsonAutoFormat,
       jsonSpaces: isJsonSpaces(parsed.jsonSpaces) ? parsed.jsonSpaces : defaultToolPreferences.jsonSpaces,
       markdownAutoPreview: typeof parsed.markdownAutoPreview === "boolean" ? parsed.markdownAutoPreview : defaultToolPreferences.markdownAutoPreview,
       structuredFormat: isStructuredFormat(parsed.structuredFormat) ? parsed.structuredFormat : defaultToolPreferences.structuredFormat,

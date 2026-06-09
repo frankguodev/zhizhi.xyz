@@ -1,10 +1,10 @@
-function sortJsonValue(value) {
-  if (Array.isArray(value)) return value.map(sortJsonValue);
+function sortJsonValue(value, descending = false) {
+  if (Array.isArray(value)) return value.map((item) => sortJsonValue(item, descending));
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, item]) => [key, sortJsonValue(item)]),
+        .sort(([a], [b]) => (descending ? b.localeCompare(a) : a.localeCompare(b)))
+        .map(([key, item]) => [key, sortJsonValue(item, descending)]),
     );
   }
   return value;
@@ -82,6 +82,7 @@ self.onmessage = (event) => {
     if (action === "format") output = JSON.stringify(parsed, null, spaces);
     if (action === "minify") output = JSON.stringify(parsed);
     if (action === "sort") output = JSON.stringify(sortJsonValue(parsed), null, spaces);
+    if (action === "sortDesc") output = JSON.stringify(sortJsonValue(parsed, true), null, spaces);
     if (action === "flatten") output = JSON.stringify(flattenJson(parsed), null, spaces);
     if (action === "unflatten") output = JSON.stringify(unflattenJson(parsed), null, spaces);
     self.postMessage({ id, ok: true, output, message: locale === "en" ? "JSON conversion completed." : "JSON 转换完成。" });

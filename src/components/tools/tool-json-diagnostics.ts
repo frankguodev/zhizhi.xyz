@@ -94,6 +94,137 @@ export function findInvalidJsonPunctuationIndex(value: string) {
   return -1;
 }
 
+// 尽力修复常见的“伪 JSON”：全角标点、注释、尾随逗号、单引号字符串、Python 字面量。
+// 只做无歧义的安全变换；不处理“无引号键名”等容易误伤的情况。
+export function repairJsonText(input: string): string {
+  let output = "";
+  let index = 0;
+
+  const skipInsignificant = (from: number) => {
+    let cursor = from;
+    while (cursor < input.length) {
+      const char = input[cursor];
+      if (/\s/.test(char)) {
+        cursor += 1;
+        continue;
+      }
+      if (char === "/" && input[cursor + 1] === "/") {
+        cursor += 2;
+        while (cursor < input.length && input[cursor] !== "\n") {
+          cursor += 1;
+        }
+        continue;
+      }
+      if (char === "/" && input[cursor + 1] === "*") {
+        cursor += 2;
+        while (cursor < input.length && !(input[cursor] === "*" && input[cursor + 1] === "/")) {
+          cursor += 1;
+        }
+        cursor += 2;
+        continue;
+      }
+      break;
+    }
+    return cursor;
+  };
+
+  while (index < input.length) {
+    const char = input[index];
+
+    // 双引号字符串原样保留。
+    if (char === "\"") {
+      output += char;
+      index += 1;
+      let escaped = false;
+      while (index < input.length) {
+        const current = input[index];
+        output += current;
+        index += 1;
+        if (escaped) {
+          escaped = false;
+        } else if (current === "\\") {
+          escaped = true;
+        } else if (current === "\"") {
+          break;
+        }
+      }
+      continue;
+    }
+
+    // 单引号字符串转成合法的双引号 JSON 字符串。
+    if (char === "'") {
+      index += 1;
+      let value = "";
+      let escaped = false;
+      while (index < input.length) {
+        const current = input[index];
+        index += 1;
+        if (escaped) {
+          value += current === "'" ? "'" : `\\${current}`;
+          escaped = false;
+        } else if (current === "\\") {
+          escaped = true;
+        } else if (current === "'") {
+          break;
+        } else {
+          value += current;
+        }
+      }
+      output += JSON.stringify(value);
+      continue;
+    }
+
+    // 行注释 / 块注释直接丢弃。
+    if (char === "/" && input[index + 1] === "/") {
+      index += 2;
+      while (index < input.length && input[index] !== "\n") {
+        index += 1;
+      }
+      continue;
+    }
+    if (char === "/" && input[index + 1] === "*") {
+      index += 2;
+      while (index < input.length && !(input[index] === "*" && input[index + 1] === "/")) {
+        index += 1;
+      }
+      index += 2;
+      continue;
+    }
+
+    // 全角标点转半角。
+    if (invalidJsonPunctuationLabels[char]) {
+      output += invalidJsonPunctuationLabels[char];
+      index += 1;
+      continue;
+    }
+
+    // 尾随逗号：后面（跳过空白和注释）紧跟 } 或 ] 时丢弃逗号。
+    if (char === ",") {
+      const nextSignificant = skipInsignificant(index + 1);
+      if (input[nextSignificant] === "}" || input[nextSignificant] === "]") {
+        index += 1;
+        continue;
+      }
+      output += char;
+      index += 1;
+      continue;
+    }
+
+    // Python 字面量 True/False/None -> true/false/null。
+    if (/[A-Za-z_]/.test(char)) {
+      const word = /^[A-Za-z_][\w$]*/.exec(input.slice(index))?.[0] ?? char;
+      output += word === "True" ? "true" : word === "False" ? "false" : word === "None" ? "null" : word;
+      index += word.length;
+      continue;
+    }
+
+    output += char;
+    index += 1;
+  }
+
+  return output;
+}
+
 export function describeInvalidJsonPunctuation(character: string) {
   const replacement = invalidJsonPunctuationLabels[character];
   if (!replacement) {

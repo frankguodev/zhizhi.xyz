@@ -39,7 +39,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
-import { enhanceJsonError, getJsonErrorHighlight, translateJsonErrorReason } from "./tool-json-diagnostics";
+import { JsonViewer } from "./json-viewer";
+import { enhanceJsonError, getJsonErrorHighlight, repairJsonText, translateJsonErrorReason } from "./tool-json-diagnostics";
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
 import { readToolPreferences, writeToolPreferences } from "./tool-preferences";
 import { toolSlugById } from "@/lib/tools-meta";
@@ -94,6 +95,8 @@ const generalLargeInputBytes = 5 * 1024 * 1024;
 const hashFileWarningBytes = 50 * 1024 * 1024;
 const hashFileLimitBytes = 256 * 1024 * 1024;
 const jsonLargeInputBytes = 10 * 1024 * 1024;
+// 自动格式化在主线程同步跑，超过该体积就跳过、提示改用「格式化」按钮（走 Worker），避免输入卡顿。
+const jsonAutoFormatMaxBytes = 1024 * 1024;
 const jsonWorkerTimeoutMs = 60000;
 const historyDrawerTransitionMs = 240;
 const utilityWorkerTimeoutMs = 60000;
@@ -253,6 +256,8 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const [jsonInput, setJsonInput] = useState("");
   const [jsonErrorHighlight, setJsonErrorHighlight] = useState<TextHighlight | null>(null);
   const [jsonOutput, setJsonOutput] = useState("");
+  const [jsonValidity, setJsonValidity] = useState<{ type: "idle" | "valid" | "error" | "large"; message: string }>({ type: "idle", message: "" });
+  const [jsonAutoFormat, setJsonAutoFormat] = useState(true);
   const [jsonSpaces, setJsonSpaces] = useState("2");
   const [encodingInput, setEncodingInput] = useState("https://zhizhi.xyz/articles?tag=AI 应用");
   const [encodingOutput, setEncodingOutput] = useState("");
@@ -394,6 +399,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       setCsvOutputMode(preferences.csvOutputMode);
       setHashAlgorithm(preferences.hashAlgorithm);
       setHashOutputFormat(preferences.hashOutputFormat);
+      setJsonAutoFormat(preferences.jsonAutoFormat);
       setJsonSpaces(preferences.jsonSpaces);
       setMarkdownAutoPreview(preferences.markdownAutoPreview);
       setStructuredFormat(preferences.structuredFormat);
@@ -421,6 +427,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       csvOutputMode,
       hashAlgorithm,
       hashOutputFormat,
+      jsonAutoFormat,
       jsonSpaces,
       markdownAutoPreview,
       structuredFormat,
@@ -437,6 +444,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     csvOutputMode,
     hashAlgorithm,
     hashOutputFormat,
+    jsonAutoFormat,
     jsonSpaces,
     markdownAutoPreview,
     preferencesReady,
@@ -477,20 +485,22 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   }, [activeTab, markdownAutoPreview, markdownInput]);
 
   useEffect(() => {
-    if (activeTab !== "json") {
-      return;
-    }
-
-    // 过大的 JSON 不在主线程同步格式化，交给手动按钮走 Worker。
-    if (jsonInput.trim() !== "" && new TextEncoder().encode(jsonInput).byteLength > jsonLargeInputBytes) {
+    if (activeTab !== "json" || !jsonAutoFormat) {
       return;
     }
 
     const timeout = window.setTimeout(() => {
-      // 输入为空时清空输出与错误高亮，避免残留上一次的结果。
+      // 输入为空时清空输出、错误高亮和校验状态，避免残留上一次的结果。
       if (jsonInput.trim() === "") {
         setJsonOutput("");
         setJsonErrorHighlight(null);
+        setJsonValidity({ type: "idle", message: "" });
+        return;
+      }
+
+      // 体积较大的 JSON 不在主线程同步校验，交给手动「格式化」走 Worker，避免输入卡顿。
+      if (new TextEncoder().encode(jsonInput).byteLength > jsonAutoFormatMaxBytes) {
+        setJsonValidity({ type: "large", message: "内容较大，点「格式化」校验" });
         return;
       }
 
@@ -498,16 +508,18 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
         const formatted = JSON.stringify(JSON.parse(jsonInput), null, Number(jsonSpaces));
         setJsonOutput(formatted);
         setJsonErrorHighlight(null);
+        setJsonValidity({ type: "valid", message: "JSON 有效" });
       } catch (error) {
         // 防抖结束后仍非法才报错，和手动「格式化」按钮一致：输出区给错误信息 + 输入框行内高亮。
         const errorMessage = enhanceJsonError(error instanceof Error ? error.message : "JSON 格式无效。", jsonInput);
         setJsonOutput(formatJsonErrorOutput(errorMessage));
         setJsonErrorHighlight(getJsonErrorHighlight(errorMessage, jsonInput));
+        setJsonValidity({ type: "error", message: "JSON 无效" });
       }
     }, 300);
 
     return () => window.clearTimeout(timeout);
-  }, [activeTab, jsonInput, jsonSpaces]);
+  }, [activeTab, jsonInput, jsonSpaces, jsonAutoFormat]);
 
   useEffect(() => () => {
     clearHistoryTransitionTimers();
@@ -1035,6 +1047,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       const result = await runJsonInWorker(jsonInput, action, Number(jsonSpaces));
       setJsonOutput(result.output);
       setJsonErrorHighlight(null);
+      setJsonValidity({ type: "valid", message: "JSON 有效" });
       setMobilePanel("output");
       showStatus("success", result.message);
     } catch (error) {
@@ -1044,12 +1057,51 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
         const errorMessage = formatToolError(error, "JSON 格式无效。");
         setJsonErrorHighlight(getJsonErrorHighlight(errorMessage, jsonInput));
         setJsonOutput(formatJsonErrorOutput(errorMessage));
+        setJsonValidity({ type: "error", message: "JSON 无效" });
         setStructuredResult(null);
         setMobilePanel("output");
       }
     } finally {
       jsonCancelRequestedRef.current = false;
       setJsonBusy(false);
+    }
+  }
+
+  function repairJson() {
+    if (!jsonInput.trim()) {
+      return;
+    }
+    const repaired = repairJsonText(jsonInput);
+    if (repaired !== jsonInput) {
+      setJsonInput(repaired);
+      setJsonErrorHighlight(null);
+    }
+  }
+
+  // 解开被多次 stringify 的 JSON：整段值本身是个 JSON 字符串时，逐层解到非字符串为止。
+  function unwrapJsonString() {
+    const trimmed = jsonInput.trim();
+    if (!trimmed) {
+      return;
+    }
+    try {
+      let parsed: unknown = JSON.parse(trimmed);
+      let unwrapped = false;
+      while (typeof parsed === "string") {
+        const inner = parsed.trim();
+        try {
+          parsed = JSON.parse(inner);
+          unwrapped = true;
+        } catch {
+          break;
+        }
+      }
+      if (unwrapped) {
+        setJsonInput(JSON.stringify(parsed, null, Number(jsonSpaces)));
+        setJsonErrorHighlight(null);
+      }
+    } catch {
+      // 整段不是合法 JSON，无法解开，保持原样。
     }
   }
 
@@ -1368,6 +1420,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 setSpaces={setJsonSpaces}
                 runJson={runJson}
                 busy={jsonBusy}
+                validity={jsonValidity}
+                autoFormat={jsonAutoFormat}
+                onAutoFormatChange={setJsonAutoFormat}
+                onRepair={repairJson}
+                onUnwrap={unwrapJsonString}
                 onCancel={cancelJsonTask}
                 onImportClick={() => jsonFileInputRef.current?.click()}
               />
@@ -1487,6 +1544,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 placeholder={activeTab === "time" ? "输入时间戳或日期字符串" : undefined}
                 size={panelSize}
                 highlight={activeTab === "json" ? jsonErrorHighlight : null}
+                resizable={activeTab !== "json"}
                 actions={
                   <>
                     <PanelActionButton icon={Clipboard} label={copiedTarget === "input" ? labels.copied : labels.copy} onClick={() => copyText(currentInput, "input")}>
@@ -1525,6 +1583,25 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
+                      <PanelActionButton icon={Download} label={labels.download} onClick={downloadOutput}>{labels.download}</PanelActionButton>
+                      <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearOutput}>{labels.clear}</PanelActionButton>
+                    </>
+                  }
+                />
+              ) : activeTab === "json" ? (
+                <JsonOutputPanel
+                  label={labels.output}
+                  metrics={currentOutputMetrics}
+                  output={jsonOutput}
+                  indent={Number(jsonSpaces)}
+                  size={panelSize}
+                  actions={
+                    <>
+                      <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
+                        {copiedTarget === "output" ? labels.copied : labels.copy}
+                      </PanelActionButton>
+                      <PanelActionButton icon={ArrowDownToLine} label={labels.swap} onClick={moveOutputToInput}>{labels.swap}</PanelActionButton>
+                      <PanelActionButton icon={ArrowRightLeft} label={labels.exchange} onClick={exchangeInputOutput}>{labels.exchange}</PanelActionButton>
                       <PanelActionButton icon={Download} label={labels.download} onClick={downloadOutput}>{labels.download}</PanelActionButton>
                       <PanelActionButton icon={Trash2} label={labels.clear} onClick={clearOutput}>{labels.clear}</PanelActionButton>
                     </>
@@ -1861,6 +1938,11 @@ function JsonControls({
   setSpaces,
   runJson,
   busy,
+  validity,
+  autoFormat,
+  onAutoFormatChange,
+  onRepair,
+  onUnwrap,
   onCancel,
   onImportClick,
 }: {
@@ -1868,6 +1950,11 @@ function JsonControls({
   setSpaces: (value: string) => void;
   runJson: (action: JsonAction) => void;
   busy: boolean;
+  validity: { type: "idle" | "valid" | "error" | "large"; message: string };
+  autoFormat: boolean;
+  onAutoFormatChange: (value: boolean) => void;
+  onRepair: () => void;
+  onUnwrap: () => void;
   onCancel: () => void;
   onImportClick: () => void;
 }) {
@@ -1880,7 +1967,8 @@ function JsonControls({
         <ToolButton disabled={busy} onClick={onImportClick}>{copyLabels.importJson}</ToolButton>
         <ToolButton disabled={busy} variant="primary" onClick={() => runJson("format")}>{"格式化"}</ToolButton>
         <ToolButton disabled={busy} onClick={() => runJson("minify")}>{"压缩"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runJson("validate")}>{"校验"}</ToolButton>
+        <ToolButton disabled={busy} onClick={onRepair}>{"尝试修复"}</ToolButton>
+        <ToolButton ariaPressed={autoFormat} disabled={busy} onClick={() => onAutoFormatChange(!autoFormat)}>{autoFormat ? "自动格式化 ✓" : "自动格式化"}</ToolButton>
         <button
           className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-accent/10 px-2.5 text-xs font-semibold text-[color-mix(in_srgb,var(--foreground)_72%,var(--muted))] transition hover:bg-accent/15 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55"
           type="button"
@@ -1896,15 +1984,32 @@ function JsonControls({
             <ControlHint>{"处理中..."}</ControlHint>
             <ToolButton onClick={onCancel}>{"取消"}</ToolButton>
           </>
+        ) : validity.type !== "idle" ? (
+          <span
+            className={`inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold ${
+              validity.type === "valid"
+                ? "bg-emerald-500/12 text-emerald-600"
+                : validity.type === "error"
+                  ? "bg-red-500/12 text-red-600"
+                  : "bg-accent/10 text-muted"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {validity.type === "valid" ? <Check className="h-3.5 w-3.5" /> : validity.type === "error" ? <X className="h-3.5 w-3.5" /> : null}
+            {validity.message}
+          </span>
         ) : null}
       </div>
       {moreOpen ? (
         <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-line/70 bg-background/45 p-2">
-          <ToolButton disabled={busy} onClick={() => runJson("sort")}>{"Key 排序"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("sort")}>{"Key 升序"}</ToolButton>
+          <ToolButton disabled={busy} onClick={() => runJson("sortDesc")}>{"Key 降序"}</ToolButton>
           <ToolButton disabled={busy} onClick={() => runJson("escape")}>{"字符串转义"}</ToolButton>
           <ToolButton disabled={busy} onClick={() => runJson("unescape")}>{"字符串反转义"}</ToolButton>
           <ToolButton disabled={busy} onClick={() => runJson("flatten")}>{"扁平化"}</ToolButton>
           <ToolButton disabled={busy} onClick={() => runJson("unflatten")}>{"还原扁平 JSON"}</ToolButton>
+          <ToolButton disabled={busy} onClick={onUnwrap}>{"解开转义 JSON"}</ToolButton>
         </div>
       ) : null}
     </div>
@@ -2309,6 +2414,7 @@ function EditorPanel({
   placeholder,
   size = "large",
   actions,
+  resizable = true,
 }: {
   label: string;
   value: string;
@@ -2319,6 +2425,7 @@ function EditorPanel({
   placeholder?: string;
   size?: EditorPanelSize;
   actions?: ReactNode;
+  resizable?: boolean;
 }) {
   const heightClass = getPanelHeightClass(size);
   const hasError = isToolErrorOutput(value);
@@ -2335,12 +2442,20 @@ function EditorPanel({
     textarea.setSelectionRange(highlight.start, highlight.end);
     textarea.focus({ preventScroll: true });
 
+    // 自动滚动到出错行：行号外于当前视口时，把它带到视口约 1/3 处（leading-6=24px，p-3.5=14px）。
+    const lineHeight = 24;
+    const padding = 14;
+    const errorTop = padding + (value.slice(0, highlight.start).split("\n").length - 1) * lineHeight;
+    if (errorTop < textarea.scrollTop || errorTop > textarea.scrollTop + textarea.clientHeight - lineHeight) {
+      textarea.scrollTop = Math.max(0, errorTop - textarea.clientHeight / 3);
+    }
+
     const frame = window.requestAnimationFrame(() => {
       setTextareaScroll({ left: textarea.scrollLeft, top: textarea.scrollTop });
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [highlight]);
+  }, [highlight, value]);
 
   return (
     <div className="block">
@@ -2373,7 +2488,7 @@ function EditorPanel({
         <textarea
           ref={textareaRef}
           aria-label={label}
-          className={`${heightClass} relative w-full resize-y rounded-md border p-3.5 font-mono text-[0.8125rem] leading-6 shadow-inner outline-none transition ${
+          className={`${heightClass} relative w-full ${resizable ? "resize-y" : "resize-none"} rounded-md border p-3.5 font-mono text-[0.8125rem] leading-6 shadow-inner outline-none transition ${
             hasError
               ? "border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] text-[var(--accent-2)] focus:border-[color-mix(in_srgb,var(--accent-2)_62%,var(--line))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--accent-2)_16%,transparent)]"
               : highlightParts
@@ -2429,6 +2544,61 @@ function MarkdownPreviewPanel({
           className={`tools-markdown-preview ${heightClass} overflow-auto rounded-md border border-line bg-paper/88 p-4 text-sm leading-7 text-foreground shadow-inner`}
           dangerouslySetInnerHTML={{ __html: html || `<p class="tools-markdown-empty">${"点击生成预览后，这里会显示 Markdown 效果。"}</p>` }}
         />
+      )}
+    </div>
+  );
+}
+
+function JsonOutputPanel({
+  actions,
+  label,
+  metrics,
+  output,
+  indent,
+  size = "large",
+}: {
+  actions?: ReactNode;
+  label: string;
+  metrics: TextMetrics;
+  output: string;
+  indent: number;
+  size?: EditorPanelSize;
+}) {
+  const heightClass = getFixedPanelHeightClass(size);
+  const hasError = isToolErrorOutput(output);
+  const parsed = useMemo(() => {
+    if (hasError || output.trim() === "") {
+      return null;
+    }
+    try {
+      return { value: JSON.parse(output) as unknown };
+    } catch {
+      return null;
+    }
+  }, [hasError, output]);
+
+  return (
+    <div className="block">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+          <Link2 className="h-3 w-3 text-accent" />
+          {label}
+          <span className="font-medium text-muted/80">
+            {metrics.displaySize} · {metrics.lines} {"行"} · {metrics.characters} {"字符"}
+          </span>
+        </span>
+        {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
+      </div>
+      {hasError ? (
+        <pre className={`${heightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
+          {output}
+        </pre>
+      ) : parsed ? (
+        <JsonViewer value={parsed.value} text={output} indent={indent} heightClass={heightClass} />
+      ) : (
+        <div className={`${heightClass} flex items-center justify-center rounded-md border border-line bg-paper/88 text-xs text-muted shadow-inner`}>
+          {"在左侧输入 JSON，这里会自动显示格式化结果。"}
+        </div>
       )}
     </div>
   );
@@ -2972,6 +3142,17 @@ function getPanelHeightClass(size: EditorPanelSize) {
     expanded: "min-h-[34rem] lg:min-h-[48rem] 2xl:min-h-[56rem]",
     medium: "min-h-80 lg:min-h-[30rem]",
     large: "min-h-[28rem] lg:min-h-[36rem]",
+  }[size];
+}
+
+// 固定高度版（对应 getPanelHeightClass 的下限值），用于内部需要滚动的面板（如 JSON 查看器），
+// 避免内容把面板撑到全铺开。字面量 class 以便 Tailwind 扫描生成。
+function getFixedPanelHeightClass(size: EditorPanelSize) {
+  return {
+    compact: "h-56 md:h-64",
+    expanded: "h-[34rem] lg:h-[48rem] 2xl:h-[56rem]",
+    medium: "h-80 lg:h-[30rem]",
+    large: "h-[28rem] lg:h-[36rem]",
   }[size];
 }
 

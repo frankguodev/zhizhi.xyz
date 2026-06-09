@@ -25,6 +25,26 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-08",
+    title: "JSON 工具全面升级：高亮、树形、路径查询与智能修复",
+    changes: [
+      { type: "added", label: "结果视图", text: "结果区支持「高亮 / 树形 / 文本」三种视图，可折叠展开节点，并带行号和结构统计（对象、数组、键数、层级深度）。" },
+      { type: "added", label: "路径查询", text: "用 data.items[0].name、users[*].id 这样的路径，从大 JSON 里直接提取需要的片段。" },
+      { type: "added", label: "尝试修复", text: "一键修复常见的「伪 JSON」：全角标点、注释、尾随逗号、单引号、Python 的 True/False/None。" },
+      { type: "added", label: "解开转义", text: "一键还原被多次转义的 JSON 字符串，常用于处理接口返回的嵌套 JSON。" },
+      { type: "improved", label: "校验提示", text: "输入即自动格式化与校验，出错实时提示并跳转到出错行；新增有效 / 无效状态标记，去掉了多余的手动「校验」按钮。" },
+      { type: "improved", label: "排序与开关", text: "Key 支持升序 / 降序排序，自动格式化可随时开关。" },
+    ],
+  },
+  {
+    date: "2026-06-07",
+    title: "工具新增：文本 / 代码对比，JSON 转 TypeScript",
+    changes: [
+      { type: "added", label: "Diff 对比", text: "对比两段文本或代码，左右并排显示行级差异并高亮改动字词。" },
+      { type: "added", label: "JSON 转 TS", text: "粘贴 JSON 自动推断 TypeScript 的 interface / type 类型定义。" },
+    ],
+  },
+  {
     date: "2026-06-06",
     title: "工具升级：新增三个图片 / 二维码工具，JSON 自动格式化",
     changes: [

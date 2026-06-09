@@ -1,9 +1,22 @@
 term,diagram,image,imageOptimize,story,sync,notes
-Embeddings,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-Prompt Engineering,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-MoA,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-CoT,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-ToT,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-GEO,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-SEO,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
-Vibe Coding,TRUE,TRUE,TRUE,TRUE,TRUE,同步生产，不同步测试,
+JAX,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+ONNX,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+CUDA,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+OpenCV,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+NLTK,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+HF,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+MLflow,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+BERT,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+GPT,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+T5,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+XLNet,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+CLIP,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+Stable Diffusion,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+XAI,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+Edge AI,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+IR,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+QA,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+MT,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+VQA,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+OOD,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ
+Alignment,TRUE,TRUE,TRUE,FALSE,TRUE,ͬ同步生产，不同步测试,ͬ

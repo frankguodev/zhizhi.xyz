@@ -15,6 +15,11 @@ html[data-theme="light"] {
   --accent-3: #3859a8;
   --accent-ink: #f8fffb;
   --amber: #b56a24;
+  --json-key: #1d5fa8;
+  --json-string: #0a7d5a;
+  --json-number: #b8501f;
+  --json-boolean: #8a4fb8;
+  --json-punct: #66776f;
   --radius-control: 8px;
   --radius-surface: 10px;
   --shadow-soft: 0 18px 48px rgba(20, 33, 31, 0.08);
@@ -35,6 +40,11 @@ html[data-theme="dark"] {
   --accent-3: #8f8069;
   --accent-ink: #14110a;
   --amber: #f4c84a;
+  --json-key: #7fb0e6;
+  --json-string: #7fcfa6;
+  --json-number: #e0a36b;
+  --json-boolean: #c79be0;
+  --json-punct: #a9a295;
   --radius-control: 8px;
   --radius-surface: 10px;
   --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.38);
