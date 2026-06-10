@@ -22,6 +22,7 @@ export const toolRoutes: readonly ToolRouteMeta[] = [
   { id: "regex", slug: "regex", title: "正则表达式测试工具", description: "在线测试正则表达式，查看匹配数量、位置和捕获组，本地运行。" },
   { id: "markdown", slug: "markdown", title: "Markdown 预览工具", description: "在线 Markdown 本地预览，快速检查标题、列表、引用和代码块，数据不上传。" },
   { id: "data", slug: "yaml", title: "YAML / TOML 转 JSON 工具", description: "在线把 YAML / TOML 转成 JSON，覆盖配置和 Front Matter 场景，本地运行。" },
+  { id: "xml", slug: "xml", title: "XML 转 JSON 工具", description: "在线把 XML 转成 JSON，支持属性、文本节点、重复节点数组和命名空间选项，本地运行，数据不上传。" },
   { id: "csv", slug: "csv", title: "CSV / TSV 转 JSON 工具", description: "在线把 CSV / TSV 转成 JSON，适合表格数据整理，本地运行，数据不上传。" },
   { id: "color", slug: "color", title: "颜色格式转换工具（HEX/RGB/HSL）", description: "在线 HEX、RGB、HSL 颜色格式互转，本地运行。" },
   { id: "image", slug: "image", title: "图片压缩 / 格式转换工具（JPG/PNG/WebP）", description: "本地压缩与转换 JPG / PNG / WebP，优先使用 WASM 编码器，图片不上传。" },

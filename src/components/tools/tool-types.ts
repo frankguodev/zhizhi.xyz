@@ -1,6 +1,6 @@
 export type ToolLocale = "zh" | "en";
 
-export type ToolTab = "json" | "encoding" | "time" | "text" | "diff" | "jsonToTs" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64";
+export type ToolTab = "json" | "encoding" | "time" | "text" | "diff" | "jsonToTs" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "xml" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64";
 export type CsvDelimiter = "auto" | "comma" | "tab";
 export type CsvOutputMode = "objects" | "rows";
 export type EncodingAction = "urlEncode" | "urlDecode" | "base64Encode" | "base64Decode" | "unicodeEscape" | "unicodeUnescape" | "htmlEscape" | "htmlUnescape";
@@ -9,11 +9,12 @@ export type HashOutputFormat = "hex" | "base64" | "base64url";
 export type JsonAction = "format" | "minify" | "sort" | "sortDesc" | "escape" | "unescape" | "flatten" | "unflatten" | "validate";
 export type StatusType = "idle" | "success" | "error";
 export type StructuredFormat = "yaml" | "toml";
-export type TextAction = "trimLines" | "removeEmpty" | "dedupe" | "sort" | "lower" | "upper";
+export type TextAction = "trimLines" | "removeEmpty" | "dedupe" | "sortAsc" | "sortDesc" | "lower" | "upper" | "collapseSpaces" | "normalizeLineEndings" | "removeZeroWidth" | "tabsToSpaces";
 export type TimeDisplayMode = "local" | "utc";
 export type TimestampUnit = "auto" | "seconds" | "milliseconds";
 export type UtilityAction = "base64Encode" | "base64Decode" | "textDedupe" | "textSort" | "regexReplace" | "regexTest";
 export type UuidFormat = "standard" | "uppercase" | "compact" | "json";
+export type XmlJsonFormat = "2" | "4" | "6" | "compact";
 export type ToolGroup = "data" | "encode" | "dev" | "writing" | "media";
 export type EditorPanelSize = "compact" | "medium" | "large" | "expanded";
 
@@ -105,6 +106,7 @@ export function isToolTab(value: unknown): value is ToolTab {
     value === "regex" ||
     value === "markdown" ||
     value === "data" ||
+    value === "xml" ||
     value === "csv" ||
     value === "color" ||
     value === "image" ||
@@ -155,4 +157,8 @@ export function isTimestampUnit(value: unknown): value is TimestampUnit {
 
 export function isUuidFormat(value: unknown): value is UuidFormat {
   return value === "standard" || value === "uppercase" || value === "compact" || value === "json";
+}
+
+export function isXmlJsonFormat(value: unknown): value is XmlJsonFormat {
+  return value === "2" || value === "4" || value === "6" || value === "compact";
 }

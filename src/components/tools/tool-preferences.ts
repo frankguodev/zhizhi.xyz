@@ -1,4 +1,4 @@
-import type { CsvDelimiter, CsvOutputMode, HashAlgorithm, HashOutputFormat, StructuredFormat, TimeDisplayMode, TimestampUnit, ToolGroup, ToolTab, UuidFormat } from "./tool-types";
+import type { CsvDelimiter, CsvOutputMode, HashAlgorithm, HashOutputFormat, StructuredFormat, TimeDisplayMode, TimestampUnit, ToolGroup, ToolTab, UuidFormat, XmlJsonFormat } from "./tool-types";
 import {
   isCsvDelimiter,
   isCsvOutputMode,
@@ -11,6 +11,7 @@ import {
   isToolGroup,
   isToolTab,
   isUuidFormat,
+  isXmlJsonFormat,
 } from "./tool-types";
 
 const preferenceStorageKey = "zhizhi.tools.preferences";
@@ -31,6 +32,11 @@ export type ToolPreferences = {
   timeDisplayMode: TimeDisplayMode;
   timestampUnit: TimestampUnit;
   uuidFormat: UuidFormat;
+  xmlForceArrays: boolean;
+  xmlIncludeAttributes: boolean;
+  xmlJsonFormat: XmlJsonFormat;
+  xmlStripNamespaces: boolean;
+  xmlTrimText: boolean;
 };
 
 const defaultToolPreferences: ToolPreferences = {
@@ -49,6 +55,11 @@ const defaultToolPreferences: ToolPreferences = {
   timeDisplayMode: "local",
   timestampUnit: "auto",
   uuidFormat: "standard",
+  xmlForceArrays: false,
+  xmlIncludeAttributes: true,
+  xmlJsonFormat: "2",
+  xmlStripNamespaces: false,
+  xmlTrimText: true,
 };
 
 export function readToolPreferences() {
@@ -79,6 +90,11 @@ export function readToolPreferences() {
       timeDisplayMode: isTimeDisplayMode(parsed.timeDisplayMode) ? parsed.timeDisplayMode : defaultToolPreferences.timeDisplayMode,
       timestampUnit: isTimestampUnit(parsed.timestampUnit) ? parsed.timestampUnit : defaultToolPreferences.timestampUnit,
       uuidFormat: isUuidFormat(parsed.uuidFormat) ? parsed.uuidFormat : defaultToolPreferences.uuidFormat,
+      xmlForceArrays: typeof parsed.xmlForceArrays === "boolean" ? parsed.xmlForceArrays : defaultToolPreferences.xmlForceArrays,
+      xmlIncludeAttributes: typeof parsed.xmlIncludeAttributes === "boolean" ? parsed.xmlIncludeAttributes : defaultToolPreferences.xmlIncludeAttributes,
+      xmlJsonFormat: isXmlJsonFormat(parsed.xmlJsonFormat) ? parsed.xmlJsonFormat : defaultToolPreferences.xmlJsonFormat,
+      xmlStripNamespaces: typeof parsed.xmlStripNamespaces === "boolean" ? parsed.xmlStripNamespaces : defaultToolPreferences.xmlStripNamespaces,
+      xmlTrimText: typeof parsed.xmlTrimText === "boolean" ? parsed.xmlTrimText : defaultToolPreferences.xmlTrimText,
     };
   } catch {
     return defaultToolPreferences;

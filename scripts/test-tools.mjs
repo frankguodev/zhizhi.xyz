@@ -7,10 +7,25 @@ const { decodeJwtInput, formatHashResult } = await import("../src/components/too
 const { describeInvalidJsonPunctuation, findInvalidJsonPunctuationIndex, findInvalidJsonPunctuationRange } = await import("../src/components/tools/tool-json-diagnostics.ts");
 const { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } = await import("../src/components/tools/tool-markdown.ts");
 const { parseTomlDocument, parseYamlDocument } = await import("../src/components/tools/tool-structured.ts");
+const { defaultXmlToJsonOptions, xmlDocumentToJson } = await import("../src/components/tools/tool-xml.ts");
 const { computeDiff, createUnifiedPatch } = await import("../src/components/tools/tool-diff.ts");
 const { jsonToTypeScript } = await import("../src/components/tools/tool-json-to-ts.ts");
 
 const defaultOptions = { emptyAsNull: false, inferTypes: true, outputMode: "objects" };
+
+function xmlText(value, nodeType = 3) {
+  return { attributes: [], childNodes: [], nodeName: nodeType === 4 ? "#cdata-section" : "#text", nodeType, textContent: value };
+}
+
+function xmlElement(nodeName, attributes = {}, childNodes = []) {
+  return {
+    attributes: Object.entries(attributes).map(([name, value]) => ({ name, value })),
+    childNodes,
+    nodeName,
+    nodeType: 1,
+    textContent: null,
+  };
+}
 
 function loadWorker(scriptPath) {
   const messages = [];
@@ -96,6 +111,39 @@ assert.deepEqual(parseTomlDocument("title = \"Tools\"\npublished = true\n\n[meta
   title: "Tools",
   published: true,
   meta: { version: 1, tags: ["json", "toml"] },
+});
+
+const xmlArticle = {
+  documentElement: xmlElement("article", { id: "tools-1", published: "true" }, [
+    xmlElement("title", {}, [xmlText(" XML 工具 ")]),
+    xmlElement("tag", {}, [xmlText("json")]),
+    xmlElement("tag", {}, [xmlText("xml")]),
+    xmlElement("summary", {}, [xmlText("支持 "), xmlElement("strong", {}, [xmlText("属性")]), xmlText(" 和文本")]),
+    xmlElement("empty"),
+  ]),
+};
+assert.deepEqual(xmlDocumentToJson(xmlArticle, defaultXmlToJsonOptions), {
+  article: {
+    "@id": "tools-1",
+    "@published": "true",
+    title: "XML 工具",
+    tag: ["json", "xml"],
+    summary: { strong: "属性", "#text": "支持和文本" },
+    empty: null,
+  },
+});
+
+assert.deepEqual(xmlDocumentToJson(xmlArticle, { ...defaultXmlToJsonOptions, forceArrays: true, includeAttributes: false }), {
+  article: {
+    title: ["XML 工具"],
+    tag: ["json", "xml"],
+    summary: [{ strong: ["属性"], "#text": "支持和文本" }],
+    empty: [null],
+  },
+});
+
+assert.deepEqual(xmlDocumentToJson({ documentElement: xmlElement("media:item", { "xml:lang": "zh" }, [xmlText("内容", 4)]) }, { ...defaultXmlToJsonOptions, stripNamespaces: true }), {
+  item: { "@lang": "zh", "#text": "内容" },
 });
 
 const runJsonWorker = loadWorker("public/tools-json-worker.js");

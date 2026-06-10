@@ -33,6 +33,18 @@ export const sampleCsv = `title,category,reading_minutes
 知之工具,tools,5
 Markdown 预览,content,8`;
 
+export const sampleXml = `<article id="tools-1" published="true">
+  <title>知之工具</title>
+  <tags>
+    <tag>json</tag>
+    <tag>xml</tag>
+  </tags>
+  <meta>
+    <localOnly>true</localOnly>
+    <version>1</version>
+  </meta>
+</article>`;
+
 export function getSampleInput(tab: ToolTab) {
   return {
     color: "#d9b861",
@@ -56,5 +68,6 @@ export function getSampleInput(tab: ToolTab) {
     uuid: "10",
     watermark: "",
     wechatQr: "",
+    xml: sampleXml,
   }[tab];
 }

@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronRight, ChevronUp, Search } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { toolMonoContentClass } from "./tool-panel";
 
 type JsonView = "highlight" | "tree" | "text";
 
@@ -169,12 +170,12 @@ function CodeBlock({ text, children }: { text: string; children: ReactNode }) {
       {gutter !== null ? (
         <pre
           aria-hidden="true"
-          className="sticky left-0 z-10 shrink-0 select-none border-r border-line/60 bg-paper px-2 py-3.5 text-right font-mono text-[0.875rem] leading-7 text-muted/55"
+          className={`sticky left-0 z-10 shrink-0 select-none border-r border-line/60 bg-paper px-2 py-3.5 text-right ${toolMonoContentClass} text-muted/55`}
         >
           {gutter}
         </pre>
       ) : null}
-      <pre className="grow whitespace-pre px-3.5 py-3.5 font-mono text-[0.875rem] leading-7 text-foreground">{children}</pre>
+      <pre className={`grow whitespace-pre px-3.5 py-3.5 ${toolMonoContentClass} text-foreground`}>{children}</pre>
     </div>
   );
 }
@@ -285,7 +286,7 @@ function TreeNode({ name, value, depth }: { name: string | number | null; value:
 
 function TreeView({ value }: { value: unknown }) {
   return (
-    <div className="min-h-full p-3.5 font-mono text-[0.875rem] leading-7 text-foreground">
+    <div className={`min-h-full p-3.5 ${toolMonoContentClass} text-foreground`}>
       <TreeNode name={null} value={value} depth={0} />
     </div>
   );

@@ -25,6 +25,17 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-10",
+    title: "工具页继续升级：新增 XML 转 JSON，文本与 Diff 工具更顺手",
+    changes: [
+      { type: "added", label: "XML 转 JSON", text: "新增 XML 转 JSON 工具，可处理属性、文本节点、重复节点和命名空间前缀，适合整理接口返回、配置文件和结构化文本。" },
+      { type: "improved", label: "JSON 工具", text: "结果区操作更清晰：复制、压缩和缩进选项放在更顺手的位置，并新增 6 空格缩进，缩进文案统一显示为空格数。" },
+      { type: "improved", label: "文本工具", text: "统计信息保留在输入区和结果区，去掉重复的顶部统计；常用清理操作放在外面，低频转换收进菜单，界面更干净。" },
+      { type: "improved", label: "Diff 对比", text: "输入区和结果区按钮重新收纳，支持复制输入、下载结果、复制补丁、展开 / 折叠未变化内容、切换上下文行数，并可跳转上一个 / 下一个差异。" },
+      { type: "improved", label: "工具界面", text: "工具页的三点菜单改为更紧凑的样式，减少弹出项占用，让输入区和结果区看起来更轻。" },
+    ],
+  },
+  {
     date: "2026-06-09",
     title: "工具体验优化：命令面板切换、JSON 内容搜索与界面精修",
     changes: [

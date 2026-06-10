@@ -47,10 +47,12 @@ import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHisto
 import { JsonViewer } from "./json-viewer";
 import { enhanceJsonError, getJsonErrorHighlight, repairJsonText, translateJsonErrorReason } from "./tool-json-diagnostics";
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
+import { toolMonoContentClass } from "./tool-panel";
 import { readToolPreferences, writeToolPreferences } from "./tool-preferences";
 import { toolSlugById } from "@/lib/tools-meta";
-import { sampleCsv, sampleMarkdown, sampleStructured } from "./tool-samples";
+import { sampleCsv, sampleMarkdown, sampleStructured, sampleXml } from "./tool-samples";
 import { parseTomlDocument, parseYamlDocument } from "./tool-structured";
+import { parseXmlToJson, type XmlToJsonOptions } from "./tool-xml";
 import type {
   CsvDelimiter,
   CsvOutputMode,
@@ -76,6 +78,7 @@ import type {
   UtilityWorkerPending,
   UtilityWorkerResult,
   UuidFormat,
+  XmlJsonFormat,
 } from "./tool-types";
 import { isToolTab } from "./tool-types";
 
@@ -100,6 +103,7 @@ const generalLargeInputBytes = 5 * 1024 * 1024;
 const hashFileWarningBytes = 50 * 1024 * 1024;
 const hashFileLimitBytes = 256 * 1024 * 1024;
 const jsonLargeInputBytes = 10 * 1024 * 1024;
+const xmlLargeInputBytes = 1024 * 1024;
 // 自动格式化在主线程同步跑，超过该体积就跳过、提示改用「格式化」按钮（走 Worker），避免输入卡顿。
 const jsonAutoFormatMaxBytes = 1024 * 1024;
 const jsonWorkerTimeoutMs = 60000;
@@ -136,6 +140,7 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   uuid: "dev",
   watermark: "media",
   wechatQr: "media",
+  xml: "data",
 };
 
 const copyLabels = {
@@ -196,6 +201,7 @@ const tabLabels = [
   { id: "regex", label: "正则", description: "测试正则表达式，查看匹配数量、位置和捕获组。", icon: Search },
   { id: "markdown", label: "MD", description: "Markdown 本地预览，适合快速检查标题、列表、引用和代码块。", icon: FileText },
   { id: "data", label: "YAML", description: "YAML / TOML 转 JSON，覆盖常见配置和 Front Matter 场景。", icon: Braces },
+  { id: "xml", label: "XML", description: "XML 转 JSON，支持属性、文本节点、重复节点和命名空间选项。", icon: Braces },
   { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
   { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
   { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
@@ -206,6 +212,9 @@ const tabLabels = [
   { id: "qrDecode", label: "二维码识别", description: "上传或粘贴二维码 / 条形码图片，本地解出链接或文本。", icon: ScanLine },
   { id: "imageBase64", label: "图片转 Base64", description: "图片与 Base64 / Data URI 互转，输出 CSS / HTML / Markdown 片段。", icon: Binary },
 ] as const;
+
+const hiddenToolTabs = new Set<ToolTab>(["data"]);
+const visibleTabLabels = tabLabels.filter((tab) => !hiddenToolTabs.has(tab.id));
 
 const toolSearchAliases: Record<ToolTab, string> = {
   color: "hex rgb hsl css color palette yanse se sezhi",
@@ -229,10 +238,11 @@ const toolSearchAliases: Record<ToolTab, string> = {
   uuid: "uuid guid random v4 id",
   watermark: "watermark text tiled diagonal photo picture copyright shuiyin wenzi pingpu banquan tupian",
   wechatQr: "wechat weixin qr qrcode contact friend avatar scan saoyisao erweima touxiang",
+  xml: "xml json rss atom svg sitemap convert parse markup biaoqian zhuanhuan",
 };
 
 // 命令面板用的工具清单：在 tabLabels 基础上补上分组与搜索别名，供 ⌘K 切换器过滤。
-const paletteTools: readonly PaletteTool[] = tabLabels.map((tab) => ({
+const paletteTools: readonly PaletteTool[] = visibleTabLabels.map((tab) => ({
   id: tab.id,
   label: tab.label,
   description: tab.description,
@@ -296,12 +306,25 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const [timestampUnit, setTimestampUnit] = useState<TimestampUnit>("auto");
   const [textInput, setTextInput] = useState("知识\n工具\n知识\n\n知之");
   const [textOutput, setTextOutput] = useState("");
+  const [textDedupeIgnoreCase, setTextDedupeIgnoreCase] = useState(false);
+  const [textDedupeKeepOrder, setTextDedupeKeepOrder] = useState(true);
+  const [textDedupeTrim, setTextDedupeTrim] = useState(true);
+  const [textSortRemoveEmpty, setTextSortRemoveEmpty] = useState(false);
+  const [textSortTrim, setTextSortTrim] = useState(false);
+  const [textSummary, setTextSummary] = useState("");
   const [structuredFormat, setStructuredFormat] = useState<StructuredFormat>("yaml");
   const [structuredInput, setStructuredInput] = useState(sampleStructured);
   const [structuredOutput, setStructuredOutput] = useState("");
   const [uuidInput, setUuidInput] = useState("10");
   const [uuidOutput, setUuidOutput] = useState("");
   const [uuidFormat, setUuidFormat] = useState<UuidFormat>("standard");
+  const [xmlForceArrays, setXmlForceArrays] = useState(false);
+  const [xmlIncludeAttributes, setXmlIncludeAttributes] = useState(true);
+  const [xmlInput, setXmlInput] = useState(sampleXml);
+  const [xmlJsonFormat, setXmlJsonFormat] = useState<XmlJsonFormat>("2");
+  const [xmlOutput, setXmlOutput] = useState("");
+  const [xmlStripNamespaces, setXmlStripNamespaces] = useState(false);
+  const [xmlTrimText, setXmlTrimText] = useState(true);
   const jsonCancelRequestedRef = useRef(false);
   const jsonPendingRef = useRef<JsonWorkerPending | null>(null);
   const jsonRequestIdRef = useRef(0);
@@ -341,6 +364,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     uuid: uuidOutput,
     watermark: "",
     wechatQr: "",
+    xml: xmlOutput,
   });
   const currentInput = getToolValue(activeTab, {
     color: colorInput,
@@ -364,6 +388,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     uuid: uuidInput,
     watermark: "",
     wechatQr: "",
+    xml: xmlInput,
   });
   const activeTabInfo = tabLabels.find((tab) => tab.id === activeTab) ?? tabLabels[0];
   const ActiveIcon = activeTabInfo.icon;
@@ -371,13 +396,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const panelSize = getPanelSize(activeTab);
   const currentInputMetrics = useMemo(() => getTextMetrics(currentInput), [currentInput]);
   const currentOutputMetrics = useMemo(() => getTextMetrics(currentOutput), [currentOutput]);
-
-  const textStats = useMemo(() => {
-    const characters = textInput.length;
-    const lines = textInput ? textInput.split(/\r?\n/).length : 0;
-    const words = textInput.trim() ? textInput.trim().split(/\s+/).filter(Boolean).length : 0;
-    return { characters, lines, words };
-  }, [textInput]);
+  const textInputIsLarge = activeTab === "text" && currentInputMetrics.bytes > generalLargeInputBytes;
+  const xmlInputIsLarge = activeTab === "xml" && currentInputMetrics.bytes > xmlLargeInputBytes;
+  const xmlIndentFormat = xmlJsonFormat === "4" || xmlJsonFormat === "6" ? xmlJsonFormat : "2";
 
   useEffect(() => {
     return () => {
@@ -402,7 +423,8 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     const timeout = window.setTimeout(() => {
       const preferences = readToolPreferences();
       const linkedTool = initialTool ?? readToolFromUrl();
-      setActiveTab(linkedTool ?? preferences.activeTab);
+      const preferredTool = hiddenToolTabs.has(preferences.activeTab) ? "json" : preferences.activeTab;
+      setActiveTab(linkedTool ?? preferredTool);
       setActiveGroup(linkedTool ? toolGroupByTab[linkedTool] : preferences.activeGroup);
       setCsvDelimiter(preferences.csvDelimiter);
       setCsvEmptyAsNull(preferences.csvEmptyAsNull);
@@ -417,6 +439,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       setTimeDisplayMode(preferences.timeDisplayMode);
       setTimestampUnit(preferences.timestampUnit);
       setUuidFormat(preferences.uuidFormat);
+      setXmlForceArrays(preferences.xmlForceArrays);
+      setXmlIncludeAttributes(preferences.xmlIncludeAttributes);
+      setXmlJsonFormat(preferences.xmlJsonFormat);
+      setXmlStripNamespaces(preferences.xmlStripNamespaces);
+      setXmlTrimText(preferences.xmlTrimText);
       setToolHistoryItems(readToolHistory());
       setPreferencesReady(true);
     }, 0);
@@ -431,7 +458,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
 
     writeToolPreferences({
       activeGroup,
-      activeTab,
+      activeTab: hiddenToolTabs.has(activeTab) ? "json" : activeTab,
       csvDelimiter,
       csvEmptyAsNull,
       csvInferTypes,
@@ -445,6 +472,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       timeDisplayMode,
       timestampUnit,
       uuidFormat,
+      xmlForceArrays,
+      xmlIncludeAttributes,
+      xmlJsonFormat,
+      xmlStripNamespaces,
+      xmlTrimText,
     });
   }, [
     activeGroup,
@@ -463,6 +495,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     timeDisplayMode,
     timestampUnit,
     uuidFormat,
+    xmlForceArrays,
+    xmlIncludeAttributes,
+    xmlJsonFormat,
+    xmlStripNamespaces,
+    xmlTrimText,
   ]);
 
   useEffect(() => {
@@ -779,6 +816,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     if (tab === "data") setStructuredOutput(value);
     if (tab === "csv") setCsvOutput(value);
     if (tab === "color") setColorOutput(value);
+    if (tab === "xml") setXmlOutput(value);
   }
 
   function setOutput(value: string) {
@@ -805,6 +843,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     if (tab === "data") setStructuredInput(value);
     if (tab === "csv") setCsvInput(value);
     if (tab === "color") setColorInput(value);
+    if (tab === "xml") setXmlInput(value);
   }
 
   function setInput(value: string) {
@@ -860,6 +899,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
 
   function clearInput() {
     setInput("");
+    if (activeTab === "text") {
+      setTextSummary("");
+    }
     showStatus("idle", "");
   }
 
@@ -868,6 +910,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     setStructuredResult(null);
     if (activeTab === "json") {
       setJsonErrorHighlight(null);
+    }
+    if (activeTab === "text") {
+      setTextSummary("");
     }
     showStatus("idle", "");
   }
@@ -919,6 +964,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     if (activeTab === "csv") {
       return { csvDelimiter, csvEmptyAsNull, csvInferTypes, csvOutputMode };
     }
+    if (activeTab === "xml") {
+      return { xmlForceArrays, xmlIncludeAttributes, xmlJsonFormat, xmlStripNamespaces, xmlTrimText };
+    }
     return {};
   }
 
@@ -938,6 +986,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     if (typeof settings.csvEmptyAsNull === "boolean") setCsvEmptyAsNull(settings.csvEmptyAsNull);
     if (typeof settings.csvInferTypes === "boolean") setCsvInferTypes(settings.csvInferTypes);
     if (settings.csvOutputMode) setCsvOutputMode(settings.csvOutputMode);
+    if (typeof settings.xmlForceArrays === "boolean") setXmlForceArrays(settings.xmlForceArrays);
+    if (typeof settings.xmlIncludeAttributes === "boolean") setXmlIncludeAttributes(settings.xmlIncludeAttributes);
+    if (settings.xmlJsonFormat) setXmlJsonFormat(settings.xmlJsonFormat);
+    if (typeof settings.xmlStripNamespaces === "boolean") setXmlStripNamespaces(settings.xmlStripNamespaces);
+    if (typeof settings.xmlTrimText === "boolean") setXmlTrimText(settings.xmlTrimText);
   }
 
   function deleteHistoryItem(id: string) {
@@ -979,7 +1032,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `zhizhi-${activeTab}-result.${downloadInfo.extension}`;
+    link.download = downloadInfo.filename ?? `zhizhi-${activeTab}-result.${downloadInfo.extension}`;
     link.style.display = "none";
     document.body.appendChild(link);
     link.click();
@@ -1197,24 +1250,23 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   async function runText(action: TextAction) {
     const inputMetrics = getTextMetrics(textInput);
     try {
-      if (action === "dedupe" || action === "sort") {
-        setTextBusy(true);
-        showStatus("idle", "正在后台线程处理文本...");
-        const result = await runUtilityInWorker(textInput, action === "dedupe" ? "textDedupe" : "textSort");
-        setTextOutput(result.output);
-        setMobilePanel("output");
-        showStatus("success", `${"文本处理完成。"}${largeInputSuffix(inputMetrics.bytes)}`);
-        return;
-      }
-
+      setTextBusy(true);
       const lines = textInput.split(/\r?\n/);
       const result = {
         trimLines: () => lines.map((line) => line.trim()).join("\n"),
         removeEmpty: () => lines.filter((line) => line.trim()).join("\n"),
+        dedupe: () => dedupeTextLines(lines, { ignoreCase: textDedupeIgnoreCase, keepOrder: textDedupeKeepOrder, trim: textDedupeTrim }),
+        sortAsc: () => sortTextLines(lines, { descending: false, removeEmpty: textSortRemoveEmpty, trim: textSortTrim }),
+        sortDesc: () => sortTextLines(lines, { descending: true, removeEmpty: textSortRemoveEmpty, trim: textSortTrim }),
         lower: () => textInput.toLowerCase(),
         upper: () => textInput.toUpperCase(),
+        collapseSpaces: () => textInput.replace(/[^\S\r\n]+/g, " "),
+        normalizeLineEndings: () => textInput.replace(/\r\n?/g, "\n"),
+        removeZeroWidth: () => textInput.replace(/[\u200b-\u200d\ufeff]/g, ""),
+        tabsToSpaces: () => textInput.replace(/\t/g, "  "),
       }[action]();
       setTextOutput(result);
+      setTextSummary(formatTextSummary(action, textInput, result));
       setMobilePanel("output");
       showStatus("success", `${"文本处理完成。"}${largeInputSuffix(inputMetrics.bytes)}`);
     } catch (error) {
@@ -1329,6 +1381,39 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     }
   }
 
+  function runXmlToJson() {
+    try {
+      const options: XmlToJsonOptions = {
+        forceArrays: xmlForceArrays,
+        includeAttributes: xmlIncludeAttributes,
+        stripNamespaces: xmlStripNamespaces,
+        trimText: xmlTrimText,
+      };
+      const value = parseXmlToJson(xmlInput, options);
+      setXmlOutput(formatXmlJson(value, xmlJsonFormat));
+      setMobilePanel("output");
+      showStatus("success", `XML 已转换为 JSON。${xmlInputIsLarge ? " 较大 XML 可能需要几秒，浏览器短暂卡顿属正常。" : ""}`);
+    } catch (error) {
+      const message = formatToolError(error, "XML 转换失败。");
+      setXmlOutput(formatXmlErrorOutput(message));
+      setMobilePanel("output");
+      showStatus("error", message);
+    }
+  }
+
+  function updateXmlJsonFormat(format: XmlJsonFormat) {
+    setXmlJsonFormat(format);
+    if (!xmlOutput.trim() || isToolErrorOutput(xmlOutput)) {
+      return;
+    }
+
+    try {
+      setXmlOutput(formatXmlJson(JSON.parse(xmlOutput), format));
+    } catch {
+      // The output may be user-edited or from an older error state; keep it unchanged.
+    }
+  }
+
   function runColorConvert() {
     try {
       setColorOutput(formatColorReport(parseColorValue(colorInput)));
@@ -1378,11 +1463,11 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
             >
               <LayoutGrid className="h-4 w-4" />
               <span>切换工具</span>
-              <span className="inline-flex items-center rounded-full bg-accent/22 px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none">{tabLabels.length}</span>
+              <span className="inline-flex items-center rounded-full bg-accent/22 px-1.5 py-0.5 text-[0.65rem] font-semibold leading-none">{visibleTabLabels.length}</span>
             </button>
           </div>
 
-          {!isStandaloneTool(activeTab) && activeTab !== "json" ? (
+          {!isStandaloneTool(activeTab) && activeTab !== "json" && activeTab !== "xml" && activeTab !== "text" ? (
           <div className="rounded-md bg-paper/54 p-2.5">
             {activeTab === "encoding" ? <EncodingControls runEncoding={runEncoding} busy={encodingBusy} /> : null}
             {activeTab === "time" ? (
@@ -1394,7 +1479,6 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 onTimestampUnitChange={setTimestampUnit}
               />
             ) : null}
-            {activeTab === "text" ? <TextControls runText={runText} stats={textStats} busy={textBusy} /> : null}
             {activeTab === "jwt" ? <JwtControls onDecode={runJwtDecode} /> : null}
             {activeTab === "hash" ? (
               <HashControls
@@ -1496,7 +1580,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 value={currentInput}
                 onChange={setInput}
                 metrics={currentInputMetrics}
-                placeholder={activeTab === "time" ? "输入时间戳或日期字符串" : undefined}
+                placeholder={activeTab === "time" ? "输入时间戳或日期字符串" : activeTab === "xml" ? "粘贴 XML 后点击「转 JSON」。属性会转成 @id，文本会转成 #text。" : activeTab === "text" ? "粘贴文本、名单或多行内容后选择处理方式。" : undefined}
                 size={panelSize}
                 highlight={activeTab === "json" ? jsonErrorHighlight : null}
                 resizable={activeTab !== "json"}
@@ -1522,12 +1606,54 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                         <JsonStatusBadge busy={jsonBusy} validity={jsonValidity} onCancel={cancelJsonTask} />
                       </>
                     ) : null}
-                    <PanelActionButton icon={Clipboard} label={copiedTarget === "input" ? labels.copied : labels.copy} onClick={() => copyText(currentInput, "input")}>
-                      {copiedTarget === "input" ? labels.copied : labels.copy}
+                    {activeTab === "xml" ? (
+                      <>
+                        <PanelActionButton primary label={"转 JSON"} onClick={runXmlToJson}>{"转 JSON"}</PanelActionButton>
+                        <PanelOverflowMenu
+                          triggerLabel={"选项"}
+                          items={[
+                            { key: "attributes", label: xmlIncludeAttributes ? "保留属性 ✓" : "保留属性", active: xmlIncludeAttributes, onClick: () => setXmlIncludeAttributes(!xmlIncludeAttributes) },
+                            { key: "trim", label: xmlTrimText ? "清理文本空白 ✓" : "清理文本空白", active: xmlTrimText, onClick: () => setXmlTrimText(!xmlTrimText) },
+                            { key: "arrays", label: xmlForceArrays ? "重复节点转数组 ✓" : "重复节点转数组", active: xmlForceArrays, onClick: () => setXmlForceArrays(!xmlForceArrays) },
+                            { key: "namespaces", label: xmlStripNamespaces ? "移除命名空间前缀 ✓" : "移除命名空间前缀", active: xmlStripNamespaces, onClick: () => setXmlStripNamespaces(!xmlStripNamespaces) },
+                          ]}
+                        />
+                        {xmlInputIsLarge ? <PanelInlineHint>{"较大 XML 可能需要几秒"}</PanelInlineHint> : null}
+                      </>
+                    ) : null}
+                    {activeTab === "text" ? (
+                      <>
+                        <PanelActionButton primary disabled={textBusy} label={"清理空白"} onClick={() => runText("trimLines")}>{"清理空白"}</PanelActionButton>
+                        <PanelActionButton disabled={textBusy} label={"清理空行"} onClick={() => runText("removeEmpty")}>{"清理空行"}</PanelActionButton>
+                        <PanelActionButton disabled={textBusy} label={"行去重"} onClick={() => runText("dedupe")}>{"行去重"}</PanelActionButton>
+                        <PanelOverflowMenu
+                          triggerLabel={"转换"}
+                          disabled={textBusy}
+                          items={[
+                            { key: "sortAsc", label: "升序排序", onClick: () => runText("sortAsc") },
+                            { key: "sortDesc", label: "降序排序", onClick: () => runText("sortDesc") },
+                            { key: "lower", label: "转小写", onClick: () => runText("lower") },
+                            { key: "upper", label: "转大写", onClick: () => runText("upper") },
+                            { key: "collapseSpaces", label: "合并连续空格", onClick: () => runText("collapseSpaces") },
+                            { key: "tabsToSpaces", label: "Tab 转空格", onClick: () => runText("tabsToSpaces") },
+                            { key: "zeroWidth", label: "移除零宽字符", onClick: () => runText("removeZeroWidth") },
+                            { key: "lineEndings", label: "统一换行符", onClick: () => runText("normalizeLineEndings") },
+                            { key: "dedupeTrim", label: textDedupeTrim ? "去重忽略首尾空白 ✓" : "去重忽略首尾空白", active: textDedupeTrim, onClick: () => setTextDedupeTrim(!textDedupeTrim) },
+                            { key: "dedupeCase", label: textDedupeIgnoreCase ? "去重忽略大小写 ✓" : "去重忽略大小写", active: textDedupeIgnoreCase, onClick: () => setTextDedupeIgnoreCase(!textDedupeIgnoreCase) },
+                            { key: "dedupeOrder", label: textDedupeKeepOrder ? "去重保留原顺序 ✓" : "去重保留原顺序", active: textDedupeKeepOrder, onClick: () => setTextDedupeKeepOrder(!textDedupeKeepOrder) },
+                            { key: "sortTrim", label: textSortTrim ? "排序前清理空白 ✓" : "排序前清理空白", active: textSortTrim, onClick: () => setTextSortTrim(!textSortTrim) },
+                            { key: "sortEmpty", label: textSortRemoveEmpty ? "排序前去空行 ✓" : "排序前去空行", active: textSortRemoveEmpty, onClick: () => setTextSortRemoveEmpty(!textSortRemoveEmpty) },
+                          ]}
+                        />
+                        {textInputIsLarge ? <PanelInlineHint>{"大文本可能需要几秒"}</PanelInlineHint> : null}
+                      </>
+                    ) : null}
+                    <PanelActionButton icon={Clipboard} label={activeTab === "xml" && copiedTarget === "input" ? "已复制 XML" : copiedTarget === "input" ? labels.copied : labels.copy} onClick={() => copyText(currentInput, "input")}>
+                      {activeTab === "xml" && copiedTarget === "input" ? "已复制 XML" : copiedTarget === "input" ? labels.copied : labels.copy}
                     </PanelActionButton>
                     {activeTab === "json" ? (
                       <PanelActionButton disabled={jsonBusy} label={"尝试修复"} onClick={repairJson}>{"尝试修复"}</PanelActionButton>
-                    ) : (
+                    ) : activeTab === "xml" || activeTab === "text" ? null : (
                       <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearInput} />
                     )}
                     <PanelOverflowMenu
@@ -1537,6 +1663,14 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                               { key: "clear", label: labels.clear, icon: Trash2, onClick: clearInput },
                               { key: "import", label: labels.importJson, icon: Upload, onClick: () => jsonFileInputRef.current?.click() },
                             ]
+                          : activeTab === "xml"
+                            ? [
+                                { key: "clear", label: labels.clear, icon: Trash2, onClick: clearInput },
+                              ]
+                          : activeTab === "text"
+                            ? [
+                                { key: "clear", label: labels.clear, icon: Trash2, onClick: clearInput },
+                              ]
                           : []),
                         { key: "save", label: labels.saveHistory, icon: Save, onClick: saveCurrentHistory },
                         { key: "history", label: labels.history, icon: History, onClick: toggleHistoryPanel },
@@ -1586,14 +1720,14 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                     <>
                       <Select
                         size="xs"
-                        className="w-16"
+                        className="w-20"
                         ariaLabel={labels.spaces}
                         value={jsonSpaces}
                         onChange={setJsonSpaces}
                         options={[
-                          { label: "2", value: "2" },
-                          { label: "4", value: "4" },
-                          { label: "6", value: "6" },
+                          { label: "2 空格", value: "2" },
+                          { label: "4 空格", value: "4" },
+                          { label: "6 空格", value: "6" },
                         ]}
                       />
                       <PanelActionButton active={jsonAutoFormat} label={"自动格式化"} onClick={() => setJsonAutoFormat(!jsonAutoFormat)}>
@@ -1603,6 +1737,44 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
                       <PanelActionButton disabled={jsonBusy} label={"压缩"} onClick={() => runJson("minify")}>{"压缩"}</PanelActionButton>
+                      <PanelOverflowMenu
+                        items={[
+                          { key: "clear", label: labels.clear, icon: Trash2, onClick: clearOutput },
+                          { key: "swap", label: labels.swap, icon: ArrowDownToLine, onClick: moveOutputToInput },
+                          { key: "exchange", label: labels.exchange, icon: ArrowRightLeft, onClick: exchangeInputOutput },
+                          { key: "download", label: labels.download, icon: Download, onClick: downloadOutput },
+                        ]}
+                      />
+                    </>
+                  }
+                />
+              ) : activeTab === "xml" ? (
+                <JsonOutputPanel
+                  label={labels.output}
+                  metrics={currentOutputMetrics}
+                  output={xmlOutput}
+                  size={panelSize}
+                  fill={expandedWorkspace}
+                  emptyMessage={"粘贴 XML 后点击「转 JSON」，这里会显示转换结果。属性会转成 @，文本/CDATA 会转成 #text，注释会忽略。"}
+                  actions={
+                    <>
+                      <PanelInlineHint>{"属性转 @id · 文本/CDATA 转 #text · 注释忽略"}</PanelInlineHint>
+                      <Select
+                        size="xs"
+                        className="w-20"
+                        ariaLabel={"JSON 格式"}
+                        value={xmlIndentFormat}
+                        onChange={(value) => updateXmlJsonFormat(value as XmlJsonFormat)}
+                        options={[
+                          { label: "2 空格", value: "2" },
+                          { label: "4 空格", value: "4" },
+                          { label: "6 空格", value: "6" },
+                        ]}
+                      />
+                      <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? "已复制 JSON" : labels.copy} onClick={() => copyText(currentOutput, "output")}>
+                        {copiedTarget === "output" ? "已复制 JSON" : labels.copy}
+                      </PanelActionButton>
+                      <PanelActionButton active={xmlJsonFormat === "compact"} label={"压缩"} onClick={() => updateXmlJsonFormat("compact")}>{"压缩"}</PanelActionButton>
                       <PanelOverflowMenu
                         items={[
                           { key: "clear", label: labels.clear, icon: Trash2, onClick: clearOutput },
@@ -1644,16 +1816,19 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                   onChange={setOutput}
                   metrics={currentOutputMetrics}
                   readOnly
+                  placeholder={activeTab === "text" ? "处理后的文本会显示在这里。" : undefined}
                   size={panelSize}
                   fill={expandedWorkspace}
                   actions={
                     <>
+                      {activeTab === "text" && textSummary ? <PanelInlineHint>{textSummary}</PanelInlineHint> : null}
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
-                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />
+                      {activeTab === "text" ? null : <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />}
                       <PanelOverflowMenu
                         items={[
+                          ...(activeTab === "text" ? [{ key: "clear", label: labels.clear, icon: Trash2, onClick: clearOutput }] : []),
                           { key: "swap", label: labels.swap, icon: ArrowDownToLine, onClick: moveOutputToInput },
                           { key: "exchange", label: labels.exchange, icon: ArrowRightLeft, onClick: exchangeInputOutput },
                           { key: "download", label: labels.download, icon: Download, onClick: downloadOutput },
@@ -2259,35 +2434,6 @@ function ColorControls({ onRun }: { onRun: () => void }) {
   );
 }
 
-function TextControls({
-  busy,
-  runText,
-  stats,
-}: {
-  busy: boolean;
-  runText: (action: TextAction) => void;
-  stats: { characters: number; lines: number; words: number };
-}) {
-  return (
-    <div className="grid gap-2.5">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <ToolButton disabled={busy} onClick={() => runText("trimLines")}>{"清理行首尾"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("removeEmpty")}>{"清理空行"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("dedupe")}>{"行去重"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("sort")}>{"行排序"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("lower")}>{"转小写"}</ToolButton>
-        <ToolButton disabled={busy} onClick={() => runText("upper")}>{"转大写"}</ToolButton>
-        {busy ? <ControlHint>{"处理中..."}</ControlHint> : null}
-      </div>
-      <div className="flex flex-wrap gap-1.5 text-[0.75rem] font-semibold text-muted">
-        <span className="rounded-md bg-accent/8 px-2 py-0.5">{"字符"} {stats.characters}</span>
-        <span className="rounded-md bg-accent/8 px-2 py-0.5">{"行数"} {stats.lines}</span>
-        <span className="rounded-md bg-accent/8 px-2 py-0.5">{"词数"} {stats.words}</span>
-      </div>
-    </div>
-  );
-}
-
 function EditorPanel({
   label,
   value,
@@ -2364,7 +2510,7 @@ function EditorPanel({
       <div className={`relative ${fillBodyClass}`}>
         {highlightParts ? (
           <pre
-            className={`${heightClass} pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap rounded-md border border-transparent bg-paper/88 p-3.5 font-mono text-[0.875rem] leading-7 text-transparent shadow-inner`}
+            className={`${heightClass} pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap rounded-md border border-transparent bg-paper/88 p-3.5 ${toolMonoContentClass} text-transparent shadow-inner`}
             style={{ overflowWrap: "break-word" }}
             aria-hidden="true"
           >
@@ -2380,7 +2526,7 @@ function EditorPanel({
         <textarea
           ref={textareaRef}
           aria-label={label}
-          className={`${heightClass} ${fillAreaClass} relative w-full ${canResize ? "resize-y" : "resize-none"} rounded-md border p-3.5 font-mono text-[0.875rem] leading-7 shadow-inner outline-none transition ${
+          className={`${heightClass} ${fillAreaClass} relative w-full ${canResize ? "resize-y" : "resize-none"} rounded-md border p-3.5 ${toolMonoContentClass} shadow-inner outline-none transition ${
             hasError
               ? "border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] text-[var(--accent-2)] focus:border-[color-mix(in_srgb,var(--accent-2)_62%,var(--line))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--accent-2)_16%,transparent)]"
               : highlightParts
@@ -2432,7 +2578,7 @@ function MarkdownPreviewPanel({
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {hasError ? (
-        <pre className={`${heightClass} ${fillBodyClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
+        <pre className={`${heightClass} ${fillBodyClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)] shadow-inner`}>
           {html}
         </pre>
       ) : (
@@ -2447,6 +2593,7 @@ function MarkdownPreviewPanel({
 
 function JsonOutputPanel({
   actions,
+  emptyMessage = "在左侧输入 JSON，这里会自动显示格式化结果。",
   label,
   metrics,
   output,
@@ -2454,6 +2601,7 @@ function JsonOutputPanel({
   fill = false,
 }: {
   actions?: ReactNode;
+  emptyMessage?: string;
   label: string;
   metrics: TextMetrics;
   output: string;
@@ -2489,14 +2637,14 @@ function JsonOutputPanel({
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {hasError ? (
-        <pre className={`${bodyHeightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
+        <pre className={`${bodyHeightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)] shadow-inner`}>
           {output}
         </pre>
       ) : parsed ? (
         <JsonViewer value={parsed.value} text={output} heightClass={bodyHeightClass} />
       ) : (
         <div className={`${bodyHeightClass} flex items-center justify-center rounded-md border border-line bg-paper/88 text-xs text-muted shadow-inner`}>
-          {"在左侧输入 JSON，这里会自动显示格式化结果。"}
+          {emptyMessage}
         </div>
       )}
     </div>
@@ -2541,11 +2689,11 @@ function StructuredResultPanel({
         }`}
       >
         {hasError ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-[var(--accent-2)]">{output}</pre>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)]">{output}</pre>
         ) : output && result ? (
           renderStructuredResult(result)
         ) : output ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-foreground">{output}</pre>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{output}</pre>
         ) : (
           <p className="text-xs font-semibold text-muted">{"运行工具后，这里会显示结构化结果。"}</p>
         )}
@@ -2573,7 +2721,7 @@ function HashStructuredResult({ result }: { result: HashStructuredResultData }) 
       </div>
       <div className="rounded-md border border-line bg-background/54 p-3">
         <div className="mb-2 text-[0.68rem] font-semibold uppercase text-muted">{"摘要"}</div>
-        <code className="block whitespace-pre-wrap break-all font-mono text-xs leading-6 text-foreground">{result.digest}</code>
+        <code className="block whitespace-pre-wrap break-all font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{result.digest}</code>
       </div>
     </div>
   );
@@ -2619,7 +2767,7 @@ function RegexStructuredResult({ result }: { result: RegexStructuredResultData }
                 <span className="rounded bg-accent/8 px-2 py-0.5">line {match.line}</span>
                 <span className="rounded bg-accent/8 px-2 py-0.5">column {match.column}</span>
               </div>
-              <code className="block whitespace-pre-wrap break-all font-mono text-xs leading-6 text-foreground">{match.match}</code>
+              <code className="block whitespace-pre-wrap break-all font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{match.match}</code>
               {match.captures.length > 0 ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${"捕获组"}: ${JSON.stringify(match.captures)}`}</div> : null}
               {match.groups ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${"命名组"}: ${JSON.stringify(match.groups)}`}</div> : null}
             </div>
@@ -2645,7 +2793,7 @@ function CodeBlock({ body, title }: { body: string; title: string }) {
   return (
     <div className="rounded-md border border-line bg-background/54 p-3">
       <div className="mb-2 text-[0.68rem] font-semibold uppercase text-muted">{title}</div>
-      <pre className="overflow-auto whitespace-pre-wrap break-words rounded bg-paper/80 p-3 font-mono text-xs leading-6 text-foreground">{body}</pre>
+      <pre className="overflow-auto whitespace-pre-wrap break-words rounded bg-paper/80 p-3 font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{body}</pre>
     </div>
   );
 }
@@ -2706,7 +2854,7 @@ function ColorResultPanel({
         }`}
       >
         {hasError ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6 text-[var(--accent-2)]">{output}</pre>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)]">{output}</pre>
         ) : color ? (
           <div className="grid gap-3">
             <div className="h-28 rounded-md border border-line shadow-inner" style={{ backgroundColor: color.hex }} />
@@ -2775,7 +2923,7 @@ function PanelOverflowMenu({
   label?: string;
   triggerLabel?: string;
   disabled?: boolean;
-  items: { key: string; label: string; icon?: ComponentType<{ className?: string }>; onClick: () => void }[];
+  items: { key: string; label: string; icon?: ComponentType<{ className?: string }>; active?: boolean; onClick: () => void }[];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -2835,7 +2983,9 @@ function PanelOverflowMenu({
             return (
               <button
                 key={item.key}
-                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-[0.75rem] font-semibold text-muted transition hover:bg-accent/8 hover:text-accent focus-visible:outline-none focus-visible:bg-accent/8"
+                className={`flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-[0.75rem] font-semibold transition hover:bg-accent/8 hover:text-accent focus-visible:outline-none focus-visible:bg-accent/8 ${
+                  item.active ? "bg-accent/8 text-accent" : "text-muted"
+                }`}
                 type="button"
                 role="menuitem"
                 onClick={() => {
@@ -2974,6 +3124,14 @@ function ControlHint({ children }: { children: ReactNode }) {
   );
 }
 
+function PanelInlineHint({ children }: { children: ReactNode }) {
+  return (
+    <span className="hidden h-7 items-center px-1 text-[0.72rem] font-semibold leading-none text-muted lg:inline-flex">
+      {children}
+    </span>
+  );
+}
+
 function ToolButton({
   children,
   onClick,
@@ -3099,6 +3257,18 @@ function formatJsonErrorOutput(message: string) {
   return formatToolErrorOutput(message, "[JSON 错误]");
 }
 
+function formatXmlErrorOutput(message: string) {
+  return formatToolErrorOutput(message, "[XML 错误]");
+}
+
+function formatXmlJson(value: unknown, format: XmlJsonFormat) {
+  return JSON.stringify(value, null, getXmlJsonSpacing(format));
+}
+
+function getXmlJsonSpacing(format: XmlJsonFormat) {
+  return format === "compact" ? undefined : Number(format);
+}
+
 function formatToolErrorOutput(message: string, title = "[错误]") {
   const detail = normalizeErrorDetail(message);
   const location = extractErrorLocation(message);
@@ -3117,7 +3287,7 @@ function formatToolErrorOutput(message: string, title = "[错误]") {
 }
 
 function isToolErrorOutput(value: string) {
-  return /^\[(?:JSON\s+error|JSON 错误|Error|错误)\]/i.test(value.trimStart());
+  return /^\[(?:JSON\s+error|JSON 错误|XML 错误|Error|错误)\]/i.test(value.trimStart());
 }
 
 function normalizeErrorDetail(message: string) {
@@ -3274,11 +3444,17 @@ function getFixedPanelHeightClass(size: EditorPanelSize) {
 }
 
 function getDownloadInfo(tab: ToolTab) {
+  if (tab === "xml") {
+    return { extension: "json", filename: "xml-to-json.json", mimeType: "application/json;charset=utf-8" };
+  }
   if (tab === "json" || tab === "csv" || tab === "data") {
     return { extension: "json", mimeType: "application/json;charset=utf-8" };
   }
   if (tab === "markdown") {
     return { extension: "html", mimeType: "text/html;charset=utf-8" };
+  }
+  if (tab === "text") {
+    return { extension: "txt", filename: "cleaned-text.txt", mimeType: "text/plain;charset=utf-8" };
   }
   if (tab === "color") {
     return { extension: "css", mimeType: "text/css;charset=utf-8" };
@@ -3286,6 +3462,76 @@ function getDownloadInfo(tab: ToolTab) {
   return { extension: "txt", mimeType: "text/plain;charset=utf-8" };
 }
 
+function dedupeTextLines(lines: string[], options: { ignoreCase: boolean; keepOrder: boolean; trim: boolean }) {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  for (const line of lines) {
+    const value = options.trim ? line.trim() : line;
+    const key = options.ignoreCase ? value.toLocaleLowerCase() : value;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    output.push(value);
+  }
+  return (options.keepOrder ? output : output.sort((left, right) => left.localeCompare(right, "zh-CN"))).join("\n");
+}
+
+function sortTextLines(lines: string[], options: { descending: boolean; removeEmpty: boolean; trim: boolean }) {
+  const normalized = lines
+    .map((line) => (options.trim ? line.trim() : line))
+    .filter((line) => !options.removeEmpty || line.trim());
+  normalized.sort((left, right) => left.localeCompare(right, "zh-CN"));
+  if (options.descending) {
+    normalized.reverse();
+  }
+  return normalized.join("\n");
+}
+
+function formatTextSummary(action: TextAction, input: string, output: string) {
+  const inputLines = splitLines(input);
+  const outputLines = splitLines(output);
+  if (action === "removeEmpty") {
+    return `移除 ${Math.max(0, inputLines.length - outputLines.length)} 个空行`;
+  }
+  if (action === "dedupe") {
+    return `去重 ${Math.max(0, inputLines.length - outputLines.length)} 行`;
+  }
+  if (action === "sortAsc") {
+    return `升序排序 ${outputLines.length} 行`;
+  }
+  if (action === "sortDesc") {
+    return `降序排序 ${outputLines.length} 行`;
+  }
+  if (action === "trimLines") {
+    return `清理 ${countChangedLines(inputLines, outputLines)} 行首尾空白`;
+  }
+  if (action === "collapseSpaces") {
+    return `合并 ${Math.max(0, input.length - output.length)} 个多余空白字符`;
+  }
+  if (action === "tabsToSpaces") {
+    return `替换 ${countMatches(input, /\t/g)} 个 Tab`;
+  }
+  if (action === "removeZeroWidth") {
+    return `移除 ${countMatches(input, /[\u200b-\u200d\ufeff]/g)} 个零宽字符`;
+  }
+  if (action === "normalizeLineEndings") {
+    return "已统一换行符";
+  }
+  return `转换 ${output.length} 个字符`;
+}
+
+function splitLines(value: string) {
+  return value ? value.split(/\r?\n/) : [];
+}
+
+function countChangedLines(before: string[], after: string[]) {
+  return before.reduce((count, line, index) => count + (line !== (after[index] ?? "") ? 1 : 0), 0);
+}
+
+function countMatches(value: string, pattern: RegExp) {
+  return value.match(pattern)?.length ?? 0;
+}
 
 function formatUuidValues(values: string[], format: UuidFormat) {
   if (format === "json") {

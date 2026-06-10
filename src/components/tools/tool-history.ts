@@ -1,5 +1,5 @@
-import type { CsvDelimiter, CsvOutputMode, HashAlgorithm, HashOutputFormat, StructuredFormat, TimeDisplayMode, TimestampUnit, ToolTab, UuidFormat } from "./tool-types";
-import { isCsvDelimiter, isCsvOutputMode, isHashAlgorithm, isHashOutputFormat, isJsonSpaces, isStructuredFormat, isTimeDisplayMode, isTimestampUnit, isToolTab, isUuidFormat } from "./tool-types";
+import type { CsvDelimiter, CsvOutputMode, HashAlgorithm, HashOutputFormat, StructuredFormat, TimeDisplayMode, TimestampUnit, ToolTab, UuidFormat, XmlJsonFormat } from "./tool-types";
+import { isCsvDelimiter, isCsvOutputMode, isHashAlgorithm, isHashOutputFormat, isJsonSpaces, isStructuredFormat, isTimeDisplayMode, isTimestampUnit, isToolTab, isUuidFormat, isXmlJsonFormat } from "./tool-types";
 
 const historyStorageKey = "zhizhi.tools.history";
 const maxHistoryPerTool = 10;
@@ -32,6 +32,11 @@ export type ToolHistorySettings = {
   timeDisplayMode?: TimeDisplayMode;
   timestampUnit?: TimestampUnit;
   uuidFormat?: UuidFormat;
+  xmlForceArrays?: boolean;
+  xmlIncludeAttributes?: boolean;
+  xmlJsonFormat?: XmlJsonFormat;
+  xmlStripNamespaces?: boolean;
+  xmlTrimText?: boolean;
 };
 
 type StoredToolHistoryItem = Partial<Record<keyof ToolHistoryItem, unknown>>;
@@ -179,6 +184,11 @@ function normalizeToolHistorySettings(value: unknown): ToolHistorySettings {
     timeDisplayMode: isTimeDisplayMode(stored.timeDisplayMode) ? stored.timeDisplayMode : undefined,
     timestampUnit: isTimestampUnit(stored.timestampUnit) ? stored.timestampUnit : undefined,
     uuidFormat: isUuidFormat(stored.uuidFormat) ? stored.uuidFormat : undefined,
+    xmlForceArrays: typeof stored.xmlForceArrays === "boolean" ? stored.xmlForceArrays : undefined,
+    xmlIncludeAttributes: typeof stored.xmlIncludeAttributes === "boolean" ? stored.xmlIncludeAttributes : undefined,
+    xmlJsonFormat: isXmlJsonFormat(stored.xmlJsonFormat) ? stored.xmlJsonFormat : undefined,
+    xmlStripNamespaces: typeof stored.xmlStripNamespaces === "boolean" ? stored.xmlStripNamespaces : undefined,
+    xmlTrimText: typeof stored.xmlTrimText === "boolean" ? stored.xmlTrimText : undefined,
   };
 }
 

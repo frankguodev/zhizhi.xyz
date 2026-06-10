@@ -20,9 +20,13 @@ export function toolPanelHeight(size: ToolPanelHeight): string {
   return heights[size];
 }
 
+// 工具内容区统一字号刻度：默认 14px / 行高 28px；2xl(≥1536px) 大屏一次性提到 16px / 32px。
+// 只放大「内容」（编辑器正文、结果体、行号槽、报错高亮覆盖层），不动标题/指标/按钮等 chrome。
+// 行号槽、高亮覆盖层等必须与正文共用此刻度，否则大屏下行号错位、高亮框漂移。小屏/移动端不受影响。
+export const toolMonoContentClass = "font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8";
+
 // 输入框/只读输出框统一框样式（不含高度，由 toolPanelHeight 提供）。
-export const toolFieldClass =
-  "w-full rounded-md border border-line bg-paper/88 p-3.5 font-mono text-[0.875rem] leading-7 text-foreground shadow-inner outline-none transition focus:border-accent/55 focus:ring-2 focus:ring-accent/15";
+export const toolFieldClass = `w-full rounded-md border border-line bg-paper/88 p-3.5 ${toolMonoContentClass} text-foreground shadow-inner outline-none transition focus:border-accent/55 focus:ring-2 focus:ring-accent/15`;
 
 export function formatFieldMeta(value: string): string {
   const lines = value ? value.split("\n").length : 0;

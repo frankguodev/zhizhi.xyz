@@ -85,7 +85,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.78,
     })),
-    ...toolRoutes.map((route) => ({
+    ...toolRoutes.filter((route) => route.id !== "data").map((route) => ({
       url: siteUrl(`/tools/${route.slug}`),
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
