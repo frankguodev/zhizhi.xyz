@@ -1340,7 +1340,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {paletteMounted ? (
         <ToolCommandPalette
           open={paletteVisible}
@@ -1355,9 +1355,9 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
       ) : null}
       <section
         aria-labelledby="tools-active-tool-heading"
-        className={`mx-auto w-full ${expandedWorkspace ? "max-w-[108rem]" : "max-w-7xl"}`}
+        className={`mx-auto flex min-h-0 w-full flex-1 flex-col ${expandedWorkspace ? "max-w-[108rem]" : "max-w-7xl"}`}
       >
-        <div className="grid gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line/80 pb-4">
             <div className="flex items-start gap-2.5">
               <span className="icon-action mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-accent">
@@ -1489,8 +1489,8 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
             </button>
           </div>
 
-          <div className={`grid gap-4 ${expandedWorkspace ? "lg:grid-cols-2 xl:gap-5" : "lg:grid-cols-2"}`}>
-            <div className={mobilePanel === "input" ? "block" : "hidden lg:block"}>
+          <div className={`grid gap-4 ${expandedWorkspace ? "lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[1fr] xl:gap-5" : "lg:grid-cols-2"}`}>
+            <div className={`${mobilePanel === "input" ? "block" : "hidden lg:block"}${expandedWorkspace ? " lg:min-h-0" : ""}`}>
               <EditorPanel
                 label={labels.input}
                 value={currentInput}
@@ -1500,6 +1500,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 size={panelSize}
                 highlight={activeTab === "json" ? jsonErrorHighlight : null}
                 resizable={activeTab !== "json"}
+                fill={expandedWorkspace}
                 actions={
                   <>
                     {activeTab === "json" ? (
@@ -1509,8 +1510,6 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                           triggerLabel={"转换"}
                           disabled={jsonBusy}
                           items={[
-                            { key: "minify", label: "压缩", onClick: () => runJson("minify") },
-                            { key: "repair", label: "尝试修复", onClick: repairJson },
                             { key: "sort", label: "Key 升序", onClick: () => runJson("sort") },
                             { key: "sortDesc", label: "Key 降序", onClick: () => runJson("sortDesc") },
                             { key: "escape", label: "字符串转义", onClick: () => runJson("escape") },
@@ -1526,10 +1525,19 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                     <PanelActionButton icon={Clipboard} label={copiedTarget === "input" ? labels.copied : labels.copy} onClick={() => copyText(currentInput, "input")}>
                       {copiedTarget === "input" ? labels.copied : labels.copy}
                     </PanelActionButton>
-                    <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearInput} />
+                    {activeTab === "json" ? (
+                      <PanelActionButton disabled={jsonBusy} label={"尝试修复"} onClick={repairJson}>{"尝试修复"}</PanelActionButton>
+                    ) : (
+                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearInput} />
+                    )}
                     <PanelOverflowMenu
                       items={[
-                        ...(activeTab === "json" ? [{ key: "import", label: labels.importJson, icon: Upload, onClick: () => jsonFileInputRef.current?.click() }] : []),
+                        ...(activeTab === "json"
+                          ? [
+                              { key: "clear", label: labels.clear, icon: Trash2, onClick: clearInput },
+                              { key: "import", label: labels.importJson, icon: Upload, onClick: () => jsonFileInputRef.current?.click() },
+                            ]
+                          : []),
                         { key: "save", label: labels.saveHistory, icon: Save, onClick: saveCurrentHistory },
                         { key: "history", label: labels.history, icon: History, onClick: toggleHistoryPanel },
                       ]}
@@ -1538,7 +1546,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                 }
               />
             </div>
-            <div className={mobilePanel === "output" ? "block" : "hidden lg:block"}>
+            <div className={`${mobilePanel === "output" ? "block" : "hidden lg:block"}${expandedWorkspace ? " lg:min-h-0" : ""}`}>
               {activeTab === "color" ? (
                 <ColorResultPanel
                   input={colorInput}
@@ -1556,6 +1564,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                   label={labels.output}
                   metrics={currentOutputMetrics}
                   size={panelSize}
+                  fill={expandedWorkspace}
                   actions={
                     <>
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
@@ -1572,6 +1581,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                   metrics={currentOutputMetrics}
                   output={jsonOutput}
                   size={panelSize}
+                  fill={expandedWorkspace}
                   actions={
                     <>
                       <Select
@@ -1592,9 +1602,10 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
                         {copiedTarget === "output" ? labels.copied : labels.copy}
                       </PanelActionButton>
-                      <PanelClearButton label={labels.clear} prompt={labels.confirmClearPrompt} confirmLabel={labels.confirmClearAction} cancelLabel={labels.cancel} onConfirm={clearOutput} />
+                      <PanelActionButton disabled={jsonBusy} label={"压缩"} onClick={() => runJson("minify")}>{"压缩"}</PanelActionButton>
                       <PanelOverflowMenu
                         items={[
+                          { key: "clear", label: labels.clear, icon: Trash2, onClick: clearOutput },
                           { key: "swap", label: labels.swap, icon: ArrowDownToLine, onClick: moveOutputToInput },
                           { key: "exchange", label: labels.exchange, icon: ArrowRightLeft, onClick: exchangeInputOutput },
                           { key: "download", label: labels.download, icon: Download, onClick: downloadOutput },
@@ -1634,6 +1645,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
                   metrics={currentOutputMetrics}
                   readOnly
                   size={panelSize}
+                  fill={expandedWorkspace}
                   actions={
                     <>
                       <PanelActionButton icon={Clipboard} label={copiedTarget === "output" ? labels.copied : labels.copy} onClick={() => copyText(currentOutput, "output")}>
@@ -1670,7 +1682,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
             onChange={(event) => void importHashFile(event.target.files?.[0] ?? null)}
           />
 
-          <p className="flex items-center gap-1.5 text-[0.7rem] font-medium text-muted">
+          <p className="flex items-center gap-1.5 text-[0.75rem] font-medium text-muted">
             <Lock className="h-3 w-3 shrink-0 text-accent" />
             所有工具均在浏览器本地运行
           </p>
@@ -1870,7 +1882,7 @@ function ToolHistoryPanel({
                     </div>
                   </div>
                 </div>
-                <p className="line-clamp-3 break-all font-mono text-[0.7rem] leading-5 text-muted">{getHistoryInputPreviewText(item)}</p>
+                <p className="line-clamp-3 break-all font-mono text-[0.75rem] leading-5 text-muted">{getHistoryInputPreviewText(item)}</p>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-[0.68rem] font-semibold text-muted">{formatBytes(new TextEncoder().encode(item.input).byteLength)}</span>
                   <div className="flex items-center gap-1.5">
@@ -2126,7 +2138,7 @@ function RegexControls({
           return (
             <button
               key={flag}
-              className={`h-6 min-w-6 cursor-pointer rounded px-1.5 text-[0.7rem] font-semibold transition ${
+              className={`h-6 min-w-6 cursor-pointer rounded px-1.5 text-[0.75rem] font-semibold transition ${
                 active ? "bg-accent/18 text-accent" : "text-muted hover:bg-accent/12 hover:text-accent"
               }`}
               type="button"
@@ -2267,7 +2279,7 @@ function TextControls({
         <ToolButton disabled={busy} onClick={() => runText("upper")}>{"转大写"}</ToolButton>
         {busy ? <ControlHint>{"处理中..."}</ControlHint> : null}
       </div>
-      <div className="flex flex-wrap gap-1.5 text-[0.7rem] font-semibold text-muted">
+      <div className="flex flex-wrap gap-1.5 text-[0.75rem] font-semibold text-muted">
         <span className="rounded-md bg-accent/8 px-2 py-0.5">{"字符"} {stats.characters}</span>
         <span className="rounded-md bg-accent/8 px-2 py-0.5">{"行数"} {stats.lines}</span>
         <span className="rounded-md bg-accent/8 px-2 py-0.5">{"词数"} {stats.words}</span>
@@ -2287,6 +2299,7 @@ function EditorPanel({
   size = "large",
   actions,
   resizable = true,
+  fill = false,
 }: {
   label: string;
   value: string;
@@ -2298,8 +2311,15 @@ function EditorPanel({
   size?: EditorPanelSize;
   actions?: ReactNode;
   resizable?: boolean;
+  fill?: boolean;
 }) {
   const heightClass = getPanelHeightClass(size);
+  // 撑满视口（仅 lg 以上）：根变 flex 列吃满列高、max-h 防超高屏过空；正文区 flex-1，文本域 h-full 填满。
+  // 撑满时禁用手动拖拽（resize-y 会与 h-full 冲突），移动端仍保留 min-h 自然高度。
+  const fillRootClass = fill ? "lg:flex lg:h-full lg:max-h-[100rem] lg:min-h-0 lg:flex-col" : "";
+  const fillBodyClass = fill ? "lg:min-h-0 lg:flex-1" : "";
+  const fillAreaClass = fill ? "lg:h-full" : "";
+  const canResize = resizable && !fill;
   const hasError = isToolErrorOutput(value);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [textareaScroll, setTextareaScroll] = useState({ left: 0, top: 0 });
@@ -2314,8 +2334,8 @@ function EditorPanel({
     textarea.setSelectionRange(highlight.start, highlight.end);
     textarea.focus({ preventScroll: true });
 
-    // 自动滚动到出错行：行号外于当前视口时，把它带到视口约 1/3 处（leading-6=24px，p-3.5=14px）。
-    const lineHeight = 24;
+    // 自动滚动到出错行：行号外于当前视口时，把它带到视口约 1/3 处（leading-7=28px，p-3.5=14px）。
+    const lineHeight = 28;
     const padding = 14;
     const errorTop = padding + (value.slice(0, highlight.start).split("\n").length - 1) * lineHeight;
     if (errorTop < textarea.scrollTop || errorTop > textarea.scrollTop + textarea.clientHeight - lineHeight) {
@@ -2330,7 +2350,7 @@ function EditorPanel({
   }, [highlight, value]);
 
   return (
-    <div className="block">
+    <div className={`block ${fillRootClass}`}>
       <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           <Link2 className="h-3 w-3 text-accent" />
@@ -2341,10 +2361,10 @@ function EditorPanel({
         </span>
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
-      <div className="relative">
+      <div className={`relative ${fillBodyClass}`}>
         {highlightParts ? (
           <pre
-            className={`${heightClass} pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap rounded-md border border-transparent bg-paper/88 p-3.5 font-mono text-[0.8125rem] leading-6 text-transparent shadow-inner`}
+            className={`${heightClass} pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap rounded-md border border-transparent bg-paper/88 p-3.5 font-mono text-[0.875rem] leading-7 text-transparent shadow-inner`}
             style={{ overflowWrap: "break-word" }}
             aria-hidden="true"
           >
@@ -2360,7 +2380,7 @@ function EditorPanel({
         <textarea
           ref={textareaRef}
           aria-label={label}
-          className={`${heightClass} relative w-full ${resizable ? "resize-y" : "resize-none"} rounded-md border p-3.5 font-mono text-[0.8125rem] leading-6 shadow-inner outline-none transition ${
+          className={`${heightClass} ${fillAreaClass} relative w-full ${canResize ? "resize-y" : "resize-none"} rounded-md border p-3.5 font-mono text-[0.875rem] leading-7 shadow-inner outline-none transition ${
             hasError
               ? "border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] text-[var(--accent-2)] focus:border-[color-mix(in_srgb,var(--accent-2)_62%,var(--line))] focus:ring-2 focus:ring-[color-mix(in_srgb,var(--accent-2)_16%,transparent)]"
               : highlightParts
@@ -2385,18 +2405,22 @@ function MarkdownPreviewPanel({
   label,
   metrics,
   size = "large",
+  fill = false,
 }: {
   actions?: ReactNode;
   html: string;
   label: string;
   metrics: TextMetrics;
   size?: EditorPanelSize;
+  fill?: boolean;
 }) {
   const heightClass = getPanelHeightClass(size);
   const hasError = isToolErrorOutput(html);
+  const fillRootClass = fill ? "lg:flex lg:h-full lg:max-h-[100rem] lg:min-h-0 lg:flex-col" : "";
+  const fillBodyClass = fill ? "lg:min-h-0 lg:flex-1" : "";
 
   return (
-    <div className="block">
+    <div className={`block ${fillRootClass}`}>
       <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           <Link2 className="h-3 w-3 text-accent" />
@@ -2408,12 +2432,12 @@ function MarkdownPreviewPanel({
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {hasError ? (
-        <pre className={`${heightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
+        <pre className={`${heightClass} ${fillBodyClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
           {html}
         </pre>
       ) : (
         <div
-          className={`tools-markdown-preview ${heightClass} overflow-auto rounded-md border border-line bg-paper/88 p-4 text-sm leading-7 text-foreground shadow-inner`}
+          className={`tools-markdown-preview ${heightClass} ${fillBodyClass} overflow-auto rounded-md border border-line bg-paper/88 p-4 text-sm leading-7 text-foreground shadow-inner`}
           dangerouslySetInnerHTML={{ __html: html || `<p class="tools-markdown-empty">${"点击生成预览后，这里会显示 Markdown 效果。"}</p>` }}
         />
       )}
@@ -2427,14 +2451,19 @@ function JsonOutputPanel({
   metrics,
   output,
   size = "large",
+  fill = false,
 }: {
   actions?: ReactNode;
   label: string;
   metrics: TextMetrics;
   output: string;
   size?: EditorPanelSize;
+  fill?: boolean;
 }) {
   const heightClass = getFixedPanelHeightClass(size);
+  const fillRootClass = fill ? "lg:flex lg:h-full lg:max-h-[100rem] lg:min-h-0 lg:flex-col" : "";
+  const fillBodyClass = fill ? "lg:min-h-0 lg:flex-1" : "";
+  const bodyHeightClass = `${heightClass} ${fillBodyClass}`;
   const hasError = isToolErrorOutput(output);
   const parsed = useMemo(() => {
     if (hasError || output.trim() === "") {
@@ -2448,7 +2477,7 @@ function JsonOutputPanel({
   }, [hasError, output]);
 
   return (
-    <div className="block">
+    <div className={`block ${fillRootClass}`}>
       <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
           <Link2 className="h-3 w-3 text-accent" />
@@ -2460,13 +2489,13 @@ function JsonOutputPanel({
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {hasError ? (
-        <pre className={`${heightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
+        <pre className={`${bodyHeightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-xs leading-6 text-[var(--accent-2)] shadow-inner`}>
           {output}
         </pre>
       ) : parsed ? (
-        <JsonViewer value={parsed.value} text={output} heightClass={heightClass} />
+        <JsonViewer value={parsed.value} text={output} heightClass={bodyHeightClass} />
       ) : (
-        <div className={`${heightClass} flex items-center justify-center rounded-md border border-line bg-paper/88 text-xs text-muted shadow-inner`}>
+        <div className={`${bodyHeightClass} flex items-center justify-center rounded-md border border-line bg-paper/88 text-xs text-muted shadow-inner`}>
           {"在左侧输入 JSON，这里会自动显示格式化结果。"}
         </div>
       )}
@@ -2723,7 +2752,7 @@ function PanelActionButton({
       : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent";
   return (
     <button
-      className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${tone}`}
+      className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.75rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${tone}`}
       type="button"
       aria-label={label}
       aria-pressed={active || undefined}
@@ -2780,7 +2809,7 @@ function PanelOverflowMenu({
   return (
     <div ref={ref} className="relative">
       <button
-        className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${
+        className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.75rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-55 ${
           open ? "bg-accent/12 text-accent" : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent"
         }`}
         type="button"
@@ -2806,7 +2835,7 @@ function PanelOverflowMenu({
             return (
               <button
                 key={item.key}
-                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-[0.7rem] font-semibold text-muted transition hover:bg-accent/8 hover:text-accent focus-visible:outline-none focus-visible:bg-accent/8"
+                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-left text-[0.75rem] font-semibold text-muted transition hover:bg-accent/8 hover:text-accent focus-visible:outline-none focus-visible:bg-accent/8"
                 type="button"
                 role="menuitem"
                 onClick={() => {
@@ -2867,7 +2896,7 @@ function PanelClearButton({
   return (
     <div ref={ref} className="relative">
       <button
-        className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 ${
+        className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.75rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 ${
           open ? "bg-amber/15 text-amber" : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent"
         }`}
         type="button"
@@ -2881,17 +2910,17 @@ function PanelClearButton({
       </button>
       {open ? (
         <div role="dialog" aria-label={prompt} className="absolute right-0 top-[calc(100%+0.35rem)] z-30 w-48 rounded-md border border-line bg-paper p-2.5 shadow-[var(--shadow-quiet)]">
-          <p className="mb-2 text-[0.7rem] font-medium leading-5 text-muted">{prompt}</p>
+          <p className="mb-2 text-[0.75rem] font-medium leading-5 text-muted">{prompt}</p>
           <div className="flex justify-end gap-1.5">
             <button
-              className="inline-flex h-7 cursor-pointer items-center rounded-md bg-accent/6 px-2.5 text-[0.7rem] font-semibold text-muted transition hover:bg-accent/10 hover:text-accent"
+              className="inline-flex h-7 cursor-pointer items-center rounded-md bg-accent/6 px-2.5 text-[0.75rem] font-semibold text-muted transition hover:bg-accent/10 hover:text-accent"
               type="button"
               onClick={() => setOpen(false)}
             >
               {cancelLabel}
             </button>
             <button
-              className="inline-flex h-7 cursor-pointer items-center rounded-md bg-amber/15 px-2.5 text-[0.7rem] font-semibold text-amber transition hover:bg-amber/25"
+              className="inline-flex h-7 cursor-pointer items-center rounded-md bg-amber/15 px-2.5 text-[0.75rem] font-semibold text-amber transition hover:bg-amber/25"
               type="button"
               onClick={() => {
                 onConfirm();
@@ -2920,7 +2949,7 @@ function JsonStatusBadge({
   if (busy) {
     return (
       <span className="inline-flex items-center gap-1.5">
-        <span className="text-[0.7rem] font-semibold text-muted">{"处理中…"}</span>
+        <span className="text-[0.75rem] font-semibold text-muted">{"处理中…"}</span>
         <PanelActionButton label={"取消"} onClick={onCancel}>{"取消"}</PanelActionButton>
       </span>
     );
@@ -2929,7 +2958,7 @@ function JsonStatusBadge({
   // 仅保留「内容较大」这条可操作提示（告诉用户超过自动校验上限、需点「格式化」走 Worker）。
   if (validity.type === "large") {
     return (
-      <span className="inline-flex h-7 items-center px-1 text-[0.7rem] font-semibold text-muted" role="status" aria-live="polite" title={validity.message}>
+      <span className="inline-flex h-7 items-center px-1 text-[0.75rem] font-semibold text-muted" role="status" aria-live="polite" title={validity.message}>
         {validity.message}
       </span>
     );
@@ -3221,8 +3250,9 @@ function getPanelSize(tab: ToolTab): EditorPanelSize {
 }
 
 // 面板高度：clamp(下限, 视口比例 dvh, 上限)。给一个偏大的视口比例让内容区随屏放大、宽敞，
-// 但不再减任何 chrome 偏移（不追求把底部声明顶进首屏，允许自然滚动）。下限保证矮屏可用、
-// 上限防止超大屏过分稀疏。用 min-h 而非 flex，保留输入框 resize-y 手动拖拽。
+// 不在此处减 chrome 偏移；页脚由 tools 页布局（页头+main 占满 100dvh）压到首屏之外，
+// 故面板撞上限留下的空白不会露出页脚。下限保证矮屏可用、上限防止超大屏过分稀疏。
+// 用 min-h 而非 flex，保留输入框 resize-y 手动拖拽。
 function getPanelHeightClass(size: EditorPanelSize) {
   return {
     compact: "min-h-[clamp(14rem,36dvh,24rem)]",

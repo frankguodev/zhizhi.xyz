@@ -198,10 +198,11 @@ export function repairJsonText(input: string): string {
       continue;
     }
 
-    // 尾随逗号：后面（跳过空白和注释）紧跟 } 或 ] 时丢弃逗号。
+    // 逗号：跳过空白和注释后，若紧跟另一个逗号，当前逗号冗余（连写多个会逐个收敛到一个）；
+    // 若紧跟 } 或 ] 则是尾随逗号。两种都丢弃当前逗号。
     if (char === ",") {
       const nextSignificant = skipInsignificant(index + 1);
-      if (input[nextSignificant] === "}" || input[nextSignificant] === "]") {
+      if (input[nextSignificant] === "," || input[nextSignificant] === "}" || input[nextSignificant] === "]") {
         index += 1;
         continue;
       }

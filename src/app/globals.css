@@ -112,14 +112,6 @@ html {
   background: transparent;
 }
 
-/* 文本输入框（cursor: text）若用自定义 ::-webkit-scrollbar，滚动条会跟随宿主显示文字 I 形光标、
-   无法在伪元素上改回箭头。改用标准 scrollbar-width：Chromium 会渲染真实滚动条（箭头光标正常）并
-   忽略上面的 webkit 伪元素；scrollbar-color 保持同款 muted 主题色。 */
-textarea {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--muted) 42%, transparent) transparent;
-}
-
 body {
   min-height: 100vh;
   background:

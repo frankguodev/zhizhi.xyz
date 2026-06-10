@@ -22,7 +22,7 @@ export function toolPanelHeight(size: ToolPanelHeight): string {
 
 // 输入框/只读输出框统一框样式（不含高度，由 toolPanelHeight 提供）。
 export const toolFieldClass =
-  "w-full rounded-md border border-line bg-paper/88 p-3.5 font-mono text-[0.8125rem] leading-6 text-foreground shadow-inner outline-none transition focus:border-accent/55 focus:ring-2 focus:ring-accent/15";
+  "w-full rounded-md border border-line bg-paper/88 p-3.5 font-mono text-[0.875rem] leading-7 text-foreground shadow-inner outline-none transition focus:border-accent/55 focus:ring-2 focus:ring-accent/15";
 
 export function formatFieldMeta(value: string): string {
   const lines = value ? value.split("\n").length : 0;

@@ -1,5 +1,4 @@
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
+import { ToolsPageShell } from "@/components/tools/tools-page-shell";
 import { ToolsWorkbench } from "@/components/tools/tools-workbench";
 
 const title = "在线工具台";
@@ -21,17 +20,8 @@ export const metadata = {
 
 export default function ToolsPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader currentPath="/tools" />
-
-      <main className="flex-1 bg-background">
-        <section className="px-6 py-6 md:py-8">
-          <h1 className="sr-only">{title}</h1>
-          <ToolsWorkbench />
-        </section>
-      </main>
-
-      <SiteFooter />
-    </div>
+    <ToolsPageShell title={title}>
+      <ToolsWorkbench />
+    </ToolsPageShell>
   );
 }
