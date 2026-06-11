@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronDown, ChevronUp, Copy, Download, FileDiff, MoreHorizontal, Trash2, UnfoldVertical } from "lucide-react";
-import type { ComponentType } from "react";
+import type { ComponentType, UIEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { computeDiff, createUnifiedPatch, type DiffGranularity, type DiffRow, type DiffSegment } from "./tool-diff";
 import { ToolPanelButton, ToolPanelHeader, formatFieldMeta, toolFieldClass, toolPanelHeight } from "./tool-panel";
@@ -321,6 +321,7 @@ function DiffResultMeta({ inputSizeHint, rows, result }: { inputSizeHint: string
 }
 
 function DiffResultView({
+  activeChangeIndex,
   collapseAllToken,
   contextLines,
   expandAllToken,
@@ -328,6 +329,7 @@ function DiffResultView({
   showWhitespace,
   viewMode,
 }: {
+  activeChangeIndex: number;
   collapseAllToken: number;
   contextLines: ContextLines;
   expandAllToken: number;
@@ -357,6 +359,7 @@ function DiffResultView({
     setPrevCollapseAllToken(collapseAllToken);
     setExpanded(new Set());
   }
+  let changeIndex = -1;
 
   function expandGap(id: number) {
     setExpanded((current) => {
@@ -386,14 +389,25 @@ function DiffResultView({
           {displayItems.map((item, index) =>
             item.kind === "gap" && !expanded.has(item.id)
               ? gapBar(item)
-              : (item.kind === "gap" ? item.rows : [item.row]).map((row, rowIndex) => (
-                  <div key={`${index}-${rowIndex}`} data-diff-change={row.type !== "equal" ? "true" : undefined} className="grid grid-cols-[3rem_minmax(0,1fr)_3rem_minmax(0,1fr)] border-b border-line/60 last:border-b-0">
-                    <div className="select-none border-r border-line/60 px-2 text-right text-muted/60">{row.leftLineNumber ?? ""}</div>
-                    <SideCell row={row} side="left" showWhitespace={showWhitespace} />
-                    <div className="select-none border-l border-r border-line/60 px-2 text-right text-muted/60">{row.rightLineNumber ?? ""}</div>
-                    <SideCell row={row} side="right" showWhitespace={showWhitespace} />
-                  </div>
-                )),
+              : (item.kind === "gap" ? item.rows : [item.row]).map((row, rowIndex) => {
+                  const rowChangeIndex = row.type === "equal" ? -1 : (changeIndex += 1);
+                  const active = rowChangeIndex === activeChangeIndex;
+                  return (
+                    <div
+                      key={`${index}-${rowIndex}`}
+                      data-diff-change={row.type !== "equal" ? "true" : undefined}
+                      data-diff-active={active ? "true" : undefined}
+                      className={`grid grid-cols-[3rem_minmax(0,1fr)_3rem_minmax(0,1fr)] border-b border-line/60 last:border-b-0 ${
+                        active ? "outline outline-2 -outline-offset-2 outline-accent/55 ring-2 ring-accent/12" : ""
+                      }`}
+                    >
+                      <div className="select-none border-r border-line/60 px-2 text-right text-muted/60">{row.leftLineNumber ?? ""}</div>
+                      <SideCell row={row} side="left" showWhitespace={showWhitespace} />
+                      <div className="select-none border-l border-r border-line/60 px-2 text-right text-muted/60">{row.rightLineNumber ?? ""}</div>
+                      <SideCell row={row} side="right" showWhitespace={showWhitespace} />
+                    </div>
+                  );
+                }),
           )}
         </div>
       </div>
@@ -406,15 +420,24 @@ function DiffResultView({
         {displayItems.map((item, index) =>
           item.kind === "gap" && !expanded.has(item.id)
             ? gapBar(item)
-            : (item.kind === "gap" ? item.rows : [item.row]).flatMap((row, rowIndex) =>
-                unifiedLines(row).map((line, lineIndex) => (
-                  <div key={`${index}-${rowIndex}-${lineIndex}`} data-diff-change={row.type !== "equal" && lineIndex === 0 ? "true" : undefined} className={`grid grid-cols-[3rem_1.25rem_minmax(0,1fr)] border-b border-line/60 last:border-b-0 ${line.bgCls}`}>
+            : (item.kind === "gap" ? item.rows : [item.row]).flatMap((row, rowIndex) => {
+                const rowChangeIndex = row.type === "equal" ? -1 : (changeIndex += 1);
+                const active = rowChangeIndex === activeChangeIndex;
+                return unifiedLines(row).map((line, lineIndex) => (
+                  <div
+                    key={`${index}-${rowIndex}-${lineIndex}`}
+                    data-diff-change={row.type !== "equal" && lineIndex === 0 ? "true" : undefined}
+                    data-diff-active={active ? "true" : undefined}
+                    className={`grid grid-cols-[3rem_1.25rem_minmax(0,1fr)] border-b border-line/60 last:border-b-0 ${line.bgCls} ${
+                      active ? "outline outline-2 -outline-offset-2 outline-accent/55 ring-2 ring-accent/12" : ""
+                    }`}
+                  >
                     <div className="select-none border-r border-line/60 px-2 text-right text-muted/60">{line.num ?? ""}</div>
                     <div className={`select-none text-center ${line.signCls}`}>{line.sign}</div>
                     <div className="whitespace-pre-wrap break-words px-2">{renderSegments(line.segments, showWhitespace)}</div>
                   </div>
-                )),
-              ),
+                ));
+              }),
         )}
       </div>
     </div>
@@ -437,6 +460,9 @@ export function DiffTool() {
   const [collapseAllToken, setCollapseAllToken] = useState(0);
   const [contextLines, setContextLines] = useState<ContextLines>(3);
   const [expandAllToken, setExpandAllToken] = useState(0);
+  const leftInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const rightInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const syncingInputScroll = useRef(false);
   const largestInputLength = Math.max(leftText.length, rightText.length);
 
   const debouncedLeft = useDebouncedValue(leftText, 200);
@@ -493,6 +519,7 @@ export function DiffTool() {
   function jumpChange(direction: "next" | "previous") {
     const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-diff-change='true']"));
     if (nodes.length === 0) {
+      setActiveChangeIndex(-1);
       return;
     }
     const offset = direction === "next" ? 1 : -1;
@@ -500,6 +527,20 @@ export function DiffTool() {
     const nextIndex = activeChangeIndex < 0 ? fallback : (activeChangeIndex + offset + nodes.length) % nodes.length;
     setActiveChangeIndex(nextIndex);
     nodes[nextIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function syncInputScroll(source: "left" | "right", event: UIEvent<HTMLTextAreaElement>) {
+    if (syncingInputScroll.current) {
+      syncingInputScroll.current = false;
+      return;
+    }
+    const target = source === "left" ? rightInputRef.current : leftInputRef.current;
+    if (!target) {
+      return;
+    }
+    syncingInputScroll.current = true;
+    target.scrollTop = event.currentTarget.scrollTop;
+    target.scrollLeft = event.currentTarget.scrollLeft;
   }
 
   async function copyPatch() {
@@ -586,11 +627,13 @@ export function DiffTool() {
             }
           />
           <textarea
+            ref={leftInputRef}
             className={`${toolPanelHeight("compact")} resize-y ${toolFieldClass}`}
             value={leftText}
             placeholder={copy.leftPlaceholder}
             spellCheck={false}
             onChange={(event) => setLeftText(event.target.value)}
+            onScroll={(event) => syncInputScroll("left", event)}
           />
         </div>
         <div className="block">
@@ -605,11 +648,13 @@ export function DiffTool() {
             }
           />
           <textarea
+            ref={rightInputRef}
             className={`${toolPanelHeight("compact")} resize-y ${toolFieldClass}`}
             value={rightText}
             placeholder={copy.rightPlaceholder}
             spellCheck={false}
             onChange={(event) => setRightText(event.target.value)}
+            onScroll={(event) => syncInputScroll("right", event)}
           />
         </div>
       </div>
@@ -617,16 +662,14 @@ export function DiffTool() {
       <div className="block">
         <ToolPanelHeader
           label={copy.result}
+          className="sticky top-0 z-20 bg-paper/95 py-1 backdrop-blur"
           meta={hasInput && !result.error && !result.identical ? <DiffResultMeta inputSizeHint={inputSizeHint} rows={result.rows} result={result} /> : inputSizeHint || undefined}
           actions={
             result.rows.length > 0 ? (
               <>
-                {changeCount > 0 ? (
-                  <>
-                    <ToolPanelButton icon={ChevronUp} onClick={() => jumpChange("previous")}>{copy.previousChange}</ToolPanelButton>
-                    <ToolPanelButton icon={ChevronDown} onClick={() => jumpChange("next")}>{copy.nextChange}</ToolPanelButton>
-                  </>
-                ) : null}
+                <span className="min-w-[3.5rem] text-center text-[0.7rem] font-semibold text-muted">{changeCount > 0 && activeChangeIndex >= 0 ? `${activeChangeIndex + 1} / ${changeCount}` : `0 / ${changeCount}`}</span>
+                <ToolPanelButton icon={ChevronUp} disabled={changeCount === 0} onClick={() => jumpChange("previous")}>{copy.previousChange}</ToolPanelButton>
+                <ToolPanelButton icon={ChevronDown} disabled={changeCount === 0} onClick={() => jumpChange("next")}>{copy.nextChange}</ToolPanelButton>
                 <ToolPanelButton icon={copied ? Check : Copy} onClick={copyResult}>{copied ? copy.copiedResult : copy.copyResult}</ToolPanelButton>
                 <ToolPanelButton icon={copiedPatch ? Check : FileDiff} onClick={copyPatch}>{copiedPatch ? copy.copiedPatch : copy.copyPatch}</ToolPanelButton>
                 <DiffOverflowMenu
@@ -651,7 +694,7 @@ export function DiffTool() {
         ) : result.identical ? (
           <p className="rounded-md border border-line bg-surface/40 px-4 py-8 text-center text-sm text-muted">{copy.identical}</p>
         ) : (
-          <DiffResultView collapseAllToken={collapseAllToken} contextLines={contextLines} expandAllToken={expandAllToken} rows={result.rows} viewMode={viewMode} showWhitespace={showWhitespace} />
+          <DiffResultView activeChangeIndex={activeChangeIndex} collapseAllToken={collapseAllToken} contextLines={contextLines} expandAllToken={expandAllToken} rows={result.rows} viewMode={viewMode} showWhitespace={showWhitespace} />
         )}
       </div>
     </div>

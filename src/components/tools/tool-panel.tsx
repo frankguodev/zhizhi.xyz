@@ -33,9 +33,9 @@ export function formatFieldMeta(value: string): string {
   return `${lines} 行 · ${value.length} 字符`;
 }
 
-export function ToolPanelHeader({ label, meta, actions }: { label: string; meta?: ReactNode; actions?: ReactNode }) {
+export function ToolPanelHeader({ label, meta, actions, className = "" }: { label: string; meta?: ReactNode; actions?: ReactNode; className?: string }) {
   return (
-    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+    <div className={`mb-1.5 flex flex-wrap items-center justify-between gap-2 ${className}`}>
       <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
         <Link2 className="h-3 w-3 text-accent" />
         {label}
@@ -52,21 +52,28 @@ export function ToolPanelButton({
   icon: Icon,
   label,
   active = false,
+  disabled = false,
 }: {
   children: ReactNode;
   onClick: () => void;
   icon?: ComponentType<{ className?: string }>;
   label?: string;
   active?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={active}
+      disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 ${
-        active ? "bg-accent/12 text-accent" : "bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent"
+      className={`inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-[0.7rem] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20 ${
+        disabled
+          ? "cursor-not-allowed bg-surface/50 text-muted/45"
+          : active
+            ? "cursor-pointer bg-accent/12 text-accent"
+            : "cursor-pointer bg-accent/6 text-muted hover:bg-accent/10 hover:text-accent"
       }`}
     >
       {Icon ? <Icon className="h-3 w-3" /> : null}

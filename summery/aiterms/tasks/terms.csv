@@ -1,3 +1,5 @@
 term,diagram,image,imageOptimize,story,sync,notes
-RNN,FALSE,TRUE,TRUE,FALSE,FALSE,
-LSTM,FALSE,TRUE,TRUE,FALSE,FALSE,
+ToT,TRUE,TRUE,TRUE,False,False,
+GEO,TRUE,TRUE,TRUE,False,False,
+SEO,TRUE,TRUE,TRUE,False,False,
+Vibe Coding,TRUE,TRUE,TRUE,False,False,
