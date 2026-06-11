@@ -38,7 +38,7 @@ type Copy = {
   popular: string;
   resultCount: (count: number) => string;
   sortLabel: string;
-  sort: { featured: string; latest: string; heat: string };
+  sort: { latest: string; heat: string };
   filterAll: string;
   filterSubmit: string;
   categoryLabel: string;
@@ -66,7 +66,7 @@ const copy: Copy = {
   popular: "热门",
   resultCount: (count) => `共 ${count.toLocaleString("zh-CN")} 个词条`,
   sortLabel: "排序",
-  sort: { featured: "趋势", latest: "最新", heat: "最热" },
+  sort: { latest: "最新", heat: "最热" },
   filterAll: "全部",
   filterSubmit: "筛选",
   categoryLabel: "分类",
@@ -81,7 +81,7 @@ const copy: Copy = {
   pageStatus: (page, totalPages) => `第 ${page} / ${totalPages} 页`,
 };
 
-const SORT_KEYS = ["featured", "latest", "heat"] as const;
+const SORT_KEYS = ["latest", "heat"] as const;
 const DIFFICULTY_KEYS = ["beginner", "intermediate", "advanced"] as const;
 
 export function aiTermPath(slug: string) {
@@ -101,7 +101,7 @@ function buildHref(basePath: string, params: HrefParams) {
   if (params.q) sp.set("q", params.q);
   if (params.category) sp.set("category", params.category);
   if (params.difficulty) sp.set("difficulty", params.difficulty);
-  if (params.sort && params.sort !== "featured") sp.set("sort", params.sort);
+  if (params.sort && params.sort !== "latest") sp.set("sort", params.sort);
   if (params.page && params.page > 1) sp.set("page", String(params.page));
   const qs = sp.toString();
   return qs ? `${basePath}?${qs}` : basePath;
@@ -256,7 +256,7 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
               </label>
               {categorySlug ? <input type="hidden" name="category" value={categorySlug} /> : null}
               {difficulty ? <input type="hidden" name="difficulty" value={difficulty} /> : null}
-              {sort !== "featured" ? <input type="hidden" name="sort" value={sort} /> : null}
+              {sort !== "latest" ? <input type="hidden" name="sort" value={sort} /> : null}
               <div className="flex min-h-14 items-center gap-2 rounded-lg border border-line bg-paper/88 px-3 shadow-[var(--shadow-quiet)] focus-within:border-accent/55 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_12%,transparent)] sm:gap-3 sm:px-4">
                 <Search className="h-5 w-5 shrink-0 text-muted" />
                 <input id="ai-term-search" name="q" defaultValue={query} className="h-12 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted" placeholder={pageCopy.searchPlaceholder} />
@@ -293,7 +293,7 @@ export function AiTermsPage({ categories, categoryCounts = {}, categorySlug, dif
           {/* 移动端筛选表单（桌面隐藏，使用左侧栏） */}
           <form action={basePath} className="mb-5 grid grid-cols-2 gap-3 lg:hidden">
             {query ? <input type="hidden" name="q" value={query} /> : null}
-            {sort !== "featured" ? <input type="hidden" name="sort" value={sort} /> : null}
+            {sort !== "latest" ? <input type="hidden" name="sort" value={sort} /> : null}
             <MobileFilterField label={pageCopy.categoryLabel} name="category" value={categorySlug ?? ""} allLabel={pageCopy.filterAll} options={categoryOptions} />
             <MobileFilterField label={pageCopy.difficultyLabel} name="difficulty" value={difficulty ?? ""} allLabel={pageCopy.filterAll} options={difficultyOptions} />
             <div className="col-span-2 flex items-center gap-3">

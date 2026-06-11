@@ -83,7 +83,7 @@ npm run ai-term:validate -- {{TERM}}
 npm run ai-term:import:dry-run -- {{TERM}}
 ```
 
-7. 如要求一图看懂，按 `05-AI词条一图看懂_prompt.md` 生成图片提示词。若要求本地图、图片优化或同步，但 prompt 不存在，也先补齐 prompt。
+7. 如要求一图看懂，按 `05-AI词条一图看懂_prompt.md` 生成图片提示词。若要求本地图、图片优化或同步，但 prompt 不存在，也先补齐 prompt；
 8. 如要求本地图，或图片优化/同步需要本地图，本地图又不存在的情况下，使用LLM自带的图片生成能力根据对应的 prompt 生成生产级图片，然后复制到本地相应路径当做本地图。确认后生成本地图，并运行：
 
 ```bash

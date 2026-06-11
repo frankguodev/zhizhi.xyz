@@ -10,7 +10,7 @@ function usage() {
   console.log(`Usage:
   npm run ai-term:diagram:check -- <TERM>
 
-Checks local diagram brief/prompt/image files. It does not upload R2 or modify pro markdown.`);
+Checks local diagram prompt/image files. It does not upload R2 or modify pro markdown.`);
 }
 
 function normalizeArg(value) {
@@ -122,16 +122,12 @@ async function main() {
     process.exit(term ? 0 : 1);
   }
 
-  const briefPath = path.join(diagramDir, `${term}_一图看懂brief.md`);
   const promptPath = path.join(diagramDir, `${term}_一图看懂提示词.md`);
   const imagePath = await findImage(term);
   const optimizedPath = path.join(diagramDir, `${term}_diagram.webp`);
   const errors = [];
   const warnings = [];
 
-  if (!(await pathExists(briefPath))) {
-    errors.push(`缺少 brief：${path.relative(workspaceRoot, briefPath)}`);
-  }
   if (!(await pathExists(promptPath))) {
     errors.push(`缺少图片提示词：${path.relative(workspaceRoot, promptPath)}`);
   }
@@ -151,7 +147,7 @@ async function main() {
       warnings.push("未找到优化后的 WebP；如需同步生产库，请先运行 ai-term:diagram:optimize。");
     }
   } else {
-    warnings.push("未找到本地图；如果只是低成本 brief/prompt 模式，这是允许的。");
+    warnings.push("未找到本地图；如果只是低成本 prompt 模式，这是允许的。");
   }
 
   if (await pathExists(optimizedPath)) {

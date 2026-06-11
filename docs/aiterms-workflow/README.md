@@ -33,7 +33,7 @@ term=LoRA，一条龙，同步测试环境，不要寓言故事。
 ```csv
 term,diagram,image,imageOptimize,story,sync,notes
 RAG,true,true,true,false,false,"生成 pro、一图看懂本地图和优化 WebP"
-MCP,true,false,false,false,false,"只生成一图看懂 brief/prompt"
+MCP,true,false,false,false,false,"只生成一图看懂 prompt"
 ```
 
 ## 输出策略
@@ -54,7 +54,7 @@ MCP,true,false,false,false,false,"只生成一图看懂 brief/prompt"
 
 ## 选项语义
 
-- `diagram=true` 或“生成一图看懂”：生成 brief 和图片提示词。
+- `diagram=true` 或“生成一图看懂”：生成 图片提示词。
 - `image=true` 或“生成本地图”：真实调用图片生成能力生成本地图。
 - `imageOptimize=true` 或“优化图片”：生成 100KB 以内的优化 WebP；优先 1600×900，压不进 100KB 时降级为 1280×720。
 - `story=true` 或“生成寓言故事”：生成独立寓言故事素材。
@@ -63,12 +63,14 @@ MCP,true,false,false,false,false,"只生成一图看懂 brief/prompt"
 - `term=XXX，一条龙。`：完整执行 `pro`、一图看懂、本地图、图片优化、寓言故事和生产草稿同步。
 - `term=XXX，一条龙，不要寓言故事。`：完整执行 `pro`、一图看懂、本地图、图片优化和测试环境草稿同步，但跳过寓言故事。
 
+一图看懂链路只生成 `{{TERM}}_一图看懂提示词.md`，不再生成独立 `{{TERM}}_一图看懂brief.md`；构图、风格、信息取舍和入图文字统一写在图片提示词中。
+
 ## 主要提示词
 
 - `98-AI词条批量生成_prompt.md`：批量清单入口，一次只处理一个词条。
 - `99-AI词条一键生成上线稿_prompt.md`：单个词条入口。
 - `01-AI词条直接生成pro_prompt.md`：直接生成 `pro`。
-- `05-AI词条一图看懂_prompt.md`：生成图解 brief/prompt；明确要求本地图时才生成图片。
+- `05-AI词条一图看懂_prompt.md`：生成图解 prompt；明确要求本地图时才生成图片。
 - `00-AI词条资料卡_prompt.md`：可选资料卡缓存，仅在用户明确要求“使用资料卡”时使用。
 
 旧拆阶段提示词仅用于 debug：
@@ -103,7 +105,7 @@ npm run ai-term:sources:index
 
 - `summery/aiterms/sources/`：可选资料卡缓存和 `index.json`，默认流程不依赖它。
 - `summery/aiterms/pro/`：最终上线候选稿。
-- `summery/aiterms/diagram/`：一图看懂 brief、提示词和本地图。
+- `summery/aiterms/diagram/`：一图看懂图片提示词、本地图和优化图。
 - `summery/aiterms/diagram/{{TERM}}_diagram.webp`：优化后的同步用图，固定 WebP、目标 100KB 以内；优先 1600×900，必要时降级 1280×720。
 - `summery/aiterms/story/`：寓言故事素材。
 - `summery/aiterms/tasks/terms.csv`：批量词条输入清单。
