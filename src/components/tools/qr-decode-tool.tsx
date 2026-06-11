@@ -47,6 +47,10 @@ function unescapeWifi(value: string) {
   return value.replace(/\\([\\;,:"])/g, "$1");
 }
 
+function unescapeStructuredValue(value: string) {
+  return value.replace(/\\([\\;,:])/g, "$1");
+}
+
 // 识别常见结构化二维码（网址 / WIFI / 电话 / 邮箱 / 短信 / 地理位置 / 名片），给出可读字段和可点操作。
 function parseCode(value: string): ParsedCode {
   const v = value.trim();
@@ -81,6 +85,29 @@ function parseCode(value: string): ParsedCode {
   if (/^mailto:/i.test(v)) {
     return { typeLabel: "邮箱", fields: [{ label: "地址", value: v.slice(7) }], actions: [{ label: "发邮件", href: v, external: false }] };
   }
+  if (/^matmsg:/i.test(v)) {
+    const bodyText = v.replace(/^matmsg:/i, "");
+    const get = (key: string) => {
+      const match = bodyText.match(new RegExp(`(?:^|;)${key}:((?:\\\\.|[^;])*)`, "i"));
+      return match ? unescapeStructuredValue(match[1]) : "";
+    };
+    const email = get("TO");
+    const subject = get("SUB");
+    const body = get("BODY");
+    const params = new URLSearchParams();
+    if (subject) params.set("subject", subject);
+    if (body) params.set("body", body);
+    const href = email ? `mailto:${email}${params.toString() ? `?${params.toString()}` : ""}` : "";
+    return {
+      typeLabel: "邮箱",
+      fields: [
+        ...(email ? [{ label: "地址", value: email }] : []),
+        ...(subject ? [{ label: "主题", value: subject }] : []),
+        ...(body ? [{ label: "正文", value: body }] : []),
+      ],
+      actions: href ? [{ label: "发邮件", href, external: false }] : [],
+    };
+  }
   if (/^smsto:/i.test(v)) {
     const [, num = "", body = ""] = v.split(":");
     return {
@@ -107,22 +134,26 @@ function parseContact(v: string): ParsedCode {
   let name = "";
   let tel = "";
   let email = "";
+  let org = "";
   if (/^mecard:/i.test(v)) {
+    const bodyText = v.replace(/^mecard:/i, "");
     const get = (key: string) => {
-      const match = v.match(new RegExp(`(?:^|;)${key}:([^;]*)`, "i"));
-      return match ? match[1] : "";
+      const match = bodyText.match(new RegExp(`(?:^|;)${key}:((?:\\\\.|[^;])*)`, "i"));
+      return match ? unescapeStructuredValue(match[1]) : "";
     };
     name = get("N");
     tel = get("TEL");
     email = get("EMAIL");
+    org = get("ORG");
   } else {
     const line = (key: string) => {
       const match = v.match(new RegExp(`(?:^|\\n)${key}[^:\\n]*:(.*)`, "i"));
-      return match ? match[1].trim() : "";
+      return match ? unescapeStructuredValue(match[1].trim()).replace(/\\n/g, "\n") : "";
     };
     name = line("FN") || line("N");
     tel = line("TEL");
     email = line("EMAIL");
+    org = line("ORG");
   }
   return {
     typeLabel: "名片",
@@ -130,6 +161,7 @@ function parseContact(v: string): ParsedCode {
       ...(name ? [{ label: "姓名", value: name }] : []),
       ...(tel ? [{ label: "电话", value: tel }] : []),
       ...(email ? [{ label: "邮箱", value: email }] : []),
+      ...(org ? [{ label: "组织", value: org }] : []),
     ],
     actions: tel ? [{ label: "拨打", href: `tel:${tel}`, external: false }] : [],
   };

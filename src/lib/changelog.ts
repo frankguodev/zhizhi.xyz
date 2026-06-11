@@ -25,6 +25,16 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-11",
+    title: "二维码工具升级：支持网址、文本、Wi-Fi、邮箱、电话、短信和名片",
+    changes: [
+      { type: "added", label: "二维码生成", text: "原「网址二维码」扩展为多类型二维码生成器，可生成网址、文本、Wi-Fi、邮箱、电话、短信和名片二维码，仍然在浏览器本地生成、不上传内容。" },
+      { type: "improved", label: "二维码设置", text: "补充纠错等级说明，优化格式、尺寸、边距和颜色设置文案，让普通用户更容易理解什么时候选择 M、Q 或 H 等级。" },
+      { type: "improved", label: "二维码识别", text: "增强邮箱和名片二维码解析，对 MATMSG 邮件格式和 vCard 名片信息识别更完整，扫码结果里的操作提示更贴近实际使用。" },
+      { type: "improved", label: "工具页", text: "更新工具总入口和子工具的标题、描述与搜索关键词，让图片、二维码、Base64、Diff 等常用工具更容易被找到。" },
+    ],
+  },
+  {
     date: "2026-06-10",
     title: "工具页继续升级：新增 XML 转 JSON，文本与 Diff 工具更顺手",
     changes: [

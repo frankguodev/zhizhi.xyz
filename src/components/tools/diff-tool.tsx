@@ -64,6 +64,7 @@ const copy = {
   expandAll: "展开全部",
   nextChange: "下一个",
   previousChange: "上一个",
+  resultCleared: "结果已清空。",
 };
 
 type ViewMode = "split" | "unified";
@@ -459,6 +460,7 @@ export function DiffTool() {
   const [activeChangeIndex, setActiveChangeIndex] = useState(-1);
   const [collapseAllToken, setCollapseAllToken] = useState(0);
   const [contextLines, setContextLines] = useState<ContextLines>(3);
+  const [clearedResultSignature, setClearedResultSignature] = useState<string | null>(null);
   const [expandAllToken, setExpandAllToken] = useState(0);
   const leftInputRef = useRef<HTMLTextAreaElement | null>(null);
   const rightInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -472,6 +474,11 @@ export function DiffTool() {
     () => computeDiff(debouncedLeft, debouncedRight, { ignoreWhitespace, ignoreCase, granularity }),
     [debouncedLeft, debouncedRight, ignoreWhitespace, ignoreCase, granularity],
   );
+  const resultSignature = `${debouncedLeft}\u0000${debouncedRight}\u0000${ignoreWhitespace}\u0000${ignoreCase}\u0000${granularity}\u0000${showWhitespace}\u0000${contextLines}`;
+  const resultCleared = clearedResultSignature === resultSignature;
+  useEffect(() => {
+    setClearedResultSignature(null);
+  }, [resultSignature]);
 
   const hasInput = leftText.trim().length > 0 || rightText.trim().length > 0;
   const inputSizeHint = largestInputLength >= nearDiffInputLimit ? copy.nearLimit : largestInputLength >= largeDiffInputLength ? copy.largeInput : "";
@@ -568,12 +575,8 @@ export function DiffTool() {
     setRightText("");
   }
 
-  function clearLeft() {
-    setLeftText("");
-  }
-
-  function clearRight() {
-    setRightText("");
+  function clearResult() {
+    setClearedResultSignature(resultSignature);
   }
 
   const toggleButtonClass = (active: boolean) =>
@@ -600,18 +603,6 @@ export function DiffTool() {
           </button>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <DiffOverflowMenu
-            items={[
-              { key: "sample", label: copy.sample, onClick: loadSample },
-              { key: "swap", label: copy.swap, onClick: swapSides },
-              { key: "clear", label: copy.clear, icon: Trash2, onClick: clearAll },
-              { key: "ignoreWhitespace", label: ignoreWhitespace ? `${copy.ignoreWhitespace} ✓` : copy.ignoreWhitespace, active: ignoreWhitespace, onClick: () => setIgnoreWhitespace(!ignoreWhitespace) },
-              { key: "ignoreCase", label: ignoreCase ? `${copy.ignoreCase} ✓` : copy.ignoreCase, active: ignoreCase, onClick: () => setIgnoreCase(!ignoreCase) },
-              { key: "showWhitespace", label: showWhitespace ? `${copy.showWhitespace} ✓` : copy.showWhitespace, active: showWhitespace, onClick: () => setShowWhitespace(!showWhitespace) },
-            ]}
-          />
-        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -622,7 +613,11 @@ export function DiffTool() {
             actions={
               <>
                 <ToolPanelButton icon={copiedLeft ? Check : Copy} onClick={() => copyInput(leftText, "left")}>{copiedLeft ? copy.copied : "复制"}</ToolPanelButton>
-                <DiffOverflowMenu items={[{ key: "clearLeft", label: copy.clear, icon: Trash2, onClick: clearLeft }]} />
+                <DiffOverflowMenu
+                  items={[
+                    { key: "clear", label: copy.clear, icon: Trash2, onClick: clearAll },
+                  ]}
+                />
               </>
             }
           />
@@ -643,7 +638,12 @@ export function DiffTool() {
             actions={
               <>
                 <ToolPanelButton icon={copiedRight ? Check : Copy} onClick={() => copyInput(rightText, "right")}>{copiedRight ? copy.copied : "复制"}</ToolPanelButton>
-                <DiffOverflowMenu items={[{ key: "clearRight", label: copy.clear, icon: Trash2, onClick: clearRight }]} />
+                <DiffOverflowMenu
+                  items={[
+                    { key: "sample", label: copy.sample, onClick: loadSample },
+                    { key: "swap", label: copy.swap, onClick: swapSides },
+                  ]}
+                />
               </>
             }
           />
@@ -663,9 +663,9 @@ export function DiffTool() {
         <ToolPanelHeader
           label={copy.result}
           className="sticky top-0 z-20 bg-paper/95 py-1 backdrop-blur"
-          meta={hasInput && !result.error && !result.identical ? <DiffResultMeta inputSizeHint={inputSizeHint} rows={result.rows} result={result} /> : inputSizeHint || undefined}
+          meta={hasInput && !resultCleared && !result.error && !result.identical ? <DiffResultMeta inputSizeHint={inputSizeHint} rows={result.rows} result={result} /> : inputSizeHint || undefined}
           actions={
-            result.rows.length > 0 ? (
+            result.rows.length > 0 && !resultCleared ? (
               <>
                 <span className="min-w-[3.5rem] text-center text-[0.7rem] font-semibold text-muted">{changeCount > 0 && activeChangeIndex >= 0 ? `${activeChangeIndex + 1} / ${changeCount}` : `0 / ${changeCount}`}</span>
                 <ToolPanelButton icon={ChevronUp} disabled={changeCount === 0} onClick={() => jumpChange("previous")}>{copy.previousChange}</ToolPanelButton>
@@ -674,8 +674,12 @@ export function DiffTool() {
                 <ToolPanelButton icon={copiedPatch ? Check : FileDiff} onClick={copyPatch}>{copiedPatch ? copy.copiedPatch : copy.copyPatch}</ToolPanelButton>
                 <DiffOverflowMenu
                   items={[
+                    { key: "clear", label: copy.clear, icon: Trash2, onClick: clearResult },
                     { key: "expandAll", label: copy.expandAll, icon: UnfoldVertical, onClick: () => setExpandAllToken((value) => value + 1) },
                     { key: "collapseAll", label: copy.collapseAll, onClick: () => setCollapseAllToken((value) => value + 1) },
+                    { key: "ignoreWhitespace", label: ignoreWhitespace ? `${copy.ignoreWhitespace} ✓` : copy.ignoreWhitespace, active: ignoreWhitespace, onClick: () => setIgnoreWhitespace(!ignoreWhitespace) },
+                    { key: "ignoreCase", label: ignoreCase ? `${copy.ignoreCase} ✓` : copy.ignoreCase, active: ignoreCase, onClick: () => setIgnoreCase(!ignoreCase) },
+                    { key: "showWhitespace", label: showWhitespace ? `${copy.showWhitespace} ✓` : copy.showWhitespace, active: showWhitespace, onClick: () => setShowWhitespace(!showWhitespace) },
                     { key: "context3", label: `${copy.contextLines} 3 行`, active: contextLines === 3, onClick: () => setContextLines(3) },
                     { key: "context5", label: `${copy.contextLines} 5 行`, active: contextLines === 5, onClick: () => setContextLines(5) },
                     { key: "context10", label: `${copy.contextLines} 10 行`, active: contextLines === 10, onClick: () => setContextLines(10) },
@@ -687,10 +691,12 @@ export function DiffTool() {
             ) : null
           }
         />
-        {result.error ? (
-          <p className="rounded-md border border-line bg-surface/40 px-4 py-8 text-center text-sm font-semibold text-amber" role="alert">{result.error}</p>
-        ) : !hasInput ? (
+        {!hasInput ? (
           <p className="rounded-md border border-dashed border-line px-4 py-8 text-center text-sm text-muted">{copy.empty}</p>
+        ) : result.error ? (
+          <p className="rounded-md border border-line bg-surface/40 px-4 py-8 text-center text-sm font-semibold text-amber" role="alert">{result.error}</p>
+        ) : resultCleared ? (
+          <p className="rounded-md border border-dashed border-line px-4 py-8 text-center text-sm text-muted">{copy.resultCleared}</p>
         ) : result.identical ? (
           <p className="rounded-md border border-line bg-surface/40 px-4 py-8 text-center text-sm text-muted">{copy.identical}</p>
         ) : (
