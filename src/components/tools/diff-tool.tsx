@@ -386,7 +386,7 @@ function DiffResultView({
     return (
       <div className="overflow-x-auto rounded-md border border-line">
         {/* 并排视图给最小宽度，窄屏改为横向滚动，避免两列代码被挤变形。 */}
-        <div className="min-w-[40rem] font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8">
+        <div className="min-w-[40rem] font-mono text-[0.875rem] leading-7">
           {displayItems.map((item, index) =>
             item.kind === "gap" && !expanded.has(item.id)
               ? gapBar(item)
@@ -417,7 +417,7 @@ function DiffResultView({
 
   return (
     <div className="overflow-x-auto rounded-md border border-line">
-      <div className="min-w-full font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8">
+      <div className="min-w-full font-mono text-[0.875rem] leading-7">
         {displayItems.map((item, index) =>
           item.kind === "gap" && !expanded.has(item.id)
             ? gapBar(item)
@@ -475,10 +475,14 @@ export function DiffTool() {
     [debouncedLeft, debouncedRight, ignoreWhitespace, ignoreCase, granularity],
   );
   const resultSignature = `${debouncedLeft}\u0000${debouncedRight}\u0000${ignoreWhitespace}\u0000${ignoreCase}\u0000${granularity}\u0000${showWhitespace}\u0000${contextLines}`;
-  const resultCleared = clearedResultSignature === resultSignature;
-  useEffect(() => {
+  // 输入/选项变化即让上次的「清空结果」失效（回退到旧签名也不复现清空）。用 render 期比较替代 effect，
+  // 规避 react-hooks/set-state-in-effect，与下方 prevNavigationRows 同款写法。
+  const [prevResultSignature, setPrevResultSignature] = useState(resultSignature);
+  if (prevResultSignature !== resultSignature) {
+    setPrevResultSignature(resultSignature);
     setClearedResultSignature(null);
-  }, [resultSignature]);
+  }
+  const resultCleared = clearedResultSignature === resultSignature;
 
   const hasInput = leftText.trim().length > 0 || rightText.trim().length > 0;
   const inputSizeHint = largestInputLength >= nearDiffInputLimit ? copy.nearLimit : largestInputLength >= largeDiffInputLength ? copy.largeInput : "";

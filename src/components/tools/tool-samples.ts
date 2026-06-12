@@ -65,6 +65,7 @@ export function getSampleInput(tab: ToolTab) {
     regex: "知之工具\nzhizhi.xyz",
     text: "知识\n工具\n知识\n\n知之",
     time: "",
+    tokenCount: "",
     uuid: "10",
     watermark: "",
     wechatQr: "",

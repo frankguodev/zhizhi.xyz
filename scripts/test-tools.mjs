@@ -10,6 +10,7 @@ const { parseTomlDocument, parseYamlDocument } = await import("../src/components
 const { defaultXmlToJsonOptions, xmlDocumentToJson } = await import("../src/components/tools/tool-xml.ts");
 const { computeDiff, createUnifiedPatch } = await import("../src/components/tools/tool-diff.ts");
 const { jsonToTypeScript } = await import("../src/components/tools/tool-json-to-ts.ts");
+const { computeTokenTextStats, estimateTokenCount, getTokenModel, tokenModels } = await import("../src/components/tools/tool-token-counter.ts");
 
 const defaultOptions = { emptyAsNull: false, inferTypes: true, outputMode: "objects" };
 
@@ -341,5 +342,36 @@ assert.match(tsDates.code, /createdAt: Date;/);
 assert.match(tsDates.code, /note: string;/);
 // 默认不识别日期。
 assert.match(jsonToTypeScript('{"createdAt":"2024-01-02"}', { rootName: "Root", declaration: "interface" }).code, /createdAt: string;/);
+
+// Token 计数器：文本统计（中英混排、码点、字/词、行）。
+const tokenStats = computeTokenTextStats("Hello 世界🌍\nstate-of-the-art");
+assert.equal(tokenStats.characters, Array.from("Hello 世界🌍\nstate-of-the-art").length);
+assert.equal(tokenStats.lines, 2);
+assert.equal(tokenStats.words, 4); // Hello + 世 + 界 + state-of-the-art
+assert.equal(tokenStats.charactersNoSpaces, tokenStats.characters - 2); // 一个空格 + 一个换行
+const emptyStats = computeTokenTextStats("");
+assert.equal(emptyStats.characters, 0);
+assert.equal(emptyStats.lines, 0);
+assert.equal(emptyStats.words, 0);
+
+// Token 计数器：估算（空串为 0，非空至少 1，按字符/系数四舍五入）。
+assert.equal(estimateTokenCount("", 4), 0);
+assert.equal(estimateTokenCount("a", 4), 1);
+assert.equal(estimateTokenCount("12345678", 4), 2); // 8 / 4
+assert.equal(estimateTokenCount("1234567", 3.5), 2); // 7 / 3.5
+
+// Token 计数器：模型表（精确模型带 encoding、估算模型带系数；未知 id 回退首项）。
+assert.equal(getTokenModel("o200k").encoding, "o200k_base");
+assert.equal(getTokenModel("cl100k").encoding, "cl100k_base");
+assert.equal(getTokenModel("claude").kind, "estimate");
+assert.ok(getTokenModel("claude").charsPerToken > 0);
+assert.equal(getTokenModel("nope").id, tokenModels[0].id);
+for (const model of tokenModels) {
+  if (model.kind === "exact") {
+    assert.ok(model.encoding, `exact 模型应有 encoding: ${model.id}`);
+  } else {
+    assert.ok(model.charsPerToken > 0, `estimate 模型应有 charsPerToken: ${model.id}`);
+  }
+}
 
 console.log("Tools smoke tests passed.");

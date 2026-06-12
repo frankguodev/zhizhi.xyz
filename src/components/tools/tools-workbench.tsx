@@ -5,6 +5,7 @@ import {
   ArrowRightLeft,
   Binary,
   Braces,
+  Calculator,
   ChevronDown,
   Clipboard,
   Code2,
@@ -93,6 +94,7 @@ const QrDecodeTool = dynamic(() => import("./qr-decode-tool").then((m) => m.QrDe
 const ImageBase64Tool = dynamic(() => import("./image-base64-tool").then((m) => m.ImageBase64Tool), { ssr: false, loading: standaloneToolLoading });
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
+const TokenCounterTool = dynamic(() => import("./token-counter-tool").then((m) => m.TokenCounterTool), { ssr: false, loading: standaloneToolLoading });
 
 type TextHighlight = {
   end: number;
@@ -126,6 +128,7 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   diff: "writing",
   encoding: "encode",
   jsonToTs: "dev",
+  tokenCount: "dev",
   hash: "dev",
   image: "media",
   imageBase64: "media",
@@ -195,6 +198,7 @@ const tabLabels = [
   { id: "text", label: "文本", description: "统计、去空行、去重、排序和大小写转换。", icon: Rows3 },
   { id: "diff", label: "Diff", description: "对比两段文本或代码，左右并排显示行级差异并高亮改动字词。", icon: GitCompareArrows },
   { id: "jsonToTs", label: "JSON→TS", description: "粘贴 JSON 自动推断 TypeScript interface / type 类型。", icon: FileCode2 },
+  { id: "tokenCount", label: "Token", description: "计算文本的 LLM token 数，GPT 精确、Claude 等估算，附统计与分词可视化。", icon: Calculator },
   { id: "jwt", label: "JWT", description: "本地解码 JWT Header 和 Payload，不验证签名。", icon: KeyRound },
   { id: "hash", label: "Hash", description: "计算 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要。", icon: HashIcon },
   { id: "uuid", label: "UUID", description: "生成单个或批量 UUID v4。", icon: Fingerprint },
@@ -224,6 +228,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   diff: "diff compare text code difference changes merge duibi chayi wenben daima bijiao",
   encoding: "url uri base64 unicode html escape unescape encode decode bianma",
   jsonToTs: "json typescript ts type interface convert codegen leixing jiekou zhuanhuan",
+  tokenCount: "token counter tokenizer tiktoken llm gpt claude prompt count cost context window leji jishu fenci shangxiawen",
   hash: "sha sha1 sha256 sha384 sha512 digest checksum file wenjian",
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
   imageBase64: "image base64 datauri data url css html markdown embed inline tupian bianma neilian",
@@ -361,6 +366,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     regex: regexOutput,
     text: textOutput,
     time: timeOutput,
+    tokenCount: "",
     uuid: uuidOutput,
     watermark: "",
     wechatQr: "",
@@ -385,6 +391,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     regex: regexInput,
     text: textInput,
     time: timeInput,
+    tokenCount: "",
     uuid: uuidInput,
     watermark: "",
     wechatQr: "",
@@ -1551,6 +1558,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
           {activeTab === "imageBase64" ? <ImageBase64Tool /> : null}
           {activeTab === "diff" ? <DiffTool /> : null}
           {activeTab === "jsonToTs" ? <JsonToTsTool /> : null}
+          {activeTab === "tokenCount" ? <TokenCounterTool /> : null}
 
           {!isStandaloneTool(activeTab) ? (
             <>
@@ -2578,7 +2586,7 @@ function MarkdownPreviewPanel({
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {hasError ? (
-        <pre className={`${heightClass} ${fillBodyClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)] shadow-inner`}>
+        <pre className={`${heightClass} ${fillBodyClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-[0.875rem] leading-7 text-[var(--accent-2)] shadow-inner`}>
           {html}
         </pre>
       ) : (
@@ -2637,7 +2645,7 @@ function JsonOutputPanel({
         {actions ? <div className="flex flex-wrap items-center gap-1.5">{actions}</div> : null}
       </div>
       {hasError ? (
-        <pre className={`${bodyHeightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)] shadow-inner`}>
+        <pre className={`${bodyHeightClass} overflow-auto rounded-md border border-[color-mix(in_srgb,var(--accent-2)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent-2)_7%,var(--paper))] p-4 font-mono text-[0.875rem] leading-7 text-[var(--accent-2)] shadow-inner`}>
           {output}
         </pre>
       ) : parsed ? (
@@ -2689,11 +2697,11 @@ function StructuredResultPanel({
         }`}
       >
         {hasError ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)]">{output}</pre>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 text-[var(--accent-2)]">{output}</pre>
         ) : output && result ? (
           renderStructuredResult(result)
         ) : output ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{output}</pre>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 text-foreground">{output}</pre>
         ) : (
           <p className="text-xs font-semibold text-muted">{"运行工具后，这里会显示结构化结果。"}</p>
         )}
@@ -2721,7 +2729,7 @@ function HashStructuredResult({ result }: { result: HashStructuredResultData }) 
       </div>
       <div className="rounded-md border border-line bg-background/54 p-3">
         <div className="mb-2 text-[0.68rem] font-semibold uppercase text-muted">{"摘要"}</div>
-        <code className="block whitespace-pre-wrap break-all font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{result.digest}</code>
+        <code className="block whitespace-pre-wrap break-all font-mono text-[0.875rem] leading-7 text-foreground">{result.digest}</code>
       </div>
     </div>
   );
@@ -2767,7 +2775,7 @@ function RegexStructuredResult({ result }: { result: RegexStructuredResultData }
                 <span className="rounded bg-accent/8 px-2 py-0.5">line {match.line}</span>
                 <span className="rounded bg-accent/8 px-2 py-0.5">column {match.column}</span>
               </div>
-              <code className="block whitespace-pre-wrap break-all font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{match.match}</code>
+              <code className="block whitespace-pre-wrap break-all font-mono text-[0.875rem] leading-7 text-foreground">{match.match}</code>
               {match.captures.length > 0 ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${"捕获组"}: ${JSON.stringify(match.captures)}`}</div> : null}
               {match.groups ? <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">{`${"命名组"}: ${JSON.stringify(match.groups)}`}</div> : null}
             </div>
@@ -2793,7 +2801,7 @@ function CodeBlock({ body, title }: { body: string; title: string }) {
   return (
     <div className="rounded-md border border-line bg-background/54 p-3">
       <div className="mb-2 text-[0.68rem] font-semibold uppercase text-muted">{title}</div>
-      <pre className="overflow-auto whitespace-pre-wrap break-words rounded bg-paper/80 p-3 font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-foreground">{body}</pre>
+      <pre className="overflow-auto whitespace-pre-wrap break-words rounded bg-paper/80 p-3 font-mono text-[0.875rem] leading-7 text-foreground">{body}</pre>
     </div>
   );
 }
@@ -2854,7 +2862,7 @@ function ColorResultPanel({
         }`}
       >
         {hasError ? (
-          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 min-[1920px]:text-[1rem] min-[1920px]:leading-8 text-[var(--accent-2)]">{output}</pre>
+          <pre className="whitespace-pre-wrap break-words font-mono text-[0.875rem] leading-7 text-[var(--accent-2)]">{output}</pre>
         ) : color ? (
           <div className="grid gap-3">
             <div className="h-28 rounded-md border border-line shadow-inner" style={{ backgroundColor: color.hex }} />
@@ -3408,7 +3416,8 @@ function isStandaloneTool(tab: ToolTab) {
     tab === "qrDecode" ||
     tab === "imageBase64" ||
     tab === "diff" ||
-    tab === "jsonToTs"
+    tab === "jsonToTs" ||
+    tab === "tokenCount"
   );
 }
 

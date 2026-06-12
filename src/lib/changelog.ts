@@ -25,6 +25,13 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-12",
+    title: "新增工具：LLM Token 计数器",
+    changes: [
+      { type: "added", label: "Token 计数", text: "粘贴文本即可计算 LLM token 数：GPT-4o / 4.1 / 5 / o 系列、GPT-4 / 3.5 用 tiktoken 精确分词，Claude / Gemini / Llama 给出估算；附字符、字 / 词、行数统计与彩色分词可视化，全部在浏览器本地计算、不上传。" },
+    ],
+  },
+  {
     date: "2026-06-11",
     title: "二维码工具升级：支持网址、文本、Wi-Fi、邮箱、电话、短信和名片",
     changes: [

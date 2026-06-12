@@ -16,6 +16,7 @@ export const toolRoutes: readonly ToolRouteMeta[] = [
   { id: "text", slug: "text", title: "文本处理工具（去重 / 排序 / 统计）", description: "在线统计文本字数、行数和大小，支持去空行、去重、排序、大小写转换和空白清理，本地运行，数据不上传。" },
   { id: "diff", slug: "diff", title: "文本 / 代码 Diff 对比工具", description: "在线对比两段文本或代码，左右并排显示行级差异并高亮行内改动，支持生成补丁，本地运行，数据不上传。" },
   { id: "jsonToTs", slug: "json-to-ts", title: "JSON 转 TypeScript 类型工具", description: "粘贴 JSON 自动推断 TypeScript interface / type 类型定义，支持嵌套对象拆分，本地运行，数据不上传。" },
+  { id: "tokenCount", slug: "token-counter", title: "LLM Token 计数器（GPT / Claude）", description: "在线计算文本的 token 数：GPT 系列用 tiktoken 精确分词、Claude / Gemini 等估算，附字符 / 字词 / 行统计与分词可视化，全部在浏览器本地运行，数据不上传。" },
   { id: "jwt", slug: "jwt", title: "JWT 解码工具", description: "在线解码 JWT Header 和 Payload，查看常见时间字段，不验证签名、不上传 token，全部在浏览器本地运行。" },
   { id: "hash", slug: "hash", title: "Hash 计算工具（SHA-1/256/384/512）", description: "在线计算文本或文件的 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要，适合校验文件完整性，本地运行。" },
   { id: "uuid", slug: "uuid", title: "UUID 生成工具（v4）", description: "在线生成单个或批量 UUID v4，支持标准、大写、紧凑和 JSON 输出格式，本地运行，数据不上传。" },

@@ -3,8 +3,8 @@ export const siteConfig = {
   nameEn: "ZHIZHI",
   domain: "zhizhi.xyz",
   url: "https://zhizhi.xyz",
-  tagline: "帮助志同道合的朋友解决问题，帮助自己回顾问题。",
-  description: "知之是一个个人知识分享系统，有高质量文章、术语词条、实用工具等。",
+  tagline: "帮助道友解决问题，帮助自己回顾问题。",
+  description: "知之是一个个人知识分享系统，有高质量文章、AI术语词条、实用工具等。",
   social: {
     email: "hello@frankguo.com",
     xUrl: "https://x.com/frankguodev",

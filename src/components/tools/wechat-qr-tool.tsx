@@ -282,8 +282,9 @@ export function WechatQrTool() {
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+      {/* 左列：图片上传 + 参数调整（参数在图片下方）；右列：合成结果，xl 下 sticky 常驻，调参即见。 */}
+      <div className="grid gap-4">
         <section className="rounded-md border border-line bg-paper/72 p-4 shadow-[var(--shadow-quiet)]">
           <div className="grid gap-4 lg:grid-cols-2">
             <ImageDropPanel
@@ -351,7 +352,7 @@ export function WechatQrTool() {
         </section>
       </div>
 
-      <section className="rounded-md border border-line bg-paper/72 p-4 shadow-[var(--shadow-quiet)]">
+      <section className="rounded-md border border-line bg-paper/72 p-4 shadow-[var(--shadow-quiet)] xl:sticky xl:top-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-foreground">{labels.output}</h3>
           {outputSummary ? <span className="text-xs font-semibold text-muted">{outputSummary}</span> : null}

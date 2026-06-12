@@ -1,6 +1,6 @@
 export type ToolLocale = "zh" | "en";
 
-export type ToolTab = "json" | "encoding" | "time" | "text" | "diff" | "jsonToTs" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "xml" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64";
+export type ToolTab = "json" | "encoding" | "time" | "text" | "diff" | "jsonToTs" | "tokenCount" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "xml" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64";
 export type CsvDelimiter = "auto" | "comma" | "tab";
 export type CsvOutputMode = "objects" | "rows";
 export type EncodingAction = "urlEncode" | "urlDecode" | "base64Encode" | "base64Decode" | "unicodeEscape" | "unicodeUnescape" | "htmlEscape" | "htmlUnescape";
