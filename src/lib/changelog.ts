@@ -25,6 +25,13 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-14",
+    title: "新增工具：证件照制作",
+    changes: [
+      { type: "added", label: "证件照制作", text: "上传人像照片，浏览器本地 AI 抠图换背景，一键生成蓝底、白底、红底（也可自定义底色）的一寸、二寸等标准尺寸证件照，支持拖动缩放微调构图并导出 JPG / PNG，全过程在本地完成、照片不上传。" },
+    ],
+  },
+  {
     date: "2026-06-12",
     title: "新增工具：LLM Token 计数器",
     changes: [

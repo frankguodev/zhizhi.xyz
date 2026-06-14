@@ -1,11 +1,2 @@
 term,diagram,image,imageOptimize,story,sync,notes
-RNN,TRUE,TRUE,TRUE,False,False,
-LSTM,TRUE,TRUE,TRUE,False,False,
-GAN,TRUE,TRUE,TRUE,False,False,
-VAE,TRUE,TRUE,TRUE,False,False,
-DNN,TRUE,TRUE,TRUE,False,False,
-GNN,TRUE,TRUE,TRUE,False,False,
-BP,TRUE,TRUE,TRUE,False,False,
-GD,TRUE,TRUE,TRUE,False,False,
-SGD,TRUE,TRUE,TRUE,False,False,
-LR,TRUE,TRUE,TRUE,False,False,
+AEO,TRUE,TRUE,TRUE,False,TRUE,同步生产

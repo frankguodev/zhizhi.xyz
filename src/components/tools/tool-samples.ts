@@ -49,6 +49,7 @@ export function getSampleInput(tab: ToolTab) {
   return {
     color: "#d9b861",
     crop: "",
+    idPhoto: "",
     csv: sampleCsv,
     data: sampleStructured,
     diff: "",

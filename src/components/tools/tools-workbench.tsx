@@ -18,6 +18,7 @@ import {
   GitCompareArrows,
   FileImage,
   Hash as HashIcon,
+  IdCard,
   History,
   KeyRound,
   LayoutGrid,
@@ -92,6 +93,7 @@ const WechatQrTool = dynamic(() => import("./wechat-qr-tool").then((m) => m.Wech
 const ImageCropTool = dynamic(() => import("./image-crop-tool").then((m) => m.ImageCropTool), { ssr: false, loading: standaloneToolLoading });
 const QrDecodeTool = dynamic(() => import("./qr-decode-tool").then((m) => m.QrDecodeTool), { ssr: false, loading: standaloneToolLoading });
 const ImageBase64Tool = dynamic(() => import("./image-base64-tool").then((m) => m.ImageBase64Tool), { ssr: false, loading: standaloneToolLoading });
+const IdPhotoTool = dynamic(() => import("./id-photo-tool").then((m) => m.IdPhotoTool), { ssr: false, loading: standaloneToolLoading });
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
 const TokenCounterTool = dynamic(() => import("./token-counter-tool").then((m) => m.TokenCounterTool), { ssr: false, loading: standaloneToolLoading });
@@ -124,6 +126,7 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   color: "dev",
   crop: "media",
   csv: "data",
+  idPhoto: "media",
   data: "data",
   diff: "writing",
   encoding: "encode",
@@ -213,6 +216,7 @@ const tabLabels = [
   { id: "linkQr", label: "二维码生成", description: "生成网址、文本、Wi-Fi、邮箱、电话、短信和名片二维码。", icon: QrCode },
   { id: "wechatQr", label: "微信二维码", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片。", icon: QrCode },
   { id: "crop", label: "裁剪旋转", description: "按比例裁剪图片，支持圆形头像、90° 旋转和水平翻转。", icon: Crop },
+  { id: "idPhoto", label: "证件照", description: "本地 AI 抠图换底，生成蓝 / 白 / 红底标准尺寸证件照，图片不上传。", icon: IdCard },
   { id: "qrDecode", label: "二维码识别", description: "上传或粘贴二维码 / 条形码图片，本地解出链接或文本。", icon: ScanLine },
   { id: "imageBase64", label: "图片转 Base64", description: "图片与 Base64 / Data URI 互转，输出 CSS / HTML / Markdown 片段。", icon: Binary },
 ] as const;
@@ -224,6 +228,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   color: "hex rgb hsl css color palette yanse se sezhi",
   crop: "crop rotate flip image avatar circle ratio aspect cut tupian caijian xuanzhuan fanzhuan touxiang yuanxing bili",
   csv: "csv tsv table excel sheet delimiter comma tab biaoge",
+  idPhoto: "id photo passport visa avatar headshot background removal blue white red zhengjianzhao yicun ercun koutu huandi lvbai zhao tupian",
   data: "yaml toml front matter config configuration json peizhi",
   diff: "diff compare text code difference changes merge duibi chayi wenben daima bijiao",
   encoding: "url uri base64 unicode html escape unescape encode decode bianma",
@@ -350,6 +355,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const currentOutput = getToolValue(activeTab, {
     color: colorOutput,
     crop: "",
+    idPhoto: "",
     csv: csvOutput,
     data: structuredOutput,
     diff: "",
@@ -375,6 +381,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
   const currentInput = getToolValue(activeTab, {
     color: colorInput,
     crop: "",
+    idPhoto: "",
     csv: csvInput,
     data: structuredInput,
     diff: "",
@@ -1554,6 +1561,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
           {activeTab === "linkQr" ? <LinkQrTool /> : null}
           {activeTab === "wechatQr" ? <WechatQrTool /> : null}
           {activeTab === "crop" ? <ImageCropTool /> : null}
+          {activeTab === "idPhoto" ? <IdPhotoTool /> : null}
           {activeTab === "qrDecode" ? <QrDecodeTool /> : null}
           {activeTab === "imageBase64" ? <ImageBase64Tool /> : null}
           {activeTab === "diff" ? <DiffTool /> : null}
@@ -3413,6 +3421,7 @@ function isStandaloneTool(tab: ToolTab) {
     tab === "wechatQr" ||
     tab === "linkQr" ||
     tab === "crop" ||
+    tab === "idPhoto" ||
     tab === "qrDecode" ||
     tab === "imageBase64" ||
     tab === "diff" ||

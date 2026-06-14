@@ -8,6 +8,7 @@ export const mediaPrefKeys = {
   linkQr: "zhizhi.tools.media.linkQr",
   watermark: "zhizhi.tools.media.watermark",
   crop: "zhizhi.tools.media.crop",
+  idPhoto: "zhizhi.tools.media.idPhoto",
 } as const;
 
 export function readMediaPrefs<T>(key: string, parse: (raw: Record<string, unknown>) => T): T | null {

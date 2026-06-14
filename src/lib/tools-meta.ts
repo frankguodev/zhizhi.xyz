@@ -31,6 +31,7 @@ export const toolRoutes: readonly ToolRouteMeta[] = [
   { id: "linkQr", slug: "link-qr", title: "二维码生成工具（网址/文本/Wi-Fi/名片）", description: "在线生成网址、文本、Wi-Fi、邮箱、电话、短信和名片二维码，支持尺寸、留白、颜色、纠错等级和 PNG/WebP/JPG 下载，本地运行，数据不上传。" },
   { id: "wechatQr", slug: "wechat-qr", title: "微信扫一扫二维码合成工具", description: "上传微信加好友二维码和头像，本地合成中间带头像的扫一扫图片，支持尺寸、留白和输出格式设置，图片不上传。" },
   { id: "crop", slug: "image-crop", title: "图片裁剪 / 旋转工具（按比例 / 圆形头像）", description: "在线裁剪、旋转、翻转图片，支持固定比例、自由裁剪和圆形头像输出，本地运行，图片不上传。" },
+  { id: "idPhoto", slug: "id-photo", title: "证件照制作工具（AI 抠图换底 / 蓝白红底）", description: "上传人像照片，本地 AI 抠图换背景，生成蓝底、白底、红底的一寸、二寸等标准尺寸证件照，图片不上传。" },
   { id: "qrDecode", slug: "qr-decode", title: "二维码识别 / 解码工具", description: "上传、拖拽或粘贴二维码和条形码图片，本地识别链接、文本、Wi-Fi、电话、邮箱、短信和名片等内容，图片不上传。" },
   { id: "imageBase64", slug: "image-base64", title: "图片转 Base64 / Data URI 工具", description: "图片与 Base64 / Data URI 互转，支持复制 CSS、HTML 和 Markdown 嵌入片段，本地运行，图片不上传。" },
 ];
