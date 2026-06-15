@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { decodeTaxonomySegment } from "@/lib/article-taxonomy";
 import { getPublicArticleListSource } from "@/lib/public-articles";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ tag: string }> }) {
   const { tag } = await params;

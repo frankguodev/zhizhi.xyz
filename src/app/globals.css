@@ -63,7 +63,7 @@ html[data-theme="dark"] {
   --color-amber: var(--amber);
   --radius-md: var(--radius-control);
   --radius-lg: var(--radius-surface);
-  --font-sans: var(--font-geist-sans), var(--font-noto-sans-sc), Arial, sans-serif;
+  --font-sans: var(--font-geist-sans), Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -119,7 +119,7 @@ body {
     linear-gradient(245deg, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent 34rem),
     var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), var(--font-noto-sans-sc), Arial, sans-serif;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
   letter-spacing: 0;
 }
 
@@ -892,7 +892,7 @@ html[data-theme="dark"] .article-prose blockquote {
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
-  font-family: var(--font-geist-sans), var(--font-noto-sans-sc), Arial, sans-serif;
+  font-family: var(--font-geist-sans), Arial, sans-serif;
   font-weight: 650;
   height: 1.9rem;
   justify-content: center;

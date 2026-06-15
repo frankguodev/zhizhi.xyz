@@ -9,7 +9,7 @@ import { buildAiTermJsonLd } from "@/lib/ai-term-structured-data";
 import { parseAiTermMarkdown } from "@/lib/markdown";
 import { defaultShareImage, siteConfig } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 type AiTermDetailRouteProps = {
   params: Promise<{

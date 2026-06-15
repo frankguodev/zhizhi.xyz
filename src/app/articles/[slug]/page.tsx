@@ -1,14 +1,12 @@
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import { ArticleDetailPage } from "@/components/content/article-detail-page";
 import { articles } from "@/data/articles";
 import { buildArticleMetadata } from "@/lib/article-metadata";
 import { buildArticleToc } from "@/lib/article-toc";
 import { getPublicArticleDetailPayload } from "@/lib/public-article-detail";
 import { getPublicArticle } from "@/lib/public-articles";
-import { getRequestOrigin } from "@/lib/request-origin";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export function generateStaticParams() {
   return articles.filter((article) => article.locale === "zh").map((article) => ({ slug: article.slug }));
@@ -22,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return {};
   }
 
-  return buildArticleMetadata(article, getRequestOrigin(await headers()));
+  return buildArticleMetadata(article);
 }
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {

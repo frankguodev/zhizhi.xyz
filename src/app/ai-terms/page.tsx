@@ -6,7 +6,7 @@ import { defaultShareImage, siteConfig } from "@/lib/site";
 
 const description = "用普通人能读懂的方式整理 AI 术语、概念、工具和新兴说法。";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const PAGE_SIZE = 12;
 const SORTS = ["latest", "heat"] as const;

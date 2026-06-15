@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ArticleIndexPage } from "@/components/content/article-index-page";
 import { defaultShareImage, siteConfig } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "文章",
