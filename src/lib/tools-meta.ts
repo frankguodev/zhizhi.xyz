@@ -25,7 +25,7 @@ export const toolRoutes: readonly ToolRouteMeta[] = [
   { id: "data", slug: "yaml", title: "YAML / TOML 转 JSON 工具", description: "在线把 YAML 或 TOML 转成 JSON，适合配置文件、Front Matter 和结构化数据整理，本地运行，数据不上传。" },
   { id: "xml", slug: "xml", title: "XML 转 JSON 工具", description: "在线把 XML 转成 JSON，支持属性、文本节点、重复节点数组和命名空间处理选项，本地运行，数据不上传。" },
   { id: "csv", slug: "csv", title: "CSV / TSV 转 JSON 工具", description: "在线把 CSV 或 TSV 转成 JSON，支持自动识别分隔符、类型推断和表格数据整理，本地运行，数据不上传。" },
-  { id: "color", slug: "color", title: "颜色格式转换工具（HEX/RGB/HSL）", description: "在线转换 HEX、RGB、HSL 等常用颜色格式，并输出可直接复制的 CSS 变量，本地运行，数据不上传。" },
+  { id: "color", slug: "color", title: "颜色拾取 / 格式转换工具（吸管取色 / HEX/RGB/HSL）", description: "上传图片点击取色并提取主色板、用屏幕吸管拾取任意颜色，并在 HEX、RGB、HSL 间互转、输出可复制的 CSS 变量，本地运行，数据不上传。" },
   { id: "image", slug: "image", title: "图片压缩 / 格式转换工具（JPG/PNG/WebP/AVIF）", description: "本地压缩、缩放并转换 JPG、PNG、WebP 和 AVIF 图片，支持批量处理和目标体积设置，图片不上传。" },
   { id: "watermark", slug: "watermark", title: "图片加水印工具", description: "在线给图片添加文字水印，支持单个定位、斜向平铺、透明度和批量处理，本地运行，图片不上传。" },
   { id: "linkQr", slug: "link-qr", title: "二维码生成工具（网址/文本/Wi-Fi/名片）", description: "在线生成网址、文本、Wi-Fi、邮箱、电话、短信和名片二维码，支持尺寸、留白、颜色、纠错等级和 PNG/WebP/JPG 下载，本地运行，数据不上传。" },

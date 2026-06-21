@@ -97,6 +97,7 @@ const IdPhotoTool = dynamic(() => import("./id-photo-tool").then((m) => m.IdPhot
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
 const TokenCounterTool = dynamic(() => import("./token-counter-tool").then((m) => m.TokenCounterTool), { ssr: false, loading: standaloneToolLoading });
+const ColorPickStudio = dynamic(() => import("./color-pick-studio").then((m) => m.ColorPickStudio), { ssr: false });
 
 type TextHighlight = {
   end: number;
@@ -210,7 +211,7 @@ const tabLabels = [
   { id: "data", label: "YAML", description: "YAML / TOML 转 JSON，覆盖常见配置和 Front Matter 场景。", icon: Braces },
   { id: "xml", label: "XML", description: "XML 转 JSON，支持属性、文本节点、重复节点和命名空间选项。", icon: Braces },
   { id: "csv", label: "CSV", description: "CSV / TSV 转 JSON，适合表格数据整理。", icon: Table2 },
-  { id: "color", label: "颜色", description: "HEX、RGB、HSL 颜色格式互转。", icon: Palette },
+  { id: "color", label: "颜色", description: "从图片取色、屏幕吸管拾色，并在 HEX、RGB、HSL 间互转。", icon: Palette },
   { id: "image", label: "图片", description: "本地压缩、转换 JPG / PNG / WebP，优先使用 WASM 编码器。", icon: FileImage },
   { id: "watermark", label: "水印", description: "给图片添加文字水印，支持单个定位与斜向平铺，可批量处理。", icon: Stamp },
   { id: "linkQr", label: "二维码生成", description: "生成网址、文本、Wi-Fi、邮箱、电话、短信和名片二维码。", icon: QrCode },
@@ -225,7 +226,7 @@ const hiddenToolTabs = new Set<ToolTab>(["data"]);
 const visibleTabLabels = tabLabels.filter((tab) => !hiddenToolTabs.has(tab.id));
 
 const toolSearchAliases: Record<ToolTab, string> = {
-  color: "hex rgb hsl css color palette yanse se sezhi",
+  color: "hex rgb hsl css color palette picker pick eyedropper dropper image yanse se sezhi quse xishi pingmu tupian zhuse diaose",
   crop: "crop rotate flip image avatar circle ratio aspect cut tupian caijian xuanzhuan fanzhuan touxiang yuanxing bili",
   csv: "csv tsv table excel sheet delimiter comma tab biaoge",
   idPhoto: "id photo passport visa avatar headshot background removal blue white red zhengjianzhao yicun ercun koutu huandi lvbai zhao tupian",
@@ -1591,6 +1592,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
 
           <div className={`grid gap-4 ${expandedWorkspace ? "lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:grid-rows-[1fr] xl:gap-5" : "lg:grid-cols-2"}`}>
             <div className={`${mobilePanel === "input" ? "block" : "hidden lg:block"}${expandedWorkspace ? " lg:min-h-0" : ""}`}>
+              {activeTab === "color" ? <ColorPickStudio onPick={setColorInput} /> : null}
               <EditorPanel
                 label={labels.input}
                 value={currentInput}

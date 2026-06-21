@@ -25,6 +25,14 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-06-21",
+    title: "颜色工具升级：图片取色、屏幕吸管与主色板",
+    changes: [
+      { type: "added", label: "图片取色", text: "上传或拖入图片，在图上移动实时预览、点击即可取色（触屏可直接点按），并自动提取图片主色板，点色块一键取色，HEX / RGB / HSL 同步换算，图片不上传。" },
+      { type: "added", label: "屏幕吸管", text: "在支持的浏览器（Chrome / Edge）里可用屏幕吸管拾取页面内外任意位置的颜色；不支持的浏览器自动隐藏该按钮，用图片取色兜底。" },
+    ],
+  },
+  {
     date: "2026-06-14",
     title: "新增工具：证件照制作",
     changes: [
