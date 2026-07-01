@@ -72,6 +72,7 @@ type ParsedContent = {
   linkCount: number;
   listCount: number;
   paragraphs: string[];
+  raw: string;
   text: string;
   title: string | null;
 };
@@ -527,6 +528,7 @@ function parseContent(input: string): ParsedContent {
     linkCount,
     listCount,
     paragraphs,
+    raw: input,
     text,
     title: title || null,
   };
@@ -617,13 +619,32 @@ function buildFaq(parsed: ParsedContent, targetQuestion: string, targetKeyword: 
   }
   return [...questions].slice(0, 5).map((question) => ({
     question,
-    answer: findAnswerAfterQuestion(parsed.paragraphs, question) || "建议用 40-80 字直接回答这个问题，再补充条件、步骤或示例。",
+    answer: findAnswerAfterQuestion(parsed, question) || "建议用 40-80 字直接回答这个问题，再补充条件、步骤或示例。",
   }));
 }
 
-function findAnswerAfterQuestion(paragraphs: string[], question: string) {
+function findAnswerAfterQuestion(parsed: ParsedContent, question: string) {
+  const headingAnswer = findAnswerAfterMarkdownHeading(parsed.raw, question);
+  if (headingAnswer) return headingAnswer;
+
   const normalizedQuestion = question.replace(/[?？]/g, "");
-  return paragraphs.find((paragraph) => paragraph !== question && !containsText(paragraph, normalizedQuestion) && countChars(paragraph) <= 180) ?? "";
+  const headings = new Set([...parsed.h1, ...parsed.h2, parsed.title].filter(Boolean));
+  return parsed.paragraphs.find((paragraph) => !headings.has(paragraph) && paragraph !== question && !containsText(paragraph, normalizedQuestion) && countChars(paragraph) <= 180) ?? "";
+}
+
+function findAnswerAfterMarkdownHeading(input: string, question: string) {
+  const normalizedQuestion = comparableText(question.replace(/[?？]/g, ""));
+  const sections = [...input.matchAll(/^#{1,6}\s+(.+)$([\s\S]*?)(?=^#{1,6}\s+|(?![\s\S]))/gm)];
+  for (const section of sections) {
+    const heading = cleanInline(section[1]).replace(/[?？]/g, "");
+    if (!containsText(heading, normalizedQuestion) && !containsText(normalizedQuestion, heading)) continue;
+    const answer = normalizeText(stripMarkup(section[2]))
+      .split(/\n{2,}|(?<=[。！？!?])\s+/)
+      .map((item) => normalizeText(item))
+      .find((item) => item.length >= 12 && countChars(item) <= 180);
+    if (answer) return answer;
+  }
+  return "";
 }
 
 function hasListOrSteps(text: string) {
@@ -780,7 +801,8 @@ function buildLlmsText(parsed: ParsedContent, options: SearchAuditOptions, summa
 }
 
 export function formatSearchAuditMarkdown(result: SearchAuditResult) {
-  const topIssues = result.issues.filter((issue) => issue.level !== "pass").slice(0, 10);
+  const issues = result.issues.filter((issue) => issue.level !== "pass");
+  const topIssues = [...issues.filter((issue) => issue.id.startsWith("type-")), ...issues.filter((issue) => !issue.id.startsWith("type-"))].slice(0, 10);
   return [
     `# AI 搜索体检结果`,
     "",

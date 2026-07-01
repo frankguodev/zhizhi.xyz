@@ -409,6 +409,7 @@ assert.match(searchAudit.aiSummary, /SEO/);
 assert.match(searchAudit.jsonLd, /"@type": "Article"/);
 assert.match(searchAudit.jsonLd, /FAQPage/);
 assert.match(searchAudit.llmsText, /zhizhi\.xyz/);
+assert.match(searchAudit.faq.find((item) => item.question === "SEO、GEO、AEO 是什么？")?.answer ?? "", /SEO 是搜索引擎优化/);
 assert.match(formatSearchAuditMarkdown(searchAudit), /AI 搜索体检结果/);
 assert.ok(searchAudit.checklist.length >= 6);
 assert.ok(searchAudit.rewrites.some((item) => item.id === "direct-answer"));

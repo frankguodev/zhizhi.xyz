@@ -72,6 +72,7 @@ const copy = {
   clear: "清空",
   copyReport: "复制报告",
   copied: "已复制",
+  copyFailed: "复制失败",
   score: "体检分数",
   extracted: "提取信息",
   issues: "优先修改",
@@ -88,6 +89,29 @@ const copy = {
 type CopiedTarget = string | null;
 
 const maxAnalyzeChars = 300_000;
+
+function copyWithSelection(value: string) {
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
+}
+
+async function writeClipboard(value: string) {
+  if (copyWithSelection(value)) return true;
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -115,19 +139,23 @@ export function SeoAeoGeoTool() {
     [analyzedInput, brandName, contentType, pageUrl, targetKeyword, targetQuestion],
   );
   const hasInput = input.trim().length > 0;
-  const topIssues = result.issues.filter((issue) => issue.level !== "pass").slice(0, 10);
+  const visibleIssues = useMemo(() => {
+    const issues = result.issues.filter((issue) => issue.level !== "pass");
+    return [...issues.filter((issue) => issue.id.startsWith("type-")), ...issues.filter((issue) => !issue.id.startsWith("type-"))].slice(0, 10);
+  }, [result.issues]);
   const reportMarkdown = useMemo(() => formatSearchAuditMarkdown(result), [result]);
   const faqText = result.faq.map((item) => `### ${item.question}\n${item.answer}`).join("\n\n");
   const faqOutput = faqText || "建议补充 2-5 个真实问题和直接回答。";
+  const copyFailedTarget = (target: string) => copiedTarget === `${target}:failed`;
 
   async function copyText(value: string, target: string) {
     if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
+    if (await writeClipboard(value)) {
       setCopiedTarget(target);
       window.setTimeout(() => setCopiedTarget(null), 1500);
-    } catch {
-      setCopiedTarget(null);
+    } else {
+      setCopiedTarget(`${target}:failed`);
+      window.setTimeout(() => setCopiedTarget(null), 1800);
     }
   }
 
@@ -139,7 +167,7 @@ export function SeoAeoGeoTool() {
           <p className="mt-1 text-xs leading-5 text-muted">{copy.intro}</p>
         </div>
         <ToolPanelButton icon={copiedTarget === "report" ? Check : Copy} onClick={() => copyText(reportMarkdown, "report")} disabled={!hasInput}>
-          {copiedTarget === "report" ? copy.copied : copy.copyReport}
+          {copiedTarget === "report" ? copy.copied : copyFailedTarget("report") ? copy.copyFailed : copy.copyReport}
         </ToolPanelButton>
       </div>
 
@@ -211,7 +239,7 @@ export function SeoAeoGeoTool() {
                   ["字词", result.extracted.wordCount.toLocaleString()],
                 ]}
               />
-              <IssueList issues={topIssues} copiedTarget={copiedTarget} onCopy={copyText} />
+              <IssueList issues={visibleIssues} copiedTarget={copiedTarget} onCopy={copyText} />
             </div>
           )}
         </div>
@@ -222,10 +250,10 @@ export function SeoAeoGeoTool() {
           <RewriteGrid rewrites={result.rewrites} copiedTarget={copiedTarget} onCopy={copyText} />
           <ChecklistPanel items={result.checklist} />
           <div className="grid gap-4 xl:grid-cols-2">
-            <CopyPanel title={copy.summary} value={result.aiSummary} copied={copiedTarget === "summary"} onCopy={() => copyText(result.aiSummary, "summary")} />
-            <CopyPanel title={copy.faq} value={faqOutput} copied={copiedTarget === "faq"} onCopy={() => copyText(faqOutput, "faq")} />
-            <CopyPanel title={copy.jsonLd} value={result.jsonLd} copied={copiedTarget === "jsonLd"} onCopy={() => copyText(result.jsonLd, "jsonLd")} mono />
-            <CopyPanel title={copy.llms} value={result.llmsText} copied={copiedTarget === "llms"} onCopy={() => copyText(result.llmsText, "llms")} mono />
+            <CopyPanel title={copy.summary} value={result.aiSummary} copied={copiedTarget === "summary"} failed={copyFailedTarget("summary")} onCopy={() => copyText(result.aiSummary, "summary")} />
+            <CopyPanel title={copy.faq} value={faqOutput} copied={copiedTarget === "faq"} failed={copyFailedTarget("faq")} onCopy={() => copyText(faqOutput, "faq")} />
+            <CopyPanel title={copy.jsonLd} value={result.jsonLd} copied={copiedTarget === "jsonLd"} failed={copyFailedTarget("jsonLd")} onCopy={() => copyText(result.jsonLd, "jsonLd")} mono />
+            <CopyPanel title={copy.llms} value={result.llmsText} copied={copiedTarget === "llms"} failed={copyFailedTarget("llms")} onCopy={() => copyText(result.llmsText, "llms")} mono />
           </div>
         </>
       ) : null}
@@ -303,7 +331,7 @@ function IssueList({ issues, copiedTarget, onCopy }: { issues: SearchAuditIssue[
               {issue.rewrite ? (
                 <div className="mt-2">
                   <ToolPanelButton icon={copiedTarget === `issue:${issue.id}` ? Check : Copy} onClick={() => onCopy(issue.rewrite ?? "", `issue:${issue.id}`)}>
-                    {copiedTarget === `issue:${issue.id}` ? copy.copied : "复制改法"}
+                    {copiedTarget === `issue:${issue.id}` ? copy.copied : copiedTarget === `issue:${issue.id}:failed` ? copy.copyFailed : "复制改法"}
                   </ToolPanelButton>
                 </div>
               ) : null}
@@ -327,7 +355,7 @@ function RewriteGrid({ rewrites, copiedTarget, onCopy }: { rewrites: SearchAudit
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
                 <ToolPanelButton icon={copiedTarget === target ? Check : Copy} onClick={() => onCopy(item.value, target)}>
-                  {copiedTarget === target ? copy.copied : "复制"}
+                  {copiedTarget === target ? copy.copied : copiedTarget === `${target}:failed` ? copy.copyFailed : "复制"}
                 </ToolPanelButton>
               </div>
               <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-sm leading-7 text-foreground">{item.value}</pre>
@@ -358,12 +386,12 @@ function ChecklistPanel({ items }: { items: SearchAuditChecklistItem[] }) {
   );
 }
 
-function CopyPanel({ title, value, copied, onCopy, mono = false }: { title: string; value: string; copied: boolean; onCopy: () => void; mono?: boolean }) {
+function CopyPanel({ title, value, copied, failed, onCopy, mono = false }: { title: string; value: string; copied: boolean; failed: boolean; onCopy: () => void; mono?: boolean }) {
   return (
     <div>
       <ToolPanelHeader
         label={title}
-        actions={<ToolPanelButton icon={copied ? Check : Copy} onClick={onCopy}>{copied ? copy.copied : "复制"}</ToolPanelButton>}
+        actions={<ToolPanelButton icon={copied ? Check : Copy} onClick={onCopy}>{copied ? copy.copied : failed ? copy.copyFailed : "复制"}</ToolPanelButton>}
       />
       <pre className={`${toolPanelHeight("medium")} overflow-auto whitespace-pre-wrap rounded-md border border-line bg-paper/88 p-3.5 text-sm leading-7 text-foreground shadow-inner ${mono ? toolMonoContentClass : ""}`}>
         {value}
