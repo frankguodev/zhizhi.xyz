@@ -3,7 +3,7 @@ import { HomePage } from "@/components/content/home-page";
 import { getPublicHomePayload } from "@/lib/public-home";
 import { defaultShareImage, siteConfig } from "@/lib/site";
 
-const description = "分享普通人也能复制的实战经验和真实成长路径。";
+const description = "分享普通人也能复制的实战经验和真实成长路径。分享自己学习的AI知识，AI术语词条、独立做项目的经历；开发一些好用的小工具。";
 
 export const metadata: Metadata = {
   title: { absolute: siteConfig.name },

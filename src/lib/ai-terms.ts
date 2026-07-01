@@ -10,6 +10,7 @@ import {
   aiTermRelations,
   aiTerms,
 } from "@/db/schema";
+import { getMediaBucket, isValidAiTermMediaKey } from "@/lib/media";
 
 export type AiTermLocale = "zh";
 export type AiTermType = "concept" | "protocol" | "framework" | "product" | "model" | "workflow" | "infra" | "slang" | "company" | "method";
@@ -285,6 +286,31 @@ function toDateValue(value: Date | string | number | null | undefined) {
 
 function publicVisibilityCondition() {
   return and(eq(aiTerms.status, "published"), eq(aiTerms.visibility, "public"))!;
+}
+
+function mediaKeyFromUrl(value: string | null | undefined) {
+  if (!value?.startsWith("/media/")) return null;
+  const key = value.slice("/media/".length);
+  return isValidAiTermMediaKey(key) ? key : null;
+}
+
+function aiTermMediaKeys(aiTerm: Pick<AdminAiTermDetail, "shareImage" | "diagramImage" | "contentMd">) {
+  const keys = new Set<string>();
+  for (const value of [aiTerm.shareImage, aiTerm.diagramImage]) {
+    const key = mediaKeyFromUrl(value);
+    if (key) keys.add(key);
+  }
+  for (const match of aiTerm.contentMd.matchAll(/\/media\/([^\s)"'<>]+)/g)) {
+    const key = mediaKeyFromUrl(`/media/${match[1]}`);
+    if (key) keys.add(key);
+  }
+  return [...keys];
+}
+
+async function deleteAiTermMedia(keys: string[]) {
+  if (keys.length === 0) return;
+  const bucket = await getMediaBucket();
+  await Promise.all(keys.map((key) => bucket.delete(key)));
 }
 
 /** 列表/摘要所需的列；避免列表查询 SELECT * 带出 contentMd、metadataJson 等大字段。 */
@@ -1334,8 +1360,10 @@ export async function deleteAiTerm(locale: AiTermLocale, slug: string) {
     return null;
   }
 
+  await deleteAiTermMedia(aiTermMediaKeys(existing));
   await db.delete(aiTermRelations).where(or(eq(aiTermRelations.termId, existing.id), eq(aiTermRelations.relatedTermId, existing.id)));
   await db.delete(aiTermRelationCandidates).where(eq(aiTermRelationCandidates.termId, existing.id));
+  await db.delete(aiTermCategoryRelations).where(eq(aiTermCategoryRelations.termId, existing.id));
   await db.delete(aiTerms).where(eq(aiTerms.id, existing.id));
   revalidatePublicAiTermsCache();
 
@@ -1356,8 +1384,8 @@ export async function bulkApplyAiTermAction(ids: string[], action: BulkAiTermAct
 
     try {
       if (action === "delete") {
-        if (aiTerm.status !== "archived") {
-          results.push({ id, ok: false, message: "只有已归档词条允许物理删除。" });
+        if (aiTerm.status !== "draft" && aiTerm.status !== "archived") {
+          results.push({ id, ok: false, message: "只有草稿或已归档词条允许物理删除。" });
           continue;
         }
         await deleteAiTerm(aiTerm.locale, aiTerm.slug);

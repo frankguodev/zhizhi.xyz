@@ -64,6 +64,7 @@ export function getSampleInput(tab: ToolTab) {
     markdown: sampleMarkdown,
     qrDecode: "",
     regex: "知之工具\nzhizhi.xyz",
+    seoAudit: "",
     text: "知识\n工具\n知识\n\n知之",
     time: "",
     tokenCount: "",

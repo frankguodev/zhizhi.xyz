@@ -25,6 +25,13 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-07-01",
+    title: "新增工具：AI 搜索体检",
+    changes: [
+      { type: "added", label: "AI 搜索体检", text: "新增 SEO / GEO / AEO 体检工具：粘贴文章或页面内容，即可在浏览器本地检查标题、摘要、首段答案、FAQ、证据来源、结构化数据和 AI 可摘取性，并生成体检分数、优先修改建议、可复制改稿、发布前清单、JSON-LD 和 llms.txt 片段，内容不上传。" },
+    ],
+  },
+  {
     date: "2026-06-21",
     title: "颜色工具升级：图片取色、屏幕吸管与主色板",
     changes: [

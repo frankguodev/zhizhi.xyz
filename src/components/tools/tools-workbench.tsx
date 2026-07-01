@@ -97,6 +97,7 @@ const IdPhotoTool = dynamic(() => import("./id-photo-tool").then((m) => m.IdPhot
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
 const TokenCounterTool = dynamic(() => import("./token-counter-tool").then((m) => m.TokenCounterTool), { ssr: false, loading: standaloneToolLoading });
+const SeoAeoGeoTool = dynamic(() => import("./seo-aeo-geo-tool").then((m) => m.SeoAeoGeoTool), { ssr: false, loading: standaloneToolLoading });
 const ColorPickStudio = dynamic(() => import("./color-pick-studio").then((m) => m.ColorPickStudio), { ssr: false });
 
 type TextHighlight = {
@@ -140,6 +141,7 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   jwt: "dev",
   linkQr: "media",
   markdown: "writing",
+  seoAudit: "writing",
   qrDecode: "media",
   regex: "dev",
   text: "writing",
@@ -203,6 +205,7 @@ const tabLabels = [
   { id: "diff", label: "Diff", description: "对比两段文本或代码，左右并排显示行级差异并高亮改动字词。", icon: GitCompareArrows },
   { id: "jsonToTs", label: "JSON→TS", description: "粘贴 JSON 自动推断 TypeScript interface / type 类型。", icon: FileCode2 },
   { id: "tokenCount", label: "Token", description: "计算文本的 LLM token 数，GPT 精确、Claude 等估算，附统计与分词可视化。", icon: Calculator },
+  { id: "seoAudit", label: "AI 搜索", description: "本地检查 SEO / AEO / GEO，生成修改建议、FAQ、JSON-LD 和 llms.txt。", icon: Search },
   { id: "jwt", label: "JWT", description: "本地解码 JWT Header 和 Payload，不验证签名。", icon: KeyRound },
   { id: "hash", label: "Hash", description: "计算 SHA-1、SHA-256、SHA-384 和 SHA-512 摘要。", icon: HashIcon },
   { id: "uuid", label: "UUID", description: "生成单个或批量 UUID v4。", icon: Fingerprint },
@@ -235,6 +238,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   encoding: "url uri base64 unicode html escape unescape encode decode bianma",
   jsonToTs: "json typescript ts type interface convert codegen leixing jiekou zhuanhuan",
   tokenCount: "token counter tokenizer tiktoken llm gpt claude prompt count cost context window leji jishu fenci shangxiawen",
+  seoAudit: "seo geo aeo ai search audit llmo answer engine optimization generative engine structured data jsonld faq llms neirong tizhen sousuo youhua",
   hash: "sha sha1 sha256 sha384 sha512 digest checksum file wenjian",
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
   imageBase64: "image base64 datauri data url css html markdown embed inline tupian bianma neilian",
@@ -371,6 +375,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     markdown: markdownOutput,
     qrDecode: "",
     regex: regexOutput,
+    seoAudit: "",
     text: textOutput,
     time: timeOutput,
     tokenCount: "",
@@ -397,6 +402,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     markdown: markdownInput,
     qrDecode: "",
     regex: regexInput,
+    seoAudit: "",
     text: textInput,
     time: timeInput,
     tokenCount: "",
@@ -1568,6 +1574,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
           {activeTab === "diff" ? <DiffTool /> : null}
           {activeTab === "jsonToTs" ? <JsonToTsTool /> : null}
           {activeTab === "tokenCount" ? <TokenCounterTool /> : null}
+          {activeTab === "seoAudit" ? <SeoAeoGeoTool /> : null}
 
           {!isStandaloneTool(activeTab) ? (
             <>
@@ -3428,7 +3435,8 @@ function isStandaloneTool(tab: ToolTab) {
     tab === "imageBase64" ||
     tab === "diff" ||
     tab === "jsonToTs" ||
-    tab === "tokenCount"
+    tab === "tokenCount" ||
+    tab === "seoAudit"
   );
 }
 

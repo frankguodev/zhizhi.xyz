@@ -11,6 +11,8 @@ const { defaultXmlToJsonOptions, xmlDocumentToJson } = await import("../src/comp
 const { computeDiff, createUnifiedPatch } = await import("../src/components/tools/tool-diff.ts");
 const { jsonToTypeScript } = await import("../src/components/tools/tool-json-to-ts.ts");
 const { computeTokenTextStats, estimateTokenCount, getTokenModel, tokenModels } = await import("../src/components/tools/tool-token-counter.ts");
+const { analyzeSearchAudit, formatSearchAuditMarkdown, searchAuditContentTypeOptions } = await import("../src/components/tools/tool-seo-audit.ts");
+const { isToolTab } = await import("../src/components/tools/tool-types.ts");
 
 const defaultOptions = { emptyAsNull: false, inferTypes: true, outputMode: "objects" };
 
@@ -373,5 +375,61 @@ for (const model of tokenModels) {
     assert.ok(model.charsPerToken > 0, `estimate 模型应有 charsPerToken: ${model.id}`);
   }
 }
+
+const searchAuditInput = `---
+title: "从 0 开始学习 SEO、GEO、AEO"
+description: "这是一份给内容创作者的 AI 搜索学习路径，帮助理解传统搜索、答案引擎和生成式搜索的差异。"
+---
+
+# 从 0 开始学习 SEO、GEO、AEO
+
+SEO、GEO、AEO 是 2026 年内容创作者需要一起理解的三件事：SEO 解决搜索引擎能不能发现你，AEO 解决答案引擎能不能摘取你，GEO 解决生成式搜索能不能把你当作可信来源引用。
+
+## SEO、GEO、AEO 是什么？
+
+SEO 是搜索引擎优化，AEO 是答案引擎优化，GEO 是生成式搜索优化。
+
+## 新手应该怎么开始？
+
+1. 写清楚标题和摘要。
+2. 在开头回答一个具体问题。
+3. 给判断补上来源、年份、案例或数据。
+
+我在整理 AI 词条时发现，有明确问题、直接答案、更新时间、案例和延伸阅读的页面更容易被引用。
+
+参考：https://developers.google.com/search/docs/fundamentals/ai-optimization-guide`;
+const searchAudit = analyzeSearchAudit(searchAuditInput, {
+  brandName: "知之",
+  pageUrl: "https://zhizhi.xyz/tools/ai-search-audit",
+  targetKeyword: "SEO、GEO、AEO",
+  targetQuestion: "SEO、GEO、AEO 是什么？",
+});
+assert.ok(searchAudit.score.overall >= 70);
+assert.match(searchAudit.aiSummary, /SEO/);
+assert.match(searchAudit.jsonLd, /"@type": "Article"/);
+assert.match(searchAudit.jsonLd, /FAQPage/);
+assert.match(searchAudit.llmsText, /zhizhi\.xyz/);
+assert.match(formatSearchAuditMarkdown(searchAudit), /AI 搜索体检结果/);
+assert.ok(searchAudit.checklist.length >= 6);
+assert.ok(searchAudit.rewrites.some((item) => item.id === "direct-answer"));
+assert.match(searchAudit.verdict, /发布|优先|基础/);
+assert.ok(searchAuditContentTypeOptions.some((item) => item.value === "tutorial" && item.label.includes("教程")));
+
+const tutorialAudit = analyzeSearchAudit("# 新手怎么做 AI 搜索优化？\n\nAI 搜索优化需要先回答用户问题，再补充事实来源和案例。", {
+  contentType: "tutorial",
+  targetQuestion: "新手怎么做 AI 搜索优化？",
+});
+assert.ok(tutorialAudit.issues.some((issue) => issue.id === "type-tutorial-steps"));
+assert.ok(tutorialAudit.issues.some((issue) => issue.rewrite));
+
+const separatorAudit = analyzeSearchAudit("# SEO、GEO、AEO 是什么？\n\n- 先回答问题\n- 再补充证据\n\n2026 年，我实测过这个流程。参考：https://example.com", {
+  targetKeyword: "SEO GEO AEO",
+});
+assert.equal(separatorAudit.issues.some((issue) => issue.id === "seo-keyword"), false);
+assert.equal(separatorAudit.issues.some((issue) => issue.id === "aeo-list"), false);
+assert.equal(isToolTab("seoAudit"), true);
+assert.equal(isToolTab("diff"), true);
+assert.equal(isToolTab("jsonToTs"), true);
+assert.equal(isToolTab("tokenCount"), true);
 
 console.log("Tools smoke tests passed.");

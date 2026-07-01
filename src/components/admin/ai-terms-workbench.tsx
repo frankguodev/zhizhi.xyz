@@ -75,7 +75,7 @@ const bulkActionOptions: Array<{ value: BulkAction; label: string }> = [
   { value: "publish", label: "发布" },
   { value: "archive", label: "归档" },
   { value: "restore", label: "恢复" },
-  { value: "delete", label: "物理删除已归档" },
+  { value: "delete", label: "物理删除草稿/归档" },
 ];
 
 function dateText(value: Date | string | number | null | undefined) {
@@ -320,7 +320,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
         publish: { title: "发布 AI 词条", description: "发布前会执行后台质量检查，存在错误时会阻止发布。", label: "发布", tone: "primary" as const },
         archive: { title: "归档 AI 词条", description: "归档后词条会被隐藏，不再进入公开内容范围。", label: "归档", tone: "danger" as const },
         restore: { title: "恢复 AI 词条", description: "恢复后词条会重新变为已发布公开状态。", label: "恢复", tone: "primary" as const },
-        delete: { title: "删除 AI 词条", description: "这会物理删除词条和关联关系，操作不可撤销。", label: "确认删除", tone: "danger" as const },
+        delete: { title: "删除 AI 词条", description: "这会物理删除词条、关联关系和词条 R2 图片，操作不可撤销。", label: "确认删除", tone: "danger" as const },
       }[pendingAction.action]
     : null;
   const bulkActionMeta = pendingBulkAction
@@ -328,7 +328,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
         publish: { title: "批量发布 AI 词条", description: "发布前会逐条执行后台质量检查，存在错误时会阻止对应词条发布。", label: "批量发布", tone: "primary" as const },
         archive: { title: "批量归档 AI 词条", description: "归档后这些词条会被隐藏，不再进入公开内容范围。", label: "批量归档", tone: "danger" as const },
         restore: { title: "批量恢复 AI 词条", description: "恢复后这些词条会重新变为已发布公开状态。", label: "批量恢复", tone: "primary" as const },
-        delete: { title: "批量物理删除 AI 词条", description: "这会物理删除已归档词条和关联关系，操作不可撤销。", label: "确认批量删除", tone: "danger" as const },
+        delete: { title: "批量物理删除 AI 词条", description: "这会物理删除草稿/已归档词条、关联关系和词条 R2 图片，操作不可撤销。", label: "确认批量删除", tone: "danger" as const },
         markReviewed: null,
         unmarkReviewed: null,
         setTrending: null,
@@ -597,7 +597,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                           <ExternalLink className="h-3.5 w-3.5" />
                           前台
                         </Link>
-                        {term.status === "archived" ? (
+                        {term.status === "draft" || term.status === "archived" ? (
                           <button
                             type="button"
                             onClick={() => setPendingAction({ action: "delete", term })}
@@ -768,7 +768,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                     <ExternalLink className="h-4 w-4" />
                     前台
                   </Link>
-                  {term.status === "archived" ? (
+                  {term.status === "draft" || term.status === "archived" ? (
                     <button
                       type="button"
                       onClick={() => setPendingAction({ action: "delete", term })}
