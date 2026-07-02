@@ -40,8 +40,8 @@ export type ToolPreferences = {
 };
 
 const defaultToolPreferences: ToolPreferences = {
-  activeGroup: "data",
-  activeTab: "json",
+  activeGroup: "writing",
+  activeTab: "seoAudit",
   csvDelimiter: "auto",
   csvEmptyAsNull: false,
   csvInferTypes: true,

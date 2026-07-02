@@ -269,8 +269,8 @@ const paletteTools: readonly PaletteTool[] = visibleTabLabels.map((tab) => ({
 export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) {
   const labels = copyLabels;
   const [preferencesReady, setPreferencesReady] = useState(false);
-  const [activeTab, setActiveTab] = useState<ToolTab>(initialTool ?? "json");
-  const [activeGroup, setActiveGroup] = useState<ToolGroup>(initialTool ? toolGroupByTab[initialTool] : "data");
+  const [activeTab, setActiveTab] = useState<ToolTab>(initialTool ?? "seoAudit");
+  const [activeGroup, setActiveGroup] = useState<ToolGroup>(initialTool ? toolGroupByTab[initialTool] : "writing");
   const [mobilePanel, setMobilePanel] = useState<"input" | "output">("input");
   const [historyMounted, setHistoryMounted] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -444,7 +444,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     const timeout = window.setTimeout(() => {
       const preferences = readToolPreferences();
       const linkedTool = initialTool ?? readToolFromUrl();
-      const preferredTool = hiddenToolTabs.has(preferences.activeTab) ? "json" : preferences.activeTab;
+      const preferredTool = hiddenToolTabs.has(preferences.activeTab) ? "seoAudit" : preferences.activeTab;
       setActiveTab(linkedTool ?? preferredTool);
       setActiveGroup(linkedTool ? toolGroupByTab[linkedTool] : preferences.activeGroup);
       setCsvDelimiter(preferences.csvDelimiter);
@@ -479,7 +479,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
 
     writeToolPreferences({
       activeGroup,
-      activeTab: hiddenToolTabs.has(activeTab) ? "json" : activeTab,
+      activeTab: hiddenToolTabs.has(activeTab) ? "seoAudit" : activeTab,
       csvDelimiter,
       csvEmptyAsNull,
       csvInferTypes,
