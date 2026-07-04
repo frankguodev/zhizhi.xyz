@@ -45,6 +45,7 @@ export type SearchAuditResult = {
   aiSummary: string;
   extracted: {
     description: string | null;
+    evidenceSignals: EvidenceSignals;
     faqCount: number;
     h1: string[];
     h2: string[];
@@ -63,8 +64,16 @@ export type SearchAuditResult = {
   verdict: string;
 };
 
+export type EvidenceSignals = {
+  datedFacts: number;
+  links: number;
+  quantifiedFacts: number;
+  total: number;
+};
+
 type ParsedContent = {
   description: string | null;
+  evidenceSignals: EvidenceSignals;
   h1: string[];
   h2: string[];
   htmlImageAlts: string[];
@@ -103,7 +112,7 @@ export function analyzeSearchAudit(input: string, options: SearchAuditOptions = 
   const targetKeyword = normalizeText(options.targetKeyword ?? "");
   const targetQuestion = normalizeText(options.targetQuestion ?? "");
   const wordCount = countWords(parsed.text);
-  const directAnswer = findDirectAnswer(parsed.paragraphs, targetKeyword);
+  const directAnswer = findDirectAnswer(parsed, targetKeyword);
   const faq = buildFaq(parsed, targetQuestion, targetKeyword);
 
   addSeoIssues(issues, parsed, wordCount, targetKeyword, options.pageUrl);
@@ -124,6 +133,7 @@ export function analyzeSearchAudit(input: string, options: SearchAuditOptions = 
     aiSummary,
     extracted: {
       description: parsed.description,
+      evidenceSignals: parsed.evidenceSignals,
       faqCount: faq.length,
       h1: parsed.h1,
       h2: parsed.h2,
@@ -296,11 +306,10 @@ function addAeoIssues(issues: SearchAuditIssue[], parsed: ParsedContent, directA
 }
 
 function addGeoIssues(issues: SearchAuditIssue[], parsed: ParsedContent, brandName?: string) {
-  if (countEvidenceSignals(parsed.text) < 2) {
-    const evidenceCount = countEvidenceSignals(parsed.text);
+  if (parsed.evidenceSignals.total < 2) {
     addIssue(issues, {
       dimension: "geo",
-      evidence: `检测到 ${evidenceCount} 个年份、数据、数量或链接信号。`,
+      evidence: `检测到来源链接 ${parsed.evidenceSignals.links} 个、时间信号 ${parsed.evidenceSignals.datedFacts} 个、数据/数量信号 ${parsed.evidenceSignals.quantifiedFacts} 个。`,
       fix: "补充可验证证据，例如年份、数据、来源、案例、实验结果或引用链接。",
       id: "geo-evidence",
       level: "fail",
@@ -472,10 +481,10 @@ function addContentTypeIssues(issues: SearchAuditIssue[], parsed: ParsedContent,
     });
   }
 
-  if (contentType === "news" && countEvidenceSignals(parsed.text) < 3) {
+  if (contentType === "news" && parsed.evidenceSignals.total < 3) {
     addIssue(issues, {
       dimension: "geo",
-      evidence: `检测到 ${countEvidenceSignals(parsed.text)} 个时间/数据/来源信号。`,
+      evidence: `检测到来源链接 ${parsed.evidenceSignals.links} 个、时间信号 ${parsed.evidenceSignals.datedFacts} 个、数据/数量信号 ${parsed.evidenceSignals.quantifiedFacts} 个。`,
       fix: "新闻解读应补齐发生时间、来源、当事方、影响范围和后续观察点。",
       id: "type-news-context",
       level: "warn",
@@ -514,6 +523,7 @@ function parseContent(input: string): ParsedContent {
   const linkCount = countMatches(input, /https?:\/\/[^\s)"'<>]+/gi) + countMatches(input, /\[[^\]]+\]\([^)]+\)/g);
   const listCount = countMatches(input, /(^|\n)\s*(?:[-*]|\d+[.)、])\s+/g);
   const text = normalizeText(stripMarkup(input));
+  const evidenceSignals = countEvidenceSignals(text);
   const paragraphs = text
     .split(/\n{2,}|(?<=[。！？!?])\s+/)
     .map((item) => normalizeText(item))
@@ -521,6 +531,7 @@ function parseContent(input: string): ParsedContent {
 
   return {
     description: description || null,
+    evidenceSignals,
     h1,
     h2,
     htmlImageAlts: [...htmlImageAlts, ...markdownImages],
@@ -598,9 +609,11 @@ function countMatches(input: string, pattern: RegExp) {
   return [...input.matchAll(pattern)].length;
 }
 
-function findDirectAnswer(paragraphs: string[], targetKeyword: string) {
+function findDirectAnswer(parsed: ParsedContent, targetKeyword: string) {
+  const headings = new Set([...parsed.h1, ...parsed.h2, parsed.title].filter(Boolean));
+  const openingParagraphs = parsed.paragraphs.filter((paragraph) => !headings.has(paragraph)).slice(0, 2);
   return (
-    paragraphs.find((paragraph) => {
+    openingParagraphs.find((paragraph) => {
       const length = countChars(paragraph);
       return length >= 40 && length <= 160 && (!targetKeyword || containsText(paragraph, targetKeyword));
     }) ?? ""
@@ -624,12 +637,7 @@ function buildFaq(parsed: ParsedContent, targetQuestion: string, targetKeyword: 
 }
 
 function findAnswerAfterQuestion(parsed: ParsedContent, question: string) {
-  const headingAnswer = findAnswerAfterMarkdownHeading(parsed.raw, question);
-  if (headingAnswer) return headingAnswer;
-
-  const normalizedQuestion = question.replace(/[?？]/g, "");
-  const headings = new Set([...parsed.h1, ...parsed.h2, parsed.title].filter(Boolean));
-  return parsed.paragraphs.find((paragraph) => !headings.has(paragraph) && paragraph !== question && !containsText(paragraph, normalizedQuestion) && countChars(paragraph) <= 180) ?? "";
+  return findAnswerAfterMarkdownHeading(parsed.raw, question);
 }
 
 function findAnswerAfterMarkdownHeading(input: string, question: string) {
@@ -655,8 +663,16 @@ function hasComparisonSignal(text: string) {
   return /\|.+\||对比|相比|区别|优缺点|适合|不适合|方案|维度|vs\.?/i.test(text);
 }
 
-function countEvidenceSignals(text: string) {
-  return countMatches(text, /\b20\d{2}\b|[0-9]+(?:\.[0-9]+)?%|[0-9]+(?:\.[0-9]+)?\s*(?:倍|个|天|年|月|元|美元|分钟|小时)|https?:\/\//gi);
+function countEvidenceSignals(text: string): EvidenceSignals {
+  const links = countMatches(text, /https?:\/\//gi);
+  const datedFacts = countMatches(text, /\b20\d{2}\b|(?:19|20)\d{2}\s*年|[1-9]\d?\s*月|[1-3]?\d\s*日/g);
+  const quantifiedFacts = countMatches(text, /[0-9]+(?:\.[0-9]+)?%|[0-9]+(?:\.[0-9]+)?\s*(?:倍|个|天|年|月|元|美元|分钟|小时|人|次|条|篇|款|例|项)/gi);
+  return {
+    datedFacts,
+    links,
+    quantifiedFacts,
+    total: links + datedFacts + quantifiedFacts,
+  };
 }
 
 function hasExperienceSignal(text: string) {
@@ -800,6 +816,26 @@ function buildLlmsText(parsed: ParsedContent, options: SearchAuditOptions, summa
   return lines.join("\n");
 }
 
+export function formatSearchAuditPublishMarkdown(result: SearchAuditResult) {
+  return [
+    "## AI 可引用摘要",
+    result.aiSummary,
+    "",
+    "## FAQ 建议",
+    ...result.faq.map((item) => `### ${item.question}\n${item.answer}`),
+    "",
+    "## JSON-LD",
+    "```json",
+    result.jsonLd,
+    "```",
+    "",
+    "## llms.txt 片段",
+    "```txt",
+    result.llmsText,
+    "```",
+  ].join("\n");
+}
+
 export function formatSearchAuditMarkdown(result: SearchAuditResult) {
   const issues = result.issues.filter((issue) => issue.level !== "pass");
   const topIssues = [...issues.filter((issue) => issue.id.startsWith("type-")), ...issues.filter((issue) => !issue.id.startsWith("type-"))].slice(0, 10);
@@ -817,5 +853,18 @@ export function formatSearchAuditMarkdown(result: SearchAuditResult) {
     "",
     "## FAQ 建议",
     ...result.faq.map((item) => `- ${item.question}\n  ${item.answer}`),
+    "",
+    "## 发布前清单",
+    ...result.checklist.map((item) => `- [${item.done ? "x" : " "}] ${item.label}`),
+    "",
+    "## JSON-LD",
+    "```json",
+    result.jsonLd,
+    "```",
+    "",
+    "## llms.txt 片段",
+    "```txt",
+    result.llmsText,
+    "```",
   ].join("\n");
 }

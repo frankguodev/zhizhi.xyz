@@ -47,6 +47,7 @@ import { convertDelimitedTextToJson } from "./tool-csv";
 import { decodeJwtInput, formatHashResult } from "./tool-crypto";
 import { clearToolHistory, deleteToolHistoryItem, readToolHistory, saveToolHistoryItem, type ToolHistoryItem, type ToolHistorySettings } from "./tool-history";
 import { JsonViewer } from "./json-viewer";
+import { SeoAeoGeoTool } from "./seo-aeo-geo-tool";
 import { enhanceJsonError, getJsonErrorHighlight, repairJsonText, translateJsonErrorReason } from "./tool-json-diagnostics";
 import { renderMarkdownPreview, sanitizeMarkdownPreviewHtml } from "./tool-markdown";
 import { toolMonoContentClass } from "./tool-panel";
@@ -97,7 +98,6 @@ const IdPhotoTool = dynamic(() => import("./id-photo-tool").then((m) => m.IdPhot
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
 const TokenCounterTool = dynamic(() => import("./token-counter-tool").then((m) => m.TokenCounterTool), { ssr: false, loading: standaloneToolLoading });
-const SeoAeoGeoTool = dynamic(() => import("./seo-aeo-geo-tool").then((m) => m.SeoAeoGeoTool), { ssr: false, loading: standaloneToolLoading });
 const ColorPickStudio = dynamic(() => import("./color-pick-studio").then((m) => m.ColorPickStudio), { ssr: false });
 
 type TextHighlight = {
