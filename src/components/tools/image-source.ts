@@ -116,10 +116,11 @@ export async function createZipBlob(files: Array<{ data: Uint8Array; name: strin
   const encoder = new TextEncoder();
   const parts: Uint8Array[] = [];
   const centralDirectoryParts: Uint8Array[] = [];
+  const usedNames = new Set<string>();
   let offset = 0;
 
   for (const [index, file] of files.entries()) {
-    const fileNameBytes = encoder.encode(uniqueZipFileName(file.name, index));
+    const fileNameBytes = encoder.encode(uniqueZipFileName(file.name, index, usedNames));
     const crc = crc32(file.data);
     const localHeader = new Uint8Array(30 + fileNameBytes.length);
     const localView = new DataView(localHeader.buffer);
@@ -167,16 +168,23 @@ export async function createZipBlob(files: Array<{ data: Uint8Array; name: strin
   return new Blob([concatUint8Arrays([...parts, ...centralDirectoryParts, endRecord])], { type: "application/zip" });
 }
 
-function uniqueZipFileName(fileName: string, index: number) {
+function uniqueZipFileName(fileName: string, index: number, usedNames: Set<string>) {
   const normalized = fileName.replace(/[\\/:*?"<>|]/g, "-") || `image-${index + 1}`;
-  if (index === 0) {
+  if (!usedNames.has(normalized)) {
+    usedNames.add(normalized);
     return normalized;
   }
   const dotIndex = normalized.lastIndexOf(".");
-  if (dotIndex <= 0) {
-    return `${normalized}-${index + 1}`;
+  const baseName = dotIndex <= 0 ? normalized : normalized.slice(0, dotIndex);
+  const extension = dotIndex <= 0 ? "" : normalized.slice(dotIndex);
+  let suffix = 1;
+  let uniqueName = `${baseName}-${suffix}${extension}`;
+  while (usedNames.has(uniqueName)) {
+    suffix += 1;
+    uniqueName = `${baseName}-${suffix}${extension}`;
   }
-  return `${normalized.slice(0, dotIndex)}-${index + 1}${normalized.slice(dotIndex)}`;
+  usedNames.add(uniqueName);
+  return uniqueName;
 }
 
 function crc32(data: Uint8Array) {
