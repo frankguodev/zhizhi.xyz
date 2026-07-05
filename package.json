@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "dev:next": "next dev",
+    "dev:tools": "npm run tools:public && next dev apps/tools",
     "dev:remote": "npm run cf:preview:test:remote",
     "dev:remote:restart": "node scripts/remote-stop.mjs && npm run dev:remote",
     "dev:cf:local": "npm run cf:preview:test",
     "build": "next build --webpack",
+    "build:tools": "npm run tools:public && next build apps/tools --webpack",
     "start": "next start",
     "lint": "eslint && npm run encoding:check",
     "cf:build": "opennextjs-cloudflare build --config wrangler.toml",
@@ -49,6 +51,7 @@
     "test:public-api": "node scripts/test-public-api.mjs",
     "test:admin-regression": "node scripts/test-admin-regression.mjs",
     "test:tools": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/test-tools.mjs",
+    "tools:public": "node scripts/sync-tools-public.mjs",
     "encoding:check": "node scripts/check-encoding.mjs",
     "encoding:fix": "node scripts/fix-encoding.mjs",
     "cf:preview:only": "opennextjs-cloudflare preview --config wrangler.toml"

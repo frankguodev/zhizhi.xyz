@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../**/*.{js,ts,jsx,tsx,mdx}";
+@source "../../apps/tools/**/*.{js,ts,jsx,tsx,mdx}";
 
 :root,
 html[data-theme="light"] {
