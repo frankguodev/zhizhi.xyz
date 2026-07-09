@@ -35,6 +35,7 @@ export const toolRoutes: readonly ToolRouteMeta[] = [
   { id: "idPhoto", slug: "id-photo", title: "证件照制作工具（AI 抠图换底 / 蓝白红底）", description: "上传人像照片，本地 AI 抠图换背景，生成蓝底、白底、红底的一寸、二寸等标准尺寸证件照，图片不上传。" },
   { id: "qrDecode", slug: "qr-decode", title: "二维码识别 / 解码工具", description: "上传、拖拽或粘贴二维码和条形码图片，本地识别链接、文本、Wi-Fi、电话、邮箱、短信和名片等内容，图片不上传。" },
   { id: "imageBase64", slug: "image-base64", title: "图片转 Base64 / Data URI 工具", description: "图片与 Base64 / Data URI 互转，支持复制 CSS、HTML 和 Markdown 嵌入片段，本地运行，图片不上传。" },
+  { id: "imageAscii", slug: "image-to-ascii", title: "图片转 ASCII 字符画工具", description: "上传图片在线生成 ASCII 字符画，支持细节、字符集、反色和彩色预览，可复制文本或下载 PNG，本地运行，图片不上传。" },
 ];
 
 export const toolSlugById = Object.fromEntries(toolRoutes.map((route) => [route.id, route.slug])) as Record<ToolTab, string>;

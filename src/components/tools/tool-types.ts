@@ -1,6 +1,6 @@
 export type ToolLocale = "zh" | "en";
 
-export type ToolTab = "json" | "encoding" | "time" | "text" | "diff" | "jsonToTs" | "tokenCount" | "seoAudit" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "xml" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64" | "idPhoto";
+export type ToolTab = "json" | "encoding" | "time" | "text" | "diff" | "jsonToTs" | "tokenCount" | "seoAudit" | "jwt" | "hash" | "uuid" | "regex" | "markdown" | "data" | "xml" | "csv" | "color" | "image" | "watermark" | "wechatQr" | "linkQr" | "crop" | "qrDecode" | "imageBase64" | "imageAscii" | "idPhoto";
 export type CsvDelimiter = "auto" | "comma" | "tab";
 export type CsvOutputMode = "objects" | "rows";
 export type EncodingAction = "urlEncode" | "urlDecode" | "base64Encode" | "base64Decode" | "unicodeEscape" | "unicodeUnescape" | "htmlEscape" | "htmlUnescape";
@@ -120,6 +120,7 @@ export function isToolTab(value: unknown): value is ToolTab {
     value === "crop" ||
     value === "qrDecode" ||
     value === "imageBase64" ||
+    value === "imageAscii" ||
     value === "idPhoto"
   );
 }

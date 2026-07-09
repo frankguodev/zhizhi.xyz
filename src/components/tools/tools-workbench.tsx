@@ -94,6 +94,7 @@ const WechatQrTool = dynamic(() => import("./wechat-qr-tool").then((m) => m.Wech
 const ImageCropTool = dynamic(() => import("./image-crop-tool").then((m) => m.ImageCropTool), { ssr: false, loading: standaloneToolLoading });
 const QrDecodeTool = dynamic(() => import("./qr-decode-tool").then((m) => m.QrDecodeTool), { ssr: false, loading: standaloneToolLoading });
 const ImageBase64Tool = dynamic(() => import("./image-base64-tool").then((m) => m.ImageBase64Tool), { ssr: false, loading: standaloneToolLoading });
+const ImageAsciiTool = dynamic(() => import("./image-ascii-tool").then((m) => m.ImageAsciiTool), { ssr: false, loading: standaloneToolLoading });
 const IdPhotoTool = dynamic(() => import("./id-photo-tool").then((m) => m.IdPhotoTool), { ssr: false, loading: standaloneToolLoading });
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
@@ -137,6 +138,7 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   hash: "dev",
   image: "media",
   imageBase64: "media",
+  imageAscii: "media",
   json: "data",
   jwt: "dev",
   linkQr: "media",
@@ -223,6 +225,7 @@ const tabLabels = [
   { id: "idPhoto", label: "证件照", description: "本地 AI 抠图换底，生成蓝 / 白 / 红底标准尺寸证件照，图片不上传。", icon: IdCard },
   { id: "qrDecode", label: "二维码识别", description: "上传或粘贴二维码 / 条形码图片，本地解出链接或文本。", icon: ScanLine },
   { id: "imageBase64", label: "图片转 Base64", description: "图片与 Base64 / Data URI 互转，输出 CSS / HTML / Markdown 片段。", icon: Binary },
+  { id: "imageAscii", label: "图片转 ASCII", description: "上传图片生成 ASCII 字符画，支持反色、彩色、复制文本和 PNG 下载。", icon: FileImage },
 ] as const;
 
 const hiddenToolTabs = new Set<ToolTab>(["data"]);
@@ -242,6 +245,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   hash: "sha sha1 sha256 sha384 sha512 digest checksum file wenjian",
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
   imageBase64: "image base64 datauri data url css html markdown embed inline tupian bianma neilian",
+  imageAscii: "image ascii art text chars characters picture photo tupian zifu zifuhua wenben",
   json: "json format minify validate sort flatten parse escape",
   jwt: "jwt token bearer header payload exp iat nbf",
   linkQr: "link url text wifi email phone sms contact vcard qr qrcode website webpage erweima lianjie wangzhi wenben mingpian",
@@ -369,6 +373,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     hash: hashOutput,
     image: "",
     imageBase64: "",
+    imageAscii: "",
     json: jsonOutput,
     jwt: jwtOutput,
     linkQr: "",
@@ -396,6 +401,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     hash: hashInput,
     image: "",
     imageBase64: "",
+    imageAscii: "",
     json: jsonInput,
     jwt: jwtInput,
     linkQr: "",
@@ -1571,6 +1577,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
           {activeTab === "idPhoto" ? <IdPhotoTool /> : null}
           {activeTab === "qrDecode" ? <QrDecodeTool /> : null}
           {activeTab === "imageBase64" ? <ImageBase64Tool /> : null}
+          {activeTab === "imageAscii" ? <ImageAsciiTool /> : null}
           {activeTab === "diff" ? <DiffTool /> : null}
           {activeTab === "jsonToTs" ? <JsonToTsTool /> : null}
           {activeTab === "tokenCount" ? <TokenCounterTool /> : null}
@@ -3433,6 +3440,7 @@ function isStandaloneTool(tab: ToolTab) {
     tab === "idPhoto" ||
     tab === "qrDecode" ||
     tab === "imageBase64" ||
+    tab === "imageAscii" ||
     tab === "diff" ||
     tab === "jsonToTs" ||
     tab === "tokenCount" ||

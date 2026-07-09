@@ -58,6 +58,7 @@ export function getSampleInput(tab: ToolTab) {
     hash: "知之工具",
     image: "",
     imageBase64: "",
+    imageAscii: "",
     json: sampleJson,
     jwt: "",
     linkQr: "https://zhizhi.xyz",
