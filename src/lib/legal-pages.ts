@@ -46,12 +46,13 @@ export const legalPages: Record<LegalPageKey, LegalPageContent> = {
   privacy: {
     title: "隐私政策",
     description: "说明知之如何处理访问、联系和站点运行过程中可能涉及的信息。",
-    updatedAt: "2026-06-01",
+    updatedAt: "2026-07-10",
     sections: [
       {
         title: "我们收集的信息",
         paragraphs: [
           "知之目前以公开内容阅读为主，不要求普通读者注册账号。访问网站时，服务器和基础设施可能会产生必要的访问日志，例如请求时间、页面路径、IP 地址、浏览器类型和错误信息。",
+          "本站使用 Google Analytics 了解公开页面的匿名访问趋势，例如页面浏览、访问来源、设备和浏览器概况。统计数据用于判断内容是否被读到、改进页面结构和排查异常，不用于广告画像。",
           "文章阅读量和点赞功能会使用匿名设备标识 Cookie，用于减少重复计数、保存点赞状态和防止短时间内反复操作。这类标识不包含姓名、邮箱或账号资料。",
           "文章页和站点页提供匿名反馈表单。当你主动提交反馈时，我们会保存你填写的反馈内容、可选联系方式（如邮箱、X / Twitter、微信），以及提交时所在的页面地址、对应文章标题、浏览器类型（User-Agent）和一个匿名设备标识，用于阅读反馈、回复疑问和改进内容。联系方式可不填。",
           "如果你通过邮件、微信或其他外部渠道联系本站，我们会处理你主动提供的联系信息和沟通内容，用于回复、排查问题或改进内容。",
@@ -63,6 +64,7 @@ export const legalPages: Record<LegalPageKey, LegalPageContent> = {
         paragraphs: [
           "这些信息主要用于保障网站安全、排查故障、理解内容是否可访问，以及维护公开知识内容的长期稳定。",
           "匿名阅读和点赞数据用于展示内容热度、评估文章是否被读到，以及改进专题和文章结构。",
+          "Google Analytics 统计数据用于了解公开页面访问趋势和内容表现。后台、登录、注册和个人中心页面不会主动加载 Google Analytics。",
           "你主动提交的反馈内容用于理解阅读中的问题、回复你的疑问，以及改进文章、词条和功能。",
           "本站不会出售个人信息，也不会以广告画像为目的主动收集普通读者的个人数据。",
         ],
@@ -163,12 +165,13 @@ export const legalPages: Record<LegalPageKey, LegalPageContent> = {
   cookies: {
     title: "Cookie 与本地存储说明",
     description: "说明知之使用 Cookie、本地存储和必要技术的方式。",
-    updatedAt: "2026-06-01",
+    updatedAt: "2026-07-10",
     sections: [
       {
         title: "默认使用方式",
         paragraphs: [
           "知之公开阅读页面默认不以广告投放或跨站追踪为目的设置 Cookie，也不接入第三方广告画像 Cookie。",
+          "本站会在公开页面加载 Google Analytics，用于了解匿名访问趋势。后台、登录、注册和个人中心页面不会主动加载该统计脚本。",
           "站点可能使用浏览器本地存储保存主题、阅读偏好等体验设置，使页面在下次访问时保持一致。",
           "工具页面的图片压缩、格式转换、二维码生成等功能在浏览器本地运行，可能使用本地存储保存少量偏好，但不会把你的文件上传到服务器。",
         ],
@@ -192,6 +195,7 @@ export const legalPages: Record<LegalPageKey, LegalPageContent> = {
       {
         title: "第三方 Cookie",
         paragraphs: [
+          "Google Analytics 可能设置用于访问统计的 Cookie 或类似技术，帮助识别匿名访问会话和基础流量趋势。",
           "当你点击外部链接或访问第三方嵌入服务时，对方可能设置自己的 Cookie 或类似技术。",
           "你可以通过浏览器设置清除 Cookie、本地存储，或限制第三方 Cookie。",
         ],

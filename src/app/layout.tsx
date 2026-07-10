@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CookieNotice } from "@/components/layout/cookie-notice";
+import { GoogleAnalytics } from "@/components/layout/google-analytics";
 import { ThemeScript } from "@/components/layout/theme-script";
 import { defaultShareImage, siteConfig } from "@/lib/site";
 import "./globals.css";
@@ -61,6 +62,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
     >
       <body suppressHydrationWarning className="min-h-full bg-background text-foreground">
+        <GoogleAnalytics />
         <ThemeScript />
         {children}
         <CookieNotice />

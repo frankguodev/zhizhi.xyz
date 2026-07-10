@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, like, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, like, lte, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import matter from "gray-matter";
 import { revalidateTag, unstable_cache } from "next/cache";
@@ -285,7 +285,11 @@ function toDateValue(value: Date | string | number | null | undefined) {
 }
 
 function publicVisibilityCondition() {
-  return and(eq(aiTerms.status, "published"), eq(aiTerms.visibility, "public"))!;
+  return and(
+    eq(aiTerms.status, "published"),
+    eq(aiTerms.visibility, "public"),
+    or(isNull(aiTerms.publishedAt), lte(aiTerms.publishedAt, new Date())),
+  )!;
 }
 
 function mediaKeyFromUrl(value: string | null | undefined) {
@@ -1320,12 +1324,13 @@ export async function updateAiTermFromMarkdown(locale: AiTermLocale, slug: strin
   };
 }
 
-export async function applyAiTermAdminAction(locale: AiTermLocale, slug: string, action: AiTermAdminAction) {
+export async function applyAiTermAdminAction(locale: AiTermLocale, slug: string, action: AiTermAdminAction, options: { publishedAt?: Date | string | number } = {}) {
   const db = await getDb();
   const timestamp = new Date();
+  const publishedAt = toDateValue(options.publishedAt) ?? timestamp;
   const next =
     action === "publish"
-      ? { status: "published" as const, visibility: "public" as const, publishedAt: timestamp }
+      ? { status: "published" as const, visibility: "public" as const, publishedAt }
       : action === "restore"
         ? { status: "published" as const, visibility: "public" as const }
         : { status: "archived" as const, visibility: "hidden" as const };

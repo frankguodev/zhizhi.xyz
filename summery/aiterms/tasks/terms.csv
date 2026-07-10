@@ -1,2 +1,12 @@
 term,diagram,image,imageOptimize,story,sync,notes
-DR,TRUE,TRUE,TRUE,False,TRUE,同步生产
+VQA,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+ONNX,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+MT,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+Harness,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+IR,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+LSTM,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+BP,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+GD,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+SGD,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+LR,TRUE,TRUE,TRUE,False,TRUE,同步生产,
+Loss,TRUE,TRUE,TRUE,False,TRUE,同步生产,

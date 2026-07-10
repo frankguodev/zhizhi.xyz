@@ -24,6 +24,7 @@ const requestSchema = z.object({
 
 const patchRequestSchema = z.object({
   action: z.enum(["archive", "restore", "publish"]),
+  publishedAt: z.string().datetime().optional(),
 });
 
 const noStoreHeaders = {
@@ -224,7 +225,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ lo
       return json({ error: "AI 词条不存在。" }, { status: 404 });
     }
 
-    const result = await applyAiTermAdminAction(parsedParams.data.locale, parsedParams.data.slug, parsedBody.data.action);
+    const scheduledAt = parsedBody.data.publishedAt ? new Date(parsedBody.data.publishedAt) : null;
+
+    if (parsedBody.data.action === "publish" && scheduledAt && scheduledAt.getTime() <= Date.now()) {
+      return json({ error: "定时发布时间必须晚于当前时间。" }, { status: 400 });
+    }
+
+    const result = await applyAiTermAdminAction(parsedParams.data.locale, parsedParams.data.slug, parsedBody.data.action, scheduledAt ? { publishedAt: scheduledAt } : {});
 
     if (!result) {
       return json({ error: "AI 词条不存在。" }, { status: 404 });
@@ -250,6 +257,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ lo
         previousVisibility: previous.visibility,
         nextStatus: result.status,
         nextVisibility: result.visibility,
+        publishMode: parsedBody.data.action === "publish" ? (scheduledAt ? "scheduled" : "immediate") : undefined,
+        scheduledAt: scheduledAt?.toISOString(),
       },
     });
     return json({ aiTerm, action: parsedBody.data.action });

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Archive, CheckCircle2, Eye, Link2, Loader2, RotateCcw, Save, ScanSearch, Trash2 } from "lucide-react";
+import { ArrowLeft, Archive, CalendarClock, CheckCircle2, Eye, Link2, Loader2, RotateCcw, Save, ScanSearch, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { AdminConfirmDialog } from "@/components/admin/admin-confirm-dialog";
 import { adminApiErrorMessage, handleAdminUnauthorized } from "@/components/admin/admin-api";
@@ -47,6 +47,10 @@ type SaveState = {
 type EditorMode = "full" | "frontmatter" | "content";
 type PreviewTab = "info" | "quality" | "preview";
 type ConfirmAction = "publish" | "archive" | "restore" | "delete";
+type PendingConfirmAction = {
+  action: ConfirmAction;
+  publishedAt?: string;
+};
 
 type UploadedDiagramMedia = {
   url: string;
@@ -70,7 +74,20 @@ function publicPath(term: Pick<AdminAiTermDetail, "slug">) {
   return `/ai-terms/${term.slug}`;
 }
 
-function statusText(status: AdminAiTermDetail["status"]) {
+function dateText(value: Date | string | number | null | undefined) {
+  if (!value) return "未设置";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "未知时间" : date.toLocaleString("zh-CN");
+}
+
+function isScheduled(status: AdminAiTermDetail["status"], publishedAt: AdminAiTermDetail["publishedAt"]) {
+  if (status !== "published" || !publishedAt) return false;
+  const date = new Date(publishedAt);
+  return !Number.isNaN(date.getTime()) && date.getTime() > Date.now();
+}
+
+function statusText(status: AdminAiTermDetail["status"], publishedAt?: AdminAiTermDetail["publishedAt"]) {
+  if (isScheduled(status, publishedAt ?? null)) return "定时发布中";
   return status === "published" ? "已发布" : status === "archived" ? "已归档" : "草稿";
 }
 
@@ -85,7 +102,8 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
   const [markdown, setMarkdown] = useState(initialData.markdown);
   const [editorMode, setEditorMode] = useState<EditorMode>("full");
   const [previewTab, setPreviewTab] = useState<PreviewTab>("quality");
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [confirmAction, setConfirmAction] = useState<PendingConfirmAction | null>(null);
+  const [scheduledAtInput, setScheduledAtInput] = useState("");
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [diagramPreview, setDiagramPreview] = useState<DiagramPreview | null>(() =>
     initialData.aiTerm.diagramImage
@@ -215,7 +233,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
     }
   }
 
-  async function runAction(action: ConfirmAction) {
+  async function runAction(action: ConfirmAction, publishedAt?: string) {
     const status: SaveState["status"] =
       action === "publish" ? "publishing" : action === "archive" ? "archiving" : action === "restore" ? "restoring" : "deleting";
     setSaveState({ status, message: "正在执行操作..." });
@@ -224,7 +242,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
       const response = await fetch(apiBase, {
         method: action === "delete" ? "DELETE" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: action === "delete" ? undefined : JSON.stringify({ action }),
+        body: action === "delete" ? undefined : JSON.stringify({ action, publishedAt }),
       });
       const result = await response.json();
 
@@ -251,7 +269,8 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
       }
 
       clearBackup();
-      setSaveState({ status: "saved", message: "AI 词条操作已完成。" });
+      if (publishedAt) setScheduledAtInput("");
+      setSaveState({ status: "saved", message: publishedAt ? `AI 词条已定时到 ${dateText(publishedAt)} 发布。` : "AI 词条操作已完成。" });
     } catch (error) {
       setSaveState({ status: "error", message: error instanceof Error ? error.message : "AI 词条操作失败。" });
     }
@@ -331,7 +350,7 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
     }
   }
 
-  function requestAction(action: ConfirmAction) {
+  function requestAction(action: ConfirmAction, scheduledAt?: string) {
     if (action === "publish") {
       if (dirty) {
         setSaveState({ status: "error", message: "当前有未保存修改。请先保存并检查，再发布词条。" });
@@ -342,18 +361,46 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
         setSaveState({ status: "error", message: `质量报告还有 ${qualityErrors} 个错误，已阻止发布。` });
         return;
       }
+
+      if (scheduledAt) {
+        const date = new Date(scheduledAt);
+        if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
+          setSaveState({ status: "error", message: "请选择晚于当前时间的定时发布时间。" });
+          return;
+        }
+      }
     }
 
-    setConfirmAction(action);
+    setConfirmAction({ action, publishedAt: scheduledAt });
+  }
+
+  function requestScheduledPublish() {
+    if (!scheduledAtInput) {
+      setSaveState({ status: "error", message: "请先选择定时发布时间。" });
+      return;
+    }
+
+    const date = new Date(scheduledAtInput);
+    if (Number.isNaN(date.getTime()) || date.getTime() <= Date.now()) {
+      setSaveState({ status: "error", message: "请选择晚于当前时间的定时发布时间。" });
+      return;
+    }
+
+    requestAction("publish", date.toISOString());
   }
 
   const confirmMeta = confirmAction
     ? {
-        publish: { title: "发布 AI 词条", description: "发布后，公开可见的词条会进入前台读取范围。", label: "发布", tone: "primary" as const },
+        publish: {
+          title: confirmAction.publishedAt ? "定时发布 AI 词条" : "发布 AI 词条",
+          description: confirmAction.publishedAt ? `到 ${dateText(confirmAction.publishedAt)} 后，词条会进入前台读取范围。` : "发布后，公开可见的词条会进入前台读取范围。",
+          label: confirmAction.publishedAt ? "定时发布" : "发布",
+          tone: "primary" as const,
+        },
         archive: { title: "归档 AI 词条", description: "归档后词条会被隐藏，不再作为公开内容展示。", label: "归档", tone: "danger" as const },
         restore: { title: "恢复 AI 词条", description: "恢复后词条会重新变为已发布公开状态。", label: "恢复", tone: "primary" as const },
         delete: { title: "删除 AI 词条", description: "这会物理删除词条和关联关系，操作不可撤销。", label: "确认删除", tone: "danger" as const },
-      }[confirmAction]
+      }[confirmAction.action]
     : null;
 
   return (
@@ -395,15 +442,15 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
         }
         onCancel={() => setConfirmAction(null)}
         onConfirm={() => {
-          const action = confirmAction;
+          const pending = confirmAction;
           setConfirmAction(null);
-          if (action) void runAction(action);
+          if (pending) void runAction(pending.action, pending.publishedAt);
         }}
       />
 
       <div className="mb-5 flex flex-col gap-3 border border-line bg-surface p-4 text-sm md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="border border-line bg-background px-3 py-1 font-semibold text-foreground">{statusText(data.aiTerm.status)}</span>
+          <span className="border border-line bg-background px-3 py-1 font-semibold text-foreground">{statusText(data.aiTerm.status, data.aiTerm.publishedAt)}</span>
           <span className="text-muted">{dirty ? "有未保存修改" : "内容已同步"}</span>
           <span className={qualityErrors > 0 ? "text-red-700" : "text-accent"}>{qualityErrors > 0 ? `质量错误 ${qualityErrors} 个` : "质量检查无错误"}</span>
         </div>
@@ -445,6 +492,20 @@ export function AiTermEditorWorkbench({ initialData }: { initialData: AiTermEdit
               <button type="button" onClick={() => requestAction("publish")} disabled={busy} className="admin-btn admin-btn-primary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
                 <CheckCircle2 className="h-4 w-4" />
                 发布
+              </button>
+              <label className="col-span-2 flex min-w-0 items-center gap-2 border border-line bg-background px-3 text-sm text-muted sm:col-span-1">
+                <CalendarClock className="h-4 w-4 shrink-0" />
+                <input
+                  type="datetime-local"
+                  value={scheduledAtInput}
+                  onChange={(event) => setScheduledAtInput(event.target.value)}
+                  className="h-10 min-w-0 bg-transparent text-foreground outline-none"
+                  aria-label="定时发布时间"
+                />
+              </label>
+              <button type="button" onClick={requestScheduledPublish} disabled={busy} className="admin-btn admin-btn-secondary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
+                <CalendarClock className="h-4 w-4" />
+                定时发布
               </button>
               {data.aiTerm.status === "archived" ? (
                 <button type="button" onClick={() => requestAction("restore")} disabled={busy} className="admin-btn admin-btn-secondary inline-flex h-11 items-center gap-2 px-4 font-semibold disabled:opacity-60">
@@ -615,8 +676,9 @@ function InfoPanel({
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
           <Meta label="Slug" value={aiTerm.slug} />
           <Meta label="语言" value={aiTerm.locale} />
-          <Meta label="状态" value={statusText(aiTerm.status)} />
+          <Meta label="状态" value={statusText(aiTerm.status, aiTerm.publishedAt)} />
           <Meta label="可见性" value={aiTerm.visibility} />
+          <Meta label="发布时间" value={dateText(aiTerm.publishedAt)} />
           <Meta label="热度" value={String(aiTerm.heatScore)} />
           <Meta label="质量分" value={String(aiTerm.qualityScore)} />
           <Meta label="词条图解" value={aiTerm.diagramImage ?? "未设置"} />

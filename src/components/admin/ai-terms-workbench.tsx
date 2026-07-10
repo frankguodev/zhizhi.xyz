@@ -78,13 +78,12 @@ const bulkActionOptions: Array<{ value: BulkAction; label: string }> = [
   { value: "delete", label: "物理删除草稿/归档" },
 ];
 
-function dateText(value: Date | string | number | null | undefined) {
-  if (!value) {
-    return "未设置";
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "未知时间" : date.toLocaleString("zh-CN");
+function publishTimeText(term: Pick<AdminAiTermItem, "status" | "publishedAt">) {
+  if (term.status !== "published") return "未发布";
+  if (!term.publishedAt) return "立即可见";
+  const date = new Date(term.publishedAt);
+  if (Number.isNaN(date.getTime())) return "未知时间";
+  return date.getTime() > Date.now() ? `定时中 ${date.toLocaleString("zh-CN")}` : date.toLocaleString("zh-CN");
 }
 
 function publicPath(term: Pick<AdminAiTermItem, "slug">) {
@@ -453,7 +452,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
               <th className="px-4 py-3">分数</th>
               <th className="px-4 py-3">排序</th>
               <th className="px-4 py-3">审核</th>
-              <th className="px-4 py-3">更新时间</th>
+              <th className="px-4 py-3">发布时间</th>
               <th className="px-4 py-3">操作</th>
             </tr>
           </thead>
@@ -545,7 +544,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                         人审
                       </label>
                     </td>
-                    <td className="px-4 py-4 text-xs text-muted">{dateText(term.updatedAt)}</td>
+                    <td className="px-4 py-4 text-xs text-muted">{publishTimeText(term)}</td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-2">
                         <Link href={editPath(term)} className="admin-btn admin-btn-secondary inline-flex h-9 items-center justify-center gap-2 px-3 text-xs font-semibold">
@@ -647,7 +646,7 @@ export function AiTermsWorkbench({ initialAiTerms, initialFilters, emptyMessage 
                 <div className="mt-3">
                   <h2 className="break-words text-lg font-semibold text-foreground [overflow-wrap:anywhere]">{term.term}</h2>
                   <p className="mt-1 break-words text-xs text-muted [overflow-wrap:anywhere]">{term.termZh || term.fullName || term.slug}</p>
-                  <p className="mt-2 text-xs text-muted">更新于 {dateText(term.updatedAt)}</p>
+                  <p className="mt-2 text-xs text-muted">发布：{publishTimeText(term)}</p>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-1">

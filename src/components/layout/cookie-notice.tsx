@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 const storageKey = "zhizhi.cookie-notice";
 
 const copy = {
-  message: "知之仅使用保障网站基本功能所需的 Cookie，不用于广告或跨站追踪。",
+  message: "知之使用保障网站基本功能所需的 Cookie，并通过 Google Analytics 了解匿名访问趋势，不用于广告画像。",
   detail: "了解更多",
   accept: "知道了",
 };
