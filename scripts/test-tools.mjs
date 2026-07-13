@@ -12,6 +12,7 @@ const { computeDiff, createUnifiedPatch } = await import("../src/components/tool
 const { jsonToTypeScript } = await import("../src/components/tools/tool-json-to-ts.ts");
 const { computeTokenTextStats, estimateTokenCount, getTokenModel, tokenModels } = await import("../src/components/tools/tool-token-counter.ts");
 const { analyzeSearchAudit, formatSearchAuditMarkdown, formatSearchAuditPublishMarkdown, searchAuditContentTypeOptions } = await import("../src/components/tools/tool-seo-audit.ts");
+const { fitVideoSize, videoCommand } = await import("../src/components/tools/tool-video.ts");
 const { isToolTab } = await import("../src/components/tools/tool-types.ts");
 
 const defaultOptions = { emptyAsNull: false, inferTypes: true, outputMode: "objects" };
@@ -446,5 +447,39 @@ assert.equal(isToolTab("seoAudit"), true);
 assert.equal(isToolTab("diff"), true);
 assert.equal(isToolTab("jsonToTs"), true);
 assert.equal(isToolTab("tokenCount"), true);
+assert.equal(isToolTab("videoConverter"), true);
+
+// 视频转换：不放大小视频，缩放和原始奇数尺寸都规整为偶数。
+assert.deepEqual(fitVideoSize(640, 480, 720), { width: 640, height: 480 });
+assert.deepEqual(fitVideoSize(1920, 1080, 720), { width: 1280, height: 720 });
+assert.deepEqual(fitVideoSize(1080, 1920, 720), { width: 404, height: 720 });
+assert.deepEqual(fitVideoSize(853, 479, null), { width: 852, height: 478 });
+
+const videoBaseOptions = { input: "input.mov", output: "output.mp4", outputKey: "mp4", quality: "balanced", resolution: "original", size: { width: 852, height: 478 }, keepAudio: true };
+const mp4Command = videoCommand(videoBaseOptions);
+assert.deepEqual(mp4Command.slice(0, 5), ["-i", "input.mov", "-vf", "scale=852:478", "-c:v"]);
+assert.ok(mp4Command.includes("26"));
+assert.ok(mp4Command.includes("aac"));
+assert.ok(videoCommand({ ...videoBaseOptions, keepAudio: false }).includes("-an"));
+assert.ok(videoCommand({ ...videoBaseOptions, quality: "small" }).includes("32"));
+assert.ok(videoCommand({ ...videoBaseOptions, quality: "quality" }).includes("20"));
+
+const webmCommand = videoCommand({ ...videoBaseOptions, output: "output.webm", outputKey: "webm" });
+assert.ok(webmCommand.includes("libvpx"));
+assert.deepEqual(webmCommand.slice(webmCommand.indexOf("-crf"), webmCommand.indexOf("-crf") + 4), ["-crf", "34", "-b:v", "2M"]);
+assert.ok(webmCommand.includes("libopus"));
+assert.ok(webmCommand.includes("realtime"));
+assert.ok(videoCommand({ ...videoBaseOptions, output: "output.webm", outputKey: "webm", quality: "small" }).includes("45"));
+assert.ok(videoCommand({ ...videoBaseOptions, output: "output.webm", outputKey: "webm", quality: "quality" }).includes("26"));
+
+const mp3Command = videoCommand({ ...videoBaseOptions, output: "output.mp3", outputKey: "mp3" });
+assert.deepEqual(mp3Command.slice(0, 5), ["-i", "input.mov", "-map", "0:a:0", "-vn"]);
+assert.ok(mp3Command.includes("128k"));
+assert.ok(videoCommand({ ...videoBaseOptions, output: "output.mp3", outputKey: "mp3", quality: "quality" }).includes("192k"));
+
+const gifCommand = videoCommand({ ...videoBaseOptions, output: "output.gif", outputKey: "gif", resolution: "480", size: { width: 640, height: 480 } });
+assert.match(gifCommand[gifCommand.indexOf("-filter_complex") + 1], /fps=12,scale=640:480.*palettegen.*paletteuse/);
+const unknownSizeCommand = videoCommand({ ...videoBaseOptions, size: null, resolution: "720" });
+assert.ok(unknownSizeCommand.includes("scale=-2:trunc(min(720\\,ih)/2)*2"));
 
 console.log("Tools smoke tests passed.");

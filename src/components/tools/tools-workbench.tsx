@@ -13,6 +13,7 @@ import {
   Download,
   FileText,
   FileCode2,
+  FileVideo,
   Fingerprint,
   FileJson2,
   GitCompareArrows,
@@ -95,6 +96,7 @@ const ImageCropTool = dynamic(() => import("./image-crop-tool").then((m) => m.Im
 const QrDecodeTool = dynamic(() => import("./qr-decode-tool").then((m) => m.QrDecodeTool), { ssr: false, loading: standaloneToolLoading });
 const ImageBase64Tool = dynamic(() => import("./image-base64-tool").then((m) => m.ImageBase64Tool), { ssr: false, loading: standaloneToolLoading });
 const ImageAsciiTool = dynamic(() => import("./image-ascii-tool").then((m) => m.ImageAsciiTool), { ssr: false, loading: standaloneToolLoading });
+const VideoConverterTool = dynamic(() => import("./video-converter-tool").then((m) => m.VideoConverterTool), { ssr: false, loading: standaloneToolLoading });
 const IdPhotoTool = dynamic(() => import("./id-photo-tool").then((m) => m.IdPhotoTool), { ssr: false, loading: standaloneToolLoading });
 const DiffTool = dynamic(() => import("./diff-tool").then((m) => m.DiffTool), { ssr: false, loading: standaloneToolLoading });
 const JsonToTsTool = dynamic(() => import("./json-to-ts-tool").then((m) => m.JsonToTsTool), { ssr: false, loading: standaloneToolLoading });
@@ -139,6 +141,7 @@ const toolGroupByTab: Record<ToolTab, ToolGroup> = {
   image: "media",
   imageBase64: "media",
   imageAscii: "media",
+  videoConverter: "media",
   json: "data",
   jwt: "dev",
   linkQr: "media",
@@ -226,6 +229,7 @@ const tabLabels = [
   { id: "qrDecode", label: "二维码识别", description: "上传或粘贴二维码 / 条形码图片，本地解出链接或文本。", icon: ScanLine },
   { id: "imageBase64", label: "图片转 Base64", description: "图片与 Base64 / Data URI 互转，输出 CSS / HTML / Markdown 片段。", icon: Binary },
   { id: "imageAscii", label: "图片转 ASCII", description: "上传图片生成 ASCII 字符画，支持反色、彩色、复制文本和 PNG 下载。", icon: FileImage },
+  { id: "videoConverter", label: "视频转换", description: "本地 FFmpeg WASM 压缩视频，并转换 MP4 / WebM / MP3 / GIF。", icon: FileVideo },
 ] as const;
 
 const hiddenToolTabs = new Set<ToolTab>(["data"]);
@@ -246,6 +250,7 @@ const toolSearchAliases: Record<ToolTab, string> = {
   image: "image compress convert jpg jpeg png webp resize photo picture media tupian yasuo zhuanhuan",
   imageBase64: "image base64 datauri data url css html markdown embed inline tupian bianma neilian",
   imageAscii: "image ascii art text chars characters picture photo tupian zifu zifuhua wenben",
+  videoConverter: "video compress convert mp4 webm mp3 gif ffmpeg wasm shipin yasuo zhuanhuan",
   json: "json format minify validate sort flatten parse escape",
   jwt: "jwt token bearer header payload exp iat nbf",
   linkQr: "link url text wifi email phone sms contact vcard qr qrcode website webpage erweima lianjie wangzhi wenben mingpian",
@@ -374,6 +379,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     image: "",
     imageBase64: "",
     imageAscii: "",
+    videoConverter: "",
     json: jsonOutput,
     jwt: jwtOutput,
     linkQr: "",
@@ -402,6 +408,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
     image: "",
     imageBase64: "",
     imageAscii: "",
+    videoConverter: "",
     json: jsonInput,
     jwt: jwtInput,
     linkQr: "",
@@ -1578,6 +1585,7 @@ export function ToolsWorkbench({ initialTool }: { initialTool?: ToolTab } = {}) 
           {activeTab === "qrDecode" ? <QrDecodeTool /> : null}
           {activeTab === "imageBase64" ? <ImageBase64Tool /> : null}
           {activeTab === "imageAscii" ? <ImageAsciiTool /> : null}
+          {activeTab === "videoConverter" ? <VideoConverterTool /> : null}
           {activeTab === "diff" ? <DiffTool /> : null}
           {activeTab === "jsonToTs" ? <JsonToTsTool /> : null}
           {activeTab === "tokenCount" ? <TokenCounterTool /> : null}
@@ -3441,6 +3449,7 @@ function isStandaloneTool(tab: ToolTab) {
     tab === "qrDecode" ||
     tab === "imageBase64" ||
     tab === "imageAscii" ||
+    tab === "videoConverter" ||
     tab === "diff" ||
     tab === "jsonToTs" ||
     tab === "tokenCount" ||

@@ -59,6 +59,7 @@ export function getSampleInput(tab: ToolTab) {
     image: "",
     imageBase64: "",
     imageAscii: "",
+    videoConverter: "",
     json: sampleJson,
     jwt: "",
     linkQr: "https://zhizhi.xyz",
