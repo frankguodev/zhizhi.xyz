@@ -13,7 +13,6 @@ const navItems = [
   { href: "/articles", label: "文章" },
   { href: "/series", label: "专题" },
   { href: "/ai-terms", label: "词条" },
-  { href: "/tools", label: "工具" },
   { href: "/about", label: "关于" },
 ];
 

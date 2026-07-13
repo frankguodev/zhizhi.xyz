@@ -25,6 +25,14 @@ export type ChangelogRelease = {
 // 最新的发布放在数组最前面。
 export const changelog: ChangelogRelease[] = [
   {
+    date: "2026-07-13",
+    title: "工具台迁移到 ToolDB 独立站",
+    changes: [
+      { type: "improved", label: "工具台", text: "工具台已迁移到 ToolDB 独立站点，图片转 ASCII、视频转换等浏览器工具将在独立站维护，避免大体积工具影响主站部署和访问稳定性。" },
+      { type: "added", label: "ToolDB 入口", text: "主站页脚「站点入口」新增 ToolDB 外链，方便从知之进入独立工具站。" },
+    ],
+  },
+  {
     date: "2026-07-01",
     title: "新增工具：AI 搜索体检",
     changes: [

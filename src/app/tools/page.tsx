@@ -1,27 +1,22 @@
-import { ToolsPageShell } from "@/components/tools/tools-page-shell";
-import { ToolsWorkbench } from "@/components/tools/tools-workbench";
+import { permanentRedirect } from "next/navigation";
 
-const title = "在线工具台";
-const description = "知之在线工具台，提供 JSON、编码、时间戳、文本处理、Diff、LLM Token 计数、图片压缩转换、二维码和 Base64 等常用工具，全部在浏览器本地运行，数据不上传。";
+const title = "在线工具台迁移中";
+const description = "知之在线工具台正在迁移到独立站点。";
 
 export const metadata = {
   title,
   description,
   alternates: {
-    canonical: "/tools",
+    canonical: "https://tooldb.cn/",
   },
   openGraph: {
     title,
     description,
-    url: "/tools",
+    url: "https://tooldb.cn/",
     type: "website",
   },
 };
 
 export default function ToolsPage() {
-  return (
-    <ToolsPageShell title={title}>
-      <ToolsWorkbench />
-    </ToolsPageShell>
-  );
+  permanentRedirect("https://tooldb.cn/");
 }

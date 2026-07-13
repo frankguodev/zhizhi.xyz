@@ -10,7 +10,6 @@ const primaryLinks = [
   { href: "/articles", label: "文章" },
   { href: "/ai-terms", label: "词条" },
   { href: "/series", label: "专题" },
-  { href: "/tools", label: "工具" },
   { href: "/about", label: "关于" },
 ];
 
@@ -85,6 +84,14 @@ export async function SiteFooter() {
                   <span>{item.label}</span>
                 </Link>
               ))}
+              <a
+                className="inline-flex cursor-pointer items-center transition hover:text-accent"
+                href="https://tooldb.cn/"
+                rel="noopener"
+                target="_blank"
+              >
+                <span>ToolDB</span>
+              </a>
             </nav>
           </div>
 

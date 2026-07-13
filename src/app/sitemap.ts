@@ -3,7 +3,6 @@ import { countPublicAiTerms, listPublicAiTerms } from "@/lib/ai-terms";
 import { getPublicArticles } from "@/lib/public-articles";
 import { listPublicSeries } from "@/lib/series";
 import { siteConfig } from "@/lib/site";
-import { toolRoutes } from "@/lib/tools-meta";
 
 function siteUrl(path = "") {
   return `${siteConfig.url}${path}`;
@@ -51,7 +50,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/ai-terms", priority: 0.8, changeFrequency: "weekly" },
     { path: "/series", priority: 0.75, changeFrequency: "weekly" },
     { path: "/about", priority: 0.55, changeFrequency: "monthly" },
-    { path: "/tools", priority: 0.6, changeFrequency: "monthly" },
     { path: "/donate", priority: 0.45, changeFrequency: "monthly" },
     { path: "/changelog", priority: 0.5, changeFrequency: "weekly" },
     { path: "/privacy", priority: 0.25, changeFrequency: "yearly" },
@@ -84,12 +82,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: safeDate(term.updatedAt || term.publishedAt),
       changeFrequency: "monthly" as const,
       priority: 0.78,
-    })),
-    ...toolRoutes.filter((route) => route.id !== "data").map((route) => ({
-      url: siteUrl(`/tools/${route.slug}`),
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
     })),
   ];
 }

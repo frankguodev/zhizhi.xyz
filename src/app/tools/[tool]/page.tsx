@@ -1,38 +1,22 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { ToolsPageShell } from "@/components/tools/tools-page-shell";
-import { ToolsWorkbench } from "@/components/tools/tools-workbench";
-import { findToolRouteBySlug, toolRoutes } from "@/lib/tools-meta";
-
-export const dynamicParams = false;
+import { permanentRedirect } from "next/navigation";
 
 type ToolRouteProps = {
   params: Promise<{ tool: string }>;
 };
 
-export function generateStaticParams() {
-  return toolRoutes.map((route) => ({ tool: route.slug }));
-}
-
-export async function generateMetadata({ params }: ToolRouteProps): Promise<Metadata> {
+export async function generateMetadata({ params }: ToolRouteProps) {
   const { tool } = await params;
-  const route = findToolRouteBySlug(tool);
-
-  if (!route) {
-    return {};
-  }
-
-  const url = `/tools/${route.slug}`;
+  const url = `https://tooldb.cn/${encodeURIComponent(tool)}`;
 
   return {
-    title: route.title,
-    description: route.description,
+    title: "在线工具台迁移中",
+    description: "知之在线工具台已迁移到 ToolDB 独立站点。",
     alternates: {
       canonical: url,
     },
     openGraph: {
-      title: route.title,
-      description: route.description,
+      title: "在线工具台迁移中",
+      description: "知之在线工具台已迁移到 ToolDB 独立站点。",
       url,
       type: "website",
     },
@@ -41,15 +25,5 @@ export async function generateMetadata({ params }: ToolRouteProps): Promise<Meta
 
 export default async function ToolRoutePage({ params }: ToolRouteProps) {
   const { tool } = await params;
-  const route = findToolRouteBySlug(tool);
-
-  if (!route) {
-    notFound();
-  }
-
-  return (
-    <ToolsPageShell title={route.title}>
-      <ToolsWorkbench initialTool={route.id} />
-    </ToolsPageShell>
-  );
+  permanentRedirect(`https://tooldb.cn/${encodeURIComponent(tool)}`);
 }

@@ -1,5 +1,0 @@
-FFmpeg WebAssembly core
-
-Package: @ffmpeg/core 0.12.10
-License: GPL-2.0-or-later
-Source: https://github.com/ffmpegwasm/ffmpeg.wasm
