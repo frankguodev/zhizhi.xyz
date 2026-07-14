@@ -19,7 +19,6 @@ const siteInfoLinks = [
   { href: "/terms", label: "使用条款" },
   { href: "/disclaimer", label: "免责声明" },
   { href: "/cookies", label: "Cookie 说明" },
-  { href: "/changelog", label: "更新日志" },
 ];
 
 export async function SiteFooter() {
